@@ -220,8 +220,8 @@ gl_FragColor=vec4((opt), texture2D(u_texture, vec2(texturePos.x,texturePos.y)).w
                     } else {
                         camera.targets[4] = -event.alpha + 180;
                     }
-                    camera.targets[3] = //-event.beta;
-                    camera.targets[5] = 0
+                    camera.targets[3] = -event.beta;
+                    camera.targets[5] = event.gamma;
                     //event.gamma;
                     camera.targets[6] = 0
                     camera.targets[7] = 0
