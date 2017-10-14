@@ -10,7 +10,7 @@
 </audio>
 <p onclick="var eve=new MouseEvent('click');fEle.dispatchEvent(eve);">click me</p>
 
-<input type="file" id="files" accept="audio*;capture=microphone" multiple style="display:none;">
+<input type="file" id="files" accept="audio/*;capture=microphone" multiple style="display:none;">
 <p id="op"></p>
 <script>
 var aSrc=document.getElementById("src");
@@ -22,7 +22,7 @@ var source=audioCtx.createMediaElementSource(aEle);
 var analyser=audioCtx.createAnalyser();
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
-//fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
+fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
 var arr=new Uint8Array(analyser.frequencyBinCount);
 function update(){
 	requestAnimationFrame(update);
