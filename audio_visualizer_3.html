@@ -28,6 +28,8 @@ function update(){
 	requestAnimationFrame(update);
 	analyser.getByteFrequencyData(arr);
 	op.innerHTML=Math.max.apply(null,arr);
+	aEle.pause();
+	aEle.play();
 }
 update();
 var errorCallback = function(e) {
