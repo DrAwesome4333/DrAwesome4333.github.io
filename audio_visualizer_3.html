@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Audio Visualizer 3.0</title>
+</head>
+<body>
+<audio id="audio">
+ <source id="src" type="audio/mp3"></source>
+ HTML5 Audio element is not supported on your browser.
+</audio>
+<p onclick="var eve=new MouseEvent('click');fEle.dispatchEvent(eve);">click me</p>
+
+<input type="file" id="files" accept="audio*;capture=microphone" multiple style="display:none;">
+<p id="op"></p>
+<script>
+var aSrc=document.getElementById("src");
+var aEle=document.getElementById("audio");
+var fEle=document.getElementById("files");
+var op=document.getElementById("op");
+var audioCtx= new (window.AudioContext || window.webkitAudioContext)();
+var source=audioCtx.createMediaElementSource(aEle);
+var analyser=audioCtx.createAnalyser();
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
+var arr=new Uint8Array(analyser.frequencyBinCount);
+function update(){
+	requestAnimationFrame(update);
+	analyser.getByteFrequencyData(arr);
+	op.innerHTML=Math.max.apply(null,arr);
+}
+update();
+var errorCallback = function(e) {
+    console.log('Reeeejected!', e);
+  };
+if (navigator.getUserMedia) {
+  navigator.getUserMedia({audio: true, video: false}, function(stream) {
+    aSrc.src = window.URL.createObjectURL(stream);
+	console.log(stream)
+	aEle.load();
+	aEle.play();
+  }, errorCallback);
+} else {
+  //video.src = 'somevideo.webm'; // fallback.
+}
+  
+</script>
+
+</body>
+</html>
