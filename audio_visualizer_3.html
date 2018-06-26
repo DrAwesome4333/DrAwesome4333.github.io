@@ -23,8 +23,11 @@ var source=audioCtx.createMediaElementSource(aEle);
 var mSource;
 var ct = document.getElementById("can").getContext("2d");
 var analyser=audioCtx.createAnalyser();
+var gainNode = audioCtx.createGain();
 source.connect(analyser);
-analyser.connect(audioCtx.destination);
+analyser.connect(gainNode);
+gainNode.connect(audioCtx.destination);
+gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
 fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
 var arr=new Uint8Array(analyser.frequencyBinCount);
 function update(){
