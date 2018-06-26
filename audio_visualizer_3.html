@@ -36,7 +36,7 @@ var errorCallback = function(e) {
   };
 if (navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
-    mSource = audioCtx.createMediaElementSource(stream);
+    mSource = audioCtx.createMediaStreamSource(stream);
 	console.log(stream)
   }).catch(errorCallback);
 } else {
