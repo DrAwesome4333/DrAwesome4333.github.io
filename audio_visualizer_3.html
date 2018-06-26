@@ -34,9 +34,9 @@ function update(){
 	ct.clearRect(0,0,1000,200);
 	ct.strokeStyle="black";
 	ct.beginPath();
-	ct.moveTo(0,arr[0]);
+	ct.moveTo(0,-arr[0]+200);
 	for(var i = 1;i<arr.length;i++){
-		ct.lineTo(1000/arr.length*i,arr[i]);
+		ct.lineTo(1000/arr.length*i,-arr[i]+200);
 	}
 	ct.stroke();
 }
