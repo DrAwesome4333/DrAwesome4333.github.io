@@ -19,10 +19,11 @@ var fEle=document.getElementById("files");
 var op=document.getElementById("op");
 var audioCtx= new (window.AudioContext || window.webkitAudioContext)();
 var source=audioCtx.createMediaElementSource(aEle);
+var mSource;
 var analyser=audioCtx.createAnalyser();
 source.connect(analyser);
 analyser.connect(audioCtx.destination);
-fEle.addEventListener("change",function(){aEle.srcObject=fEle.files[0];aEle.load();aEle.play();})
+fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
 var arr=new Uint8Array(analyser.frequencyBinCount);
 function update(){
 	requestAnimationFrame(update);
@@ -35,10 +36,8 @@ var errorCallback = function(e) {
   };
 if (navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
-    aEle.srcObject = stream;
+    mSource = audioCtx.createMediaElementSource(stream);
 	console.log(stream)
-	aEle.load();
-	aEle.play();
   }).catch(errorCallback);
 } else {
   //video.src = 'somevideo.webm'; // fallback.
