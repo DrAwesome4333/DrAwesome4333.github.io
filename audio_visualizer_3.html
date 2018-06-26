@@ -34,7 +34,7 @@ var errorCallback = function(e) {
     console.log('Reeeejected!', e);
   };
 if (navigator.getUserMedia) {
-  navigator.getUserMedia({audio: true, video: false}, function(stream) {
+  navigator.mediaDevices.getUserMedia({audio: true, video: false}, function(stream) {
     aSrc.src = stream.srcObject;
 	console.log(stream)
 	aEle.load();
