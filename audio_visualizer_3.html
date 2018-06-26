@@ -37,8 +37,8 @@ if (navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
     aEle.srcObject = stream;
 	console.log(stream)
-	//aEle.load();
-//	aEle.play();
+	aEle.load();
+	aEle.play();
   }).catch(errorCallback);
 } else {
   //video.src = 'somevideo.webm'; // fallback.
