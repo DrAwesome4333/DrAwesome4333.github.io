@@ -12,7 +12,7 @@
 
 <input type="file" id="files" accept="audio/*;capture=microphone" multiple style="display:none;">
 <p id="op"></p>
-<canvas id="can" width = 1000 height = 200></canvas>
+<canvas id="can" width = 1000 height = 300></canvas>
 <script>
 var aSrc=document.getElementById("src");
 var aEle=document.getElementById("audio");
@@ -38,23 +38,23 @@ function update(){
 
   analyser.getFloatTimeDomainData(dataArray);
 	
-	ct.clearRect(0,0,1000,200);
+	ct.clearRect(0,0,1000,300);
 	ct.strokeStyle="black";
 	ct.fillStyle="Green";
 	ct.beginPath();
 	ct.moveTo(0,-arr[0]+200);
 	for(var i = 1;i<arr.length;i++){
-		ct.lineTo(1000/arr.length*i,-arr[i]+200);
+		ct.lineTo(1000/arr.length*i,-arr[i]+300);
 	}
-	ct.lineTo(1000,200);
-	ct.lineTo(0,200);
+	ct.lineTo(1000,300);
+	ct.lineTo(0,300);
 	ct.fill();
 	ct.stroke();
 
 	ct.beginPath();
 ct.moveTo(0,500);
 for(var a=0;a<dataArray.length;a++){
-ct.lineTo(a*(1000/dataArray.length),(dataArray[a]*100)+100)
+ct.lineTo(a*(1000/dataArray.length),(dataArray[a]*150)+150)
 }
 ct.strokeStyle="rgba(255,0,0,128)"
 					
