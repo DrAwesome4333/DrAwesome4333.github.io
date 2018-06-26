@@ -35,7 +35,7 @@ var errorCallback = function(e) {
   };
 if (navigator.getUserMedia) {
   navigator.getUserMedia({audio: true, video: false}, function(stream) {
-    aSrc.src = window.HTMLMediaElement.srcObject(stream);
+    aSrc.src = window.URL.createObjectURL(stream);
 	console.log(stream)
 	aEle.load();
 	aEle.play();
