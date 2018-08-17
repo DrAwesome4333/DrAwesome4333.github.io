@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+    
+    <body>
+        <input type="button" onclick="solve();" value="Start">
+        <p id="op" style="font-size:30px;"></p>
+        <script>
+            var op = document.getElementById("op");
+            var moves = new Array(40);
+            var done = false;
+            var setup = false;
+            var newMove = true;// this means the previous move was just set up and this is a new move for the current depth. Indicates that the depth (if not already at the max) should be incremented
+            var depth = 0;//max is level 19, the current depth is used to check for solutions
+            var forward = true;
+            var maxDepth = 6;
+            var hasLeft = false;
+            var debug = "default";
+            var cubeCount = 0;
+            var shouldCount = true;
+            var time = 0;
+            var oldTime = 0;
+            var newTime = 0;
+            
+            function displayText(){
+                var output = "";
+                var number = "";
+                for(var i = 0; i<40;i+=2){
+                    number = (i/2+1).toString();
+                    if (number.length<2){
+                        number = "0"+number;
+                    }
+                    output+=number + " : "+ movesToText(moves[i],moves[i+1]) + "<br>";
+                }
+                return output + "cube count: "+cubeCount+"<br>Time: "+time;
+            }
+            for(var a = 0; a<40; a++){
+                moves[a]=0;//DON'T KNOW WHY I HAVE TO SPECIFY THIS BUT I HAVE TOO!
+                //it is because the array starts out as undefined, not 0
+            }
+            function movesToText(layer,direction){
+                    switch(layer){
+                        case 0: {
+                            switch(direction){
+                                case 0: 
+                                    return "L";
+                                    break;
+                                case 1: 
+                                    return "Li";
+                                    break;
+                                case 2: 
+                                    return "L2";
+                                    break;
+                            }
+                            break;
+                        }
+                        case 1: {
+                            switch(direction){
+                                case 0: 
+                                    return "Ri";
+                                    break;
+                                case 1: 
+                                    return "R";
+                                    break;
+                                case 2: 
+                                    return "R2";
+                                    break;
+                            }
+                            break;
+                        }
+                        case 2: {
+                            switch(direction){
+                                case 0: 
+                                    return "D";
+                                    break;
+                                case 1: 
+                                    return "Di";
+                                    break;
+                                case 2: 
+                                    return "D2";
+                                    break;
+                            }
+                            break;
+                        }
+                        case 3: {
+                            switch(direction){
+                                case 0: 
+                                    return "Ui";
+                                    break;
+                                case 1: 
+                                    return "U";
+                                    break;
+                                case 2: 
+                                    return "U2";
+                                    break;
+                            }
+                            break;
+                        }
+                        case 4: {
+                            switch(direction){
+                                case 0: 
+                                    return "F";
+                                    break;
+                                case 1: 
+                                    return "Fi";
+                                    break;
+                                case 2: 
+                                    return "F2";
+                                    break;
+                            }
+                            break;
+                        }
+                        case 5: {
+                            switch(direction){
+                                case 0: 
+                                    return "Bi";
+                                    break;
+                                case 1: 
+                                    return "B";
+                                    break;
+                                case 2: 
+                                    return "B2";
+                                    break;
+                            }
+                            break;
+                        }
+                        default:{
+                            return "?";
+                        }
+                    }
+            }
+
+            op.innerHTML = displayText();
+
+            function solve(){
+                for(var a = 0;a<1000000;a++){
+                    if(moves[0] != 0){
+                        hasLeft = true;
+                    }
+                    if(hasLeft && moves[0]==0){
+                        shouldCount = false;
+                    }
+                    oldTime = performance.now();
+                    solveRun();
+                    if(shouldCount)
+                        time += performance.now()-oldTime;
+                }
+                requestAnimationFrame(solve);
+                op.innerHTML=displayText();
+            }
+            
+            function solveRun(){
+                if(!setup){
+                    setup = true;
+                    depth++;
+                }else{
+                    if(newMove){
+                        moves[depth*2]=0;
+                        moves[depth*2+1]=0;
+                        if(!checkValidMove(0)){
+                            moves[depth*2]++;
+                        }
+                        if(!checkValidMove(moves[depth*2])){//done twice to stop bad things if both moves are invalid
+                            moves[depth*2]++;
+                        }
+                        if(depth+1<=maxDepth-1){
+                             depth++;
+                             newMove = true;
+                        }else{
+                            newMove = false;
+                        }
+                    }else{
+                        
+                        if(depth+1 == maxDepth && moves[depth*2+1]<=2){
+                                if(shouldCount)
+                                    cubeCount++;
+                            }
+                        moves[depth*2+1]++;
+                        
+                        if(moves[depth*2+1]>2){
+                            moves[depth*2+1]=0;
+                            moves[depth*2]++;
+                            if(!checkValidMove(moves[depth*2])){
+                                moves[depth*2]++;
+                            }
+                            if(!checkValidMove(moves[depth*2])){
+                                moves[depth*2]++;
+                            }
+                            if(moves[depth*2]>5){
+                                if(depth > 0){
+                                depth--;
+                                }else{
+                                    console.log("done");
+                                    moves[0]=0;
+                                    moves[1]=0;
+                                }
+                            }else{
+
+                                if(depth+1<=maxDepth-1){
+                                    depth++;
+                                    
+                                newMove=true;
+                                }
+                            }
+                        }else if(depth+1<=maxDepth-1){
+                                    depth++;
+                                    
+                                newMove=true;
+                                }
+                    }
+
+                }
+                
+            }
+
+            function checkValidMove(layer){
+                //disallows working on the same layer as the last move
+                //disallows working on a layer that has not been affected by the last move.
+                //scans all previous moves to see if the above layer has been affected by other moves, if it has not, then this
+                // cube is already present in another bracn and should no longer be continued on this branch.
+                var isValid = true;
+                if(layer>5 || layer<0){
+                    return false;
+                }
+                var inverseLayer = Math.floor(layer/2)*2;//this is the only layer that can be moved without affecting the previous layers
+                if(inverseLayer == layer){
+                    inverseLayer ++;
+                }
+                
+                var cont = true;
+
+
+                for(var i = depth-1; i >= 0 && cont;i--){
+                    cont = false;
+                    if(moves[i*2] == layer){
+                        isValid = false;
+                        break;
+                    }else if(moves[i*2] == inverseLayer){
+                        cont = true;// this allows the previous move to be checked (if it exists) as the inverse layer does not affect the next layer so
+                        //the previous move needs to be checked to see if it affect the layer, this should not happen more than once as finding inverselayer
+                        //twice in a row would imply an invalid move.
+                    }
+                }
+                return isValid;
+            }
+        </script>
+    </body>
+</html>
