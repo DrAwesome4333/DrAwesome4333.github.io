@@ -2906,10 +2906,10 @@ var Controls = {
 		document.getElementById("cube_edit").addEventListener("mouseout",Controls.MouseUp);
 		document.getElementById("cube_edit").addEventListener("mouseup",Controls.MouseUp);
 		document.getElementById("cube_edit").addEventListener("mousedown",Controls.MouseDown);
-		document.getElementById("cube_edit").addEventListener("touchmove",Controls.MouseMove);
-		document.getElementById("cube_edit").addEventListener("touchcancel",Controls.MouseUp);
-		document.getElementById("cube_edit").addEventListener("touchend",Controls.MouseUp);
-		document.getElementById("cube_edit").addEventListener("touchstart",Controls.MouseDown);
+		document.getElementById("cube_edit").addEventListener("touchmove",Controls.TouchMove);
+		document.getElementById("cube_edit").addEventListener("touchcancel",Controls.TouchEnd);
+		document.getElementById("cube_edit").addEventListener("touchend",Controls.TouchEnd);
+		document.getElementById("cube_edit").addEventListener("touchstart",Controls.TouchStart);
 		
 	},
 	MouseMove:function(e){
@@ -2937,7 +2937,38 @@ var Controls = {
 			Controls.MouseClicked = false;});//make sure this is cleared on the next frame
 			clearTimeout(Controls.ClickTimer);
 			Controls.ClickTimer=null;
+	}
+		
+		document.getElementById("cube_edit").style.cursor="auto";
+
+	},
+	TouchMove:function(e){
+		Controls.OldMouseX = Controls.MouseX;
+		Controls.OldMouseY = Controls.MouseY;
+		//Controls.MouseX = e.clientX;
+		//Controls.MouseY = e.clientY;
+		console.log(e);
+
+	},
+	TouchStart:function(e){
+		Controls.MouseIsDown=true;
+		Controls.MouseJustWentDown=true;
+		if(Controls.ClickTimer){
+			clearTimeout(Controls.ClickTimer);
 		}
+		Controls.ClickTimer = setTimeout(function(){Controls.MouseJustWentDown=false;Controls.ClickTimer=null;},Controls.ClickTime);
+		
+	},
+	TouchEnd:function(e){
+		Controls.MouseIsDown=false;
+		Controls.MouseJustWentDown=false;
+		if(Controls.ClickTimer){
+			Controls.MouseClicked = true;
+			requestAnimationFrame(function(){
+			Controls.MouseClicked = false;});//make sure this is cleared on the next frame
+			clearTimeout(Controls.ClickTimer);
+			Controls.ClickTimer=null;
+	}
 		
 		document.getElementById("cube_edit").style.cursor="auto";
 
