@@ -1687,12 +1687,19 @@ var Renderer = {
 		this.bct = this.bumpCanvas.getContext("2d");
 		this.bct.fillStyle = "rgb(128,128,255)";
 		this.bct.fillRect(0,0,1024,1024)
-		/*for(var x= 0;x<32;x++){
-			for(var y= 0;y<32;y++){
-				this.bct.fillStyle = "rgb("+Math.floor(Math.random()*255)+","+Math.floor(Math.random()*255)+","+Math.floor(Math.random()*128)+128+")";
-				this.bct.fillRect(x*32,y*32,32,32);
+
+		/*
+		for(var x= 0;x<64;x++){
+			for(var y= 0;y<64;y++){
+				this.bct.fillStyle = "rgb("+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*128+128)+")";
+				this.bct.fillRect(x*16,y*16,16,16);
 			}
-		}//*/
+		}
+		this.bct.strokeStyle = "rgb(128,128,255)";
+		this.bct.lineWidth = 100;
+		this.bct.lineJoin="round";
+		this.bct.strokeRect(0,0,1024,1024);
+		//*/
 		this.bumpImage = new Image();
 		this.bumpImage.src = "vpZuv.png";
 		//*
@@ -2899,6 +2906,10 @@ var Controls = {
 		document.getElementById("cube_edit").addEventListener("mouseout",Controls.MouseUp);
 		document.getElementById("cube_edit").addEventListener("mouseup",Controls.MouseUp);
 		document.getElementById("cube_edit").addEventListener("mousedown",Controls.MouseDown);
+		document.getElementById("cube_edit").addEventListener("touchmove",Controls.MouseMove);
+		document.getElementById("cube_edit").addEventListener("touchcancel",Controls.MouseUp);
+		document.getElementById("cube_edit").addEventListener("touchend",Controls.MouseUp);
+		document.getElementById("cube_edit").addEventListener("touchstart",Controls.MouseDown);
 		
 	},
 	MouseMove:function(e){
@@ -3435,7 +3446,7 @@ function start(){
 	Controls.SetUp();
 	Renderer.SetUpCamera();
 	Renderer.Clear();
-	testCube = new vCube(3,CubeDataType.Surface,generateSolvedCube(3,CubeDataType.Surface),undefined,undefined,undefined,true);
+	testCube = new vCube(10,CubeDataType.Surface,generateSolvedCube(10,CubeDataType.Surface),undefined,undefined,undefined,true);
 	testCube.render();
 	draw();
 }
