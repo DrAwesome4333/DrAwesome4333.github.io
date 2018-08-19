@@ -2943,7 +2943,7 @@ var Controls = {
 
 	},
 	TouchMove:function(e){
-		e.preventDefualt();
+		e.preventDefault();
 		Controls.OldMouseX = Controls.MouseX;
 		Controls.OldMouseY = Controls.MouseY;
 		Controls.MouseX = e.touches[0].clientX;
@@ -2953,7 +2953,7 @@ var Controls = {
 	},
 	TouchStart:function(e){
 		
-		e.preventDefualt();
+		e.preventDefault();
 		Controls.MouseIsDown=true;
 		Controls.MouseJustWentDown=true;
 		if(Controls.ClickTimer){
@@ -2964,7 +2964,7 @@ var Controls = {
 	},
 	TouchEnd:function(e){
 		
-		e.preventDefualt();
+		e.preventDefault();
 		Controls.MouseIsDown=false;
 		Controls.MouseJustWentDown=false;
 		if(Controls.ClickTimer){
