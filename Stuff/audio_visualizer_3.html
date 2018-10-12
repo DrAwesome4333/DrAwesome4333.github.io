@@ -7,12 +7,14 @@
       href="https://drawesome4333.github.io/favicon.ico">
 </head>
 <body>
-<audio id="audio">
+<audio id="audio" controls>
  <source id="src" type="audio/mp3">
  HTML5 Audio element is not supported on your browser.
 </audio>
-<input type="button" value="start" onclick="start();">
-<p onclick="var eve=new MouseEvent('click');fEle.dispatchEvent(eve);">click me</p>
+<br>
+<input type="button" value="Start Listening" onclick="start();">
+<br>
+<p onclick="var eve=new MouseEvent('click');fEle.dispatchEvent(eve);">Load a file</p>
 
 <input type="file" id="files" accept="audio/*;capture=microphone" multiple style="display:none;">
 <p id="op"></p>
@@ -38,9 +40,9 @@ gainNode = audioCtx.createGain();
 source.connect(analyser);
 analyser.connect(gainNode);
 gainNode.connect(audioCtx.destination);
-gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+gainNode.gain.setValueAtTime(0, audioCtx.currentTime);//Mute audio so it doesn't create feedback
 analyser.fftSize=2048;
-fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();})
+fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);mSource.disconnect(analyser)})
 arr=new Uint8Array(analyser.frequencyBinCount);
 dataArray = new Uint8Array(analyser.frequencyBinCount);
 if (navigator.mediaDevices.getUserMedia) {
@@ -50,8 +52,7 @@ if (navigator.mediaDevices.getUserMedia) {
 	console.log(stream)
   }).catch(errorCallback);
 } else {
-  //video.src = 'somevideo.webm'; // fallback.
-	console.log("Shrug");
+  alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
 }
   
 update();
@@ -90,6 +91,7 @@ ct.stroke();
 	
 }
 var errorCallback = function(e) {
+	alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
     console.log(e);
   };
 
