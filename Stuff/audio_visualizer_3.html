@@ -32,6 +32,108 @@ var analyser;
 var gainNode;
 var arr;
 var dataArray;
+
+var Graphics = {
+	canvas:document.createElement("CANVAS"),
+	gl:null,
+	canvas_settings:{
+		width:0,
+		height:0,
+		top:0,
+		left:0,
+		p_width:0,
+		p_height:0,//previous width/height, lets a function know if the view port needs to be updated
+		fullScreen:false,//if true the canvas will attempt to take up the whole screen
+		shouldShow:true
+	},
+	particles:{
+		
+	},
+	cubes:{
+
+	},
+	state:{
+		mode:-1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
+		particles:true//wether or not to do particles on modes that don't require it
+	}
+
+}
+
+function Song(fileElement,fileNumber){
+	this.length = 0;
+	this.title = "Unknown";
+	this.artist = "Unkown Artist";
+	this.album = "Unkown Album";
+	this.composer = "";
+	this.cover = null;
+	this.flagged = false;//if true this song has an error that wont allow it to play
+	this.format = "";
+	this.fileElement = fileElement;//describes which file element holds this song's files
+	this.fileNumber = fileNumber;
+
+}
+
+var Audio = {
+	ctx:null,
+	gainNode:null,
+	state:{
+		volume:0,
+		source:-1,//-1 for none, 0 for music, 1 for microphone
+	},
+	microphone:{
+		source:null,//the aduio context source
+		playing:false//tells if the microphone is active or not
+	},
+	music:{
+		source:null//the html element that will play the music is linked here
+		//playing is not needed as this will not be controlled by the audio object but the player object
+	}
+
+}
+
+var Player = {
+	songs:[],
+	songId:-1,
+	paused:true,
+	playing:false,
+	shuffle:false,
+	repeat:0,//0 for no repats, 1 for repeat playlist, 2 for repeat song
+	controls:{
+		controlContainer:null,
+		playButton:null,//play and pause
+		timeLine:null,
+		timeBack:null,
+		timeDot:null,
+		fastforwardButton:null,
+		rewindButton:null,
+		backButton:null,
+		skipButton:null,
+		volumeDot:null,
+		volumeLine:null,
+		volumeBack:null,
+		repeatButton:null
+	},
+	resources:{
+		pause:null,
+		play:null,
+		repeatAll:null,
+		repeatOne:null,
+		repeatNone:null,
+		fastforward:null,
+		skip:null,
+		back:null,
+		rewind:null,
+		dot:null,
+		pauseDisabled:null,
+		playDisabled:null,
+		skipDisabled:null,
+		backDisabled:null,
+		rewindDisabled:null
+	}
+
+}
+
+var fileElements=[];//a list of file elements that can hold the music files
 function start(){
 	audioCtx= new (window.AudioContext || window.webkitAudioContext)();
 source=audioCtx.createMediaElementSource(aEle);
