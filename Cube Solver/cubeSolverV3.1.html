@@ -2668,8 +2668,16 @@ var Algorithm = {
 						break;
 					}
 					case(CubeDataType.Piece):{
+						var LocationCount = cubeSize*cubeSize*cubeSize-(cubeSize-2)*(cubeSize-2)*(cubeSize-2);
 						for(var j = 0;j<filterLength;j++){
-							CubeData.Change(destinationCube,format,0,j,cubeSize,CubeData.PullInfo(originCube,Algorithm.SavedFilters[ftu][move][j],5))
+							var originLocation = Algorithm.SavedFilters[ftu][move][j];
+							var homeChange =   Math.floor(originLocation/LocationCount);
+							originLocation %= LocationCount;
+							var xyz = CubeData.GetPieceCoords(j,cubeSize);
+							var PieceCodeCount = CubeData.CountSides(xyz[0],xyz[1],xyz[2],cubeSize)==3? 8:12;//helps get the home range correct
+							// it doesn't care for center pieces as their home should be 0 anyways
+							var dataEntry =  ((CubeData.PullInfo(originCube,originLocation,5)+homeChange*PieceCodeCount) % 24)
+							CubeData.Change(destinationCube,format,0,j, cubeSize, dataEntry);
 						}
 						originCube = CubeData.Copy(destinationCube);
 						break;
@@ -3658,7 +3666,7 @@ function start(){
 	Controls.SetUp();
 	Renderer.SetUpCamera();
 	Renderer.Clear();
-	testCube = new vCube(3,CubeDataType.Surface,generateSolvedCube(3,CubeDataType.Surface),undefined,undefined,undefined,true);
+	testCube = new vCube(5,CubeDataType.Piece,generateSolvedCube(5,CubeDataType.Piece),undefined,undefined,undefined,true);
 	testCube.render();
 	draw();
 }
