@@ -290,6 +290,7 @@
 		    uniform vec3 overlay_color;\n\
 		    varying vec3 iColor;\n\
 			vec3 iNormal;\n\
+			vec3 surfaceToEye;\n\
 			vec3 halfV;\n\
 		    varying vec2 iMain_uv;\n\
 		    varying vec2 iNormal_uv;\n\
@@ -298,8 +299,9 @@
 			varying vec3 fragment_position;\n\
 		    void main(void){\n\
 				iNormal = texture2D(bump_texture,iNormal_uv).rgb * 2.0-1.0;\n\
-				halfV = normalize(iNormal + (_camera_position-fragment_position));\n\
-				float spec = max(pow(dot(iNormal,halfV),10.0),0.0);\n\
+				surfaceToEye = normalize(_camera_position-fragment_position);\n\
+				halfV = normalize(normalize(_light_direction)+surfaceToEye);\n\
+				float spec = max(pow(dot(iNormal,halfV),1000.0),0.0);\n\
 		        vec4 data = texture2D(main_texture,iMain_uv);\n\
 				float light_level = max(dot( normalize( _light_direction ) , normalize( iNormal ) ),0.0);\n\
 				if(light_level==0.0){\n\
@@ -765,8 +767,15 @@ var CubeData={
 				var newData = CubeData.Create(CubeDataType.Surface,size,1);
 				var cubeSize = size*size*6;
 				for(var i = 0; i < cubeSize; i++){
-					CubeData.Change(newData,CubeDataType.Surface,0,i,size,CubeData.PullInfo(data,cube*cubeSize*3+i,3));
+					CubeData.Change(newData,CubeDataType.Surface,0,i,size,CubeData.PullInfo(data,cube*cubeSize+i,3));
 				}
+				/*var segments = 1;
+				while(cubeSize*3/segments>32){
+					segments++;
+				}
+				for(var i = 0;i<segments;i++){
+					CubeData.ChangeBinaryData(newData,0,);
+				}*/
 
 				return newData;
 			}
@@ -779,7 +788,7 @@ var CubeData={
 
 				return newData;
 			}
-			case CubeDataType.Surface:{
+			case CubeDataType.Compact:{
 				var newData =	CubeData.Create(CubeDataType.Compact,size,1);
 				for(var i = 0; i < 8; i++){
 					CubeData.Change(newData,CubeDataType.Compact,0,i,size,CubeData.PullInfo(data,cube*24+i,3));
@@ -807,7 +816,7 @@ var CubeData={
 					CubeData.Change(data,CubeDataType.Surface,cubeIndex,i,size,CubeData.PullInfo(cubeData,i,3));
 				}
 
-				return CubeData.Copy(data);
+				return data;
 			}
 			case CubeDataType.Piece:{ 
 				var cubeSize = (size*size*size-(size-2)*(size-2)*(size-2) );
@@ -815,14 +824,14 @@ var CubeData={
 					CubeData.Change(data,CubeDataType.Piece,cubeIndex,i,size,CubeData.PullInfo(cubeData,i,5));
 				}
 
-				return CubeData.Copy(data);
+				return data;
 			}
 			case CubeDataType.Surface:{
 				for(var i = 0; i < 8; i++){
 					CubeData.Change(data,CubeDataType.Compact,cubeIndex,i,size,CubeData.PullInfo(cubeData,i,3));
 				}
 
-				return CubeData.Copy(data);
+				return data;
 			}
 		}
 
@@ -1157,6 +1166,26 @@ var CubeData={
 				z = (index-offset) % size;
 			}
 		return [x,y,z];
+	},
+	GetPieceIndex:function(x,y,z,size){
+		//inverse of get piece coords
+		var offset;
+		if(x==0){
+			return y*size+z;
+		}
+		else if(x==size-1){
+			return size*size + (size-2)*(2*size+2*(size-2)) + y*size+z;
+		}else{
+			offset = size*size + (x-1)*(2*size+2*(size-2));
+			if(y==0){
+				return offset + z;
+			}else if(y==size-1){
+				return offset + 2*(size-2) + size + z;
+			}else{
+				return offset + size + (y-1)*2 + Math.floor(z/(size-1));
+			}
+		}
+		return -1;
 	},
 	GetLocationType(size,number){//GetLocationType(size,x,y,z)
 
@@ -1646,7 +1675,7 @@ var Renderer = {
 	bumpCanvas:null,
 	MapMode:false,//Tells if we are rendering to the map or main screen.
 	RenderMode:0,//Tells about texture info. In mode 0, if texture is black it is a sticker color, white is background color, in mode 1 alpha 0 is sicker color, else, it is the texture data. In mode 2 it just displays texture
-    LightDirection:[-1,-1,-1],
+    LightDirection:[-0.5,-0.5,-2],
 	HightlightColor:[0.5,0.5,0.5],
 	BackColor:[0.9,0.9,0.9],
 	FieldOfView:90,
@@ -1664,9 +1693,9 @@ var Renderer = {
 		canvas is the holder that holds the canvas allowing
 		it to fit into the page like formating style with ease.*/
 		this.gl = this.canvas.getContext("webgl", {
-                        alpha: false,antialias: false
+                        alpha: false,antialias: true
                     })||canvas_gl_main.getContext("experimental-webgl", {
-                        alpha: false,antialias: false
+                        alpha: false,antialias: true
                     });//gotta support that IE
 		if(this.gl == null){
 			alert("Could not start up WebGL!\nPlease make sure you have a WebGL 1.0 enabled browser and try again!\nThis works best in Chrome.");
@@ -1689,20 +1718,44 @@ var Renderer = {
 		this.bct.fillRect(0,0,1024,1024)
 
 		/*
-		for(var x= 0;x<64;x++){
-			for(var y= 0;y<64;y++){
+		for(var x= 0;x<32;x++){
+			for(var y= 0;y<32;y++){
 				this.bct.fillStyle = "rgb("+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*128+128)+")";
-				this.bct.fillRect(x*16,y*16,16,16);
+				
+				this.bct.fillRect(x*32,y*32,32,32);
 			}
-		}
+		}//*/
 		this.bct.strokeStyle = "rgb(128,128,255)";
 		this.bct.lineWidth = 100;
 		this.bct.lineJoin="round";
 		this.bct.strokeRect(0,0,1024,1024);
-		//*/
-		this.bumpImage = new Image();
-		this.bumpImage.src = "vpZuv.png";
 		//*
+		this.bct.lineWidth = 1;
+		this.bct.strokeStyle = "rgb(128,0,255)";
+		this.bct.beginPath();
+		this.bct.moveTo(60,60);
+		this.bct.lineTo(964,60);
+		this.bct.stroke();
+		this.bct.strokeStyle = "rgb(128,255,255)";
+		this.bct.beginPath();
+		this.bct.moveTo(60,964);
+		this.bct.lineTo(964,964);
+		this.bct.stroke();
+		this.bct.strokeStyle = "rgb(255,128,255)";
+		this.bct.beginPath();
+		this.bct.moveTo(964,60);
+		this.bct.lineTo(964,964);
+		this.bct.stroke();
+		this.bct.strokeStyle = "rgb(0,128,255)";
+		this.bct.beginPath();
+		this.bct.moveTo(60,60);
+		this.bct.lineTo(60,964);
+		this.bct.stroke();
+		//*/
+	//	this.bumpImage = new Image(); Removed as I don't own these textures and should no use them for now
+		//this.bumpImage.src = "vpZuv.png";
+		//*/
+		/*
 		this.bumpImage.onload = function(){
 			gl.useProgram(Renderer.MainProgram);
 			gl.activeTexture(gl.TEXTURE2);
@@ -1933,18 +1986,6 @@ var Renderer = {
 			        gl.vertexAttribPointer(this.DebugAttributes.point,2,gl.FLOAT,false,4*4,0);
 			        gl.vertexAttribPointer(this.DebugAttributes.uv,2,gl.FLOAT,false,4*4,2*4);
 			    }
-			/*
-    MainAttributes:{
-        point:-1,
-        color:-1,
-		normal:-1,
-        main_uv:-1,
-        normal_uv:-1
-    },
-    MapAttributes:{
-        point:-1,
-        id_color:-1
-    },*/
 			},
 	SetUpCamera:function(){
 		//sets up the uniforms
@@ -2011,93 +2052,76 @@ var Renderer = {
 		//Renders the given cubies passed in an array of objects.
 		//Must call camera Set up before using this function!
         //set up the uniforms
-		/*MainUniforms:{
-        main_texture:-1,
-        bump_texture:-1,
-        back_color:-1,
-        light_direction:-1,
-        overlay_color:-1,
-        world_matrix:-1,
-        model_matrix:-1,
-        perspective_matrix:-1,
-        texture_mode:-1
-    },
-    MapUniforms:{
-        world_matrix:-1,
-        model_matrix:-1,
-        perspective_matrix:-1
-    }*/
-	Renderer.SetUpMain();
-	
-	gl.useProgram(Renderer.MainProgram);
-	for(var c = 0;c<cubies.length; c++){
-//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
-		var cubie = cubies[c];
-		var modelMat = Renderer.Mat4Multiply(cubeMatrix,cubie.model[6]);
-		modelMat = Renderer.Mat4Multiply(modelMat,cubie.model[3]);
-		gl.bindBuffer(gl.ARRAY_BUFFER,cubie.model[0]);
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,cubie.model[1]);
+		Renderer.SetUpMain();
 		
-		this.setAts(0);
-		var cubeTo3 = this.Mat3Inverse([modelMat[0],modelMat[1],modelMat[2] ,modelMat[4],modelMat[5],modelMat[6] ,modelMat[8],modelMat[9],modelMat[10]
-
-		]);//transpose removed to send in correctly ordered value to webgl
-		gl.uniformMatrix4fv(this.MainUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
-		gl.uniformMatrix3fv(this.MainUniforms.normal_matrix,false,cubeTo3);
-		if(cubie.inError){
-					gl.uniform3fv(this.MainUniforms.back_color,[1.0,0.1,0.1]);
-				}else{
-					gl.uniform3fv(this.MainUniforms.back_color,this.BackColor);
-				}
-		
-		for(var i = 0;i<4;i++){
-			if(i < cubie.type+2){
-
-				if(cubie.highlightedSides[i]){
-					gl.uniform3fv(this.MainUniforms.overlay_color,this.HightlightColor);
-				}else{
-					gl.uniform3fv(this.MainUniforms.overlay_color,[1.0,1.0,1.0]);
-				}
-
-				/*if(mapRender){
-					Renderer.SetUpMap(false);
-					gl.uniformMatrix4fv(this.MapUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
-					gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); //*2 because each number is 2 bytes
-					Renderer.SetUpMain(false);
-				}else{*/
-				//}
-				
-				
-				gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); 
-			
-			}
-
-		
-		}
-	}
-	if(mapRender){
-				Renderer.SetUpMap(false);
-				gl.useProgram(Renderer.MapProgram);
-				for(var c = 0;c<cubies.length; c++){
-//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
+		gl.useProgram(Renderer.MainProgram);
+		for(var c = 0;c<cubies.length; c++){
+			//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
 			var cubie = cubies[c];
 			var modelMat = Renderer.Mat4Multiply(cubeMatrix,cubie.model[6]);
 			modelMat = Renderer.Mat4Multiply(modelMat,cubie.model[3]);
 			gl.bindBuffer(gl.ARRAY_BUFFER,cubie.model[0]);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,cubie.model[1]);
-			gl.uniformMatrix4fv(this.MapUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
-			this.setAts(1);
-					//bbcb
-			for(var i = 0;i<3;i++){
-					if(i < cubie.type+1){
+			
+			this.setAts(0);
+			var cubeTo3 = this.Mat3Inverse([modelMat[0],modelMat[1],modelMat[2] ,modelMat[4],modelMat[5],modelMat[6] ,modelMat[8],modelMat[9],modelMat[10]
+
+			]);//transpose removed to send in correctly ordered value to webgl
+			gl.uniformMatrix4fv(this.MainUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
+			gl.uniformMatrix3fv(this.MainUniforms.normal_matrix,false,cubeTo3);
+			if(cubie.inError){
+						gl.uniform3fv(this.MainUniforms.back_color,[1.0,0.1,0.1]);
+					}else{
+						gl.uniform3fv(this.MainUniforms.back_color,this.BackColor);
+					}
+			
+			for(var i = 0;i<4;i++){
+				if(i < cubie.type+2){
+
+					if(cubie.highlightedSides[i]){
+						gl.uniform3fv(this.MainUniforms.overlay_color,this.HightlightColor);
+					}else{
+						gl.uniform3fv(this.MainUniforms.overlay_color,[1.0,1.0,1.0]);
+					}
+
+					/*if(mapRender){
+						Renderer.SetUpMap(false);
+						gl.uniformMatrix4fv(this.MapUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
 						gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); //*2 because each number is 2 bytes
-				}
-			}	
+						Renderer.SetUpMain(false);
+					}else{*/
+					//}
 					
+					
+					gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); 
 				
 				}
-				Renderer.SetUpMain(false);
+
+			
 			}
+		}
+		if(mapRender){
+			Renderer.SetUpMap(false);
+			gl.useProgram(Renderer.MapProgram);
+			for(var c = 0;c<cubies.length; c++){
+			//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
+				var cubie = cubies[c];
+				var modelMat = Renderer.Mat4Multiply(cubeMatrix,cubie.model[6]);
+				modelMat = Renderer.Mat4Multiply(modelMat,cubie.model[3]);
+				gl.bindBuffer(gl.ARRAY_BUFFER,cubie.model[0]);
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,cubie.model[1]);
+				gl.uniformMatrix4fv(this.MapUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
+				this.setAts(1);
+						
+				for(var i = 0;i<3;i++){
+						if(i < cubie.type+1){
+							gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); //*2 because each number is 2 bytes
+					}
+				}//end face loop			
+			}//end cubie loop
+
+			Renderer.SetUpMain(false);
+		}//end map
 		
 	
     },
@@ -2200,7 +2224,7 @@ var Renderer = {
 				 0.5, 0.5,-0.5,  0.0,0.0,0.0,   1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,  0.0,0.0, 0.0,0.0,-1.0, 0.0,1.0,0.0,
 				 0.5, 0.5, 0.5,  0.0,0.0,0.0,   1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,  0.0,0.0, 0.0,0.0,-1.0, 0.0,1.0,0.0
 				 ],
-				//Attributes go point(3),color(3),normal(3),id_color(3)(used by map),main_uv(2),normal_uv(2)
+				//Attributes go point(3),color(3),normal(3),id_color(3)(used by map),main_uv(2),normal_uv(2), vectors (6)
         
 
 		corner:[-0.5,-0.5,-0.5,  0.0,0.0,0.0,  -1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,  0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,0.0,//Left
@@ -2269,7 +2293,7 @@ var Algorithm = {
 	CacheResolution:100,
 	TotalAlgorithms:[],//3,5,816480 number of algorithms given for a 3 by 3 Cube; The totals are calculated by running the the algorithm finding code, stored as [cubeSize, AlgLength, NumOfAlgs]
 	Cache:[],//this will be an array that stores algorithms periodicaly to help save time when finding large number algoithms. stored as [cubeSize,AlgLength,Uint8Array(totalAlgorithms data),bitLength]
-	Que:[3,5],//stores the algorithms in a to do list so if it is called again for some reason, it will not fight with an ongoing process.
+	Que:[3,5,3,4,3,3,3,2,3,1],//stores the algorithms in a to do list so if it is called again for some reason, it will not fight with an ongoing process.
 	moves:null,//an array that stores the current system of moves, uncompressed. format [layer,direction]
 	done:false,
 	setup:false,
@@ -2384,7 +2408,7 @@ var Algorithm = {
                         Algorithm.moves[Algorithm.depth*2]=0;
                         Algorithm.moves[Algorithm.depth*2+1]=0;
 						var timesRun = 0;
-                        while(!Algorithm.CheckValidMove(Algorithm.moves[Algorithm.depth*2],Algorithm.cubeSize) && timesRun<Algorithm.CountLayers(Algorithm.cubeSize)){
+                        while(!Algorithm.CheckValidMove(Algorithm.moves[Algorithm.depth*2],Algorithm.cubeSize,Algorithm.depth,Algorithm.moves) && timesRun<Algorithm.CountLayers(Algorithm.cubeSize)){
                             Algorithm.moves[Algorithm.depth*2]++;
 							timesRun ++;
                         }
@@ -2393,25 +2417,26 @@ var Algorithm = {
 							Algorithm.newMove=true;
                         }else{
                            	Algorithm.newMove = false;
+							   if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
+								Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
+								
+								Algorithm.cubeCount++;
+							   
                         }
                             
                     }else{
 						
-						if(Algorithm.depth+1 == Algorithm.maxDepth && Algorithm.moves[Algorithm.depth*2+1]<=2){
-							if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
-								Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
-							Algorithm.cubeCount++;//Insert Algorithm Saving Here
-							}
+					
 							
                             
                         Algorithm.moves[Algorithm.depth*2+1]++;
-
+							
                         if(Algorithm.moves[Algorithm.depth*2+1]>2){
                            
                             Algorithm.moves[Algorithm.depth*2+1]=0;
                             Algorithm.moves[Algorithm.depth*2]++;
 							var timesRun = 0;
-                            while(!Algorithm.CheckValidMove(Algorithm.moves[Algorithm.depth*2],Algorithm.cubeSize) && timesRun<Algorithm.CountLayers(Algorithm.cubeSize)){
+                            while(!Algorithm.CheckValidMove(Algorithm.moves[Algorithm.depth*2],Algorithm.cubeSize,Algorithm.depth,Algorithm.moves) && timesRun<Algorithm.CountLayers(Algorithm.cubeSize)){
                             	Algorithm.moves[Algorithm.depth*2]++;
 								timesRun ++;
                         	}
@@ -2433,17 +2458,23 @@ var Algorithm = {
                         }else if(Algorithm.depth+1<=Algorithm.maxDepth-1){
 							Algorithm.depth++;
 							Algorithm.newMove=true;
-                        }
+                        }else{
+									if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
+										Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
+									
+									Algorithm.cubeCount++;
+								}
                     }
 
                 }
                 
             },
-    CheckValidMove:function(layer,size){
+    CheckValidMove:function(layer,size,depth,moves){
                 //disallows working on the same layer as the last move
                 //disallows working on a layer that has not been affected by the last move.
                 //scans all previous moves to see if the above layer has been affected by other moves, if it has not, then this
-                // cube is already present in another branch and should no longer be continued on this branch.
+				// cube is already present in another branch and should no longer be continued on this branch.
+				//Checks for algs that are interchangible such as RL and LR and will only do the first one that occurs (saves about 30%)
                 var isValid = true;
 				var isOdd = (size%2 == 0)? false:true;
 				
@@ -2454,7 +2485,7 @@ var Algorithm = {
                     return false;
                 }
                 var parallelLayers = [];//these are the only layers that can be moved without affecting the previous layers
-				var direction = Math.floor(layer/layerCount);
+				var direction = Math.floor(layer/layerCount);//aka plane
 
 				for(var i = 0; i < layerCount;i++){
 					if(i+layerCount*direction != layer){
@@ -2463,13 +2494,18 @@ var Algorithm = {
 				}
 
 				var cont = true;
-                for(var i = Algorithm.depth-1; i >= 0 && cont;i--){
+                for(var i = depth-1; i >= 0 && cont;i--){
                     cont = false;
-                    if(Algorithm.moves[i*2] == layer){
+                    if(moves[i*2] == layer){
                         isValid = false;
                         break;
-                    }else if(parallelLayers.includes(Algorithm.moves[i*2])){
-                        cont = true;// this allows the previous move to be checked (if it exists) as the parrellel layer does not affect the next layer so
+                    }else if(parallelLayers.includes(moves[i*2])){
+						if(moves[i*2]<layer){//checks for interchagible algs and will invalidate High to Low layer movement so LR is valid but RL is not(saves)
+						cont = true;
+						}else{
+							isValid = false;
+							break;
+						}// this allows the previous move to be checked (if it exists) as the parallel layer does not affect the next layer so
                         //the previous moves need to be checked to see if they affect the layer
                     }
                 }
@@ -2546,59 +2582,56 @@ var Algorithm = {
                         Algorithm.gMoves[Algorithm.gDepth*2]=0;
                         Algorithm.gMoves[Algorithm.gDepth*2+1]=0;
 						var timesRun = 0;
-                        while(!Algorithm.CheckValidMove(Algorithm.gMoves[Algorithm.gDepth*2],Algorithm.gCubeSize) && timesRun<Algorithm.CountLayers(Algorithm.gCubeSize)){
+                        while(!Algorithm.CheckValidMove(Algorithm.gMoves[Algorithm.gDepth*2],Algorithm.gCubeSize,Algorithm.gDepth,Algorithm.gMoves) && timesRun<Algorithm.CountLayers(Algorithm.gCubeSize)){
                             Algorithm.gMoves[Algorithm.gDepth*2]++;
 							timesRun ++;
                         }
-                        if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1){
-                            Algorithm.gDepth++;     
+                        if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1){//have we hit bottom?
+                            Algorithm.gDepth++;     //if not go down
 							Algorithm.gNewMove=true;
                         }else{
-                           	Algorithm.gNewMove = false;
+                           	Algorithm.gNewMove = false;//else explore
+							Algorithm.gCount++;
                         }
                             
                     }else{
 						
-						if(Algorithm.gDepth+1 == Algorithm.gMaxDepth && Algorithm.gMoves[Algorithm.gDepth*2+1]<=2){
-						if(Algorithm.gShouldCount){//this is here to keep the counter from increasing when the intial state is loaded as this is in fact not a new move
-						//this is the previous move, this allows the next move to be found before increasing the counter as it should.
-						Algorithm.gCount++;
-						}else{
-						Algorithm.gShouldCount = true;
-						}
-						}
-						if(Algorithm.gCount != AlgNumber)
-                        	Algorithm.gMoves[Algorithm.gDepth*2+1]++;
+						
+						//if(Algorithm.gCount != AlgNumber)
 
+                        	Algorithm.gMoves[Algorithm.gDepth*2+1]++;
+						
                         if(Algorithm.gMoves[Algorithm.gDepth*2+1]>2){
                            
                             Algorithm.gMoves[Algorithm.gDepth*2+1]=0;
                             Algorithm.gMoves[Algorithm.gDepth*2]++;
 							var timesRun = 0;
-                            while(!Algorithm.CheckValidMove(Algorithm.gMoves[Algorithm.gDepth*2],Algorithm.gCubeSize) && timesRun<Algorithm.CountLayers(Algorithm.gCubeSize)){
+                            while(!Algorithm.CheckValidMove(Algorithm.gMoves[Algorithm.gDepth*2],Algorithm.gCubeSize,Algorithm.gDepth,Algorithm.gMoves) && timesRun<Algorithm.CountLayers(Algorithm.gCubeSize)){
                             	Algorithm.gMoves[Algorithm.gDepth*2]++;
 								timesRun ++;
                         	}
-                            if(Algorithm.gMoves[Algorithm.gDepth*2]>=Algorithm.CountLayers(Algorithm.gCubeSize)){
+                            if(Algorithm.gMoves[Algorithm.gDepth*2]>=Algorithm.CountLayers(Algorithm.gCubeSize)){//go over layer count
                                 if(Algorithm.gDepth > 0){
-									Algorithm.gDepth--;
+									Algorithm.gDepth--;//go up
                                 }else{
 									Algorithm.gMoves[0]=0;
-									Algorithm.gMoves[1]=0;
+									Algorithm.gMoves[1]=0;//reset
 								}
 								
                             }else{
 
-                                if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1){
+                                if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1){//go down
                                     Algorithm.gDepth++;
                                     
 									Algorithm.gNewMove=true;
                                 }
                             }
-                        }else if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1 && Algorithm.gCount != AlgNumber){
-							Algorithm.gDepth++;
+                        }else if(Algorithm.gDepth+1<=Algorithm.gMaxDepth-1 && Algorithm.gCount != AlgNumber){//Are we at the bottom?
+							Algorithm.gDepth++;//go down
 							Algorithm.gNewMove=true;
-                        }
+                        }else{
+									Algorithm.gCount++;
+								}
                     }
 
                 }
@@ -2638,6 +2671,20 @@ var Algorithm = {
 				var filterLength = Algorithm.SavedFilters[ftu][move].length;
 				switch(format){
 					case(CubeDataType.Surface):{
+						for(var j = 0;j<filterLength;j++){
+							CubeData.Change(destinationCube,format,0,j,cubeSize,CubeData.PullInfo(originCube,Algorithm.SavedFilters[ftu][move][j],3))
+						}
+						originCube = CubeData.Copy(destinationCube);
+						break;
+					}
+					case(CubeDataType.Piece):{
+						for(var j = 0;j<filterLength;j++){
+							CubeData.Change(destinationCube,format,0,j,cubeSize,CubeData.PullInfo(originCube,Algorithm.SavedFilters[ftu][move][j],5))
+						}
+						originCube = CubeData.Copy(destinationCube);
+						break;
+					}
+					case(CubeDataType.Compact):{
 						for(var j = 0;j<filterLength;j++){
 							CubeData.Change(destinationCube,format,0,j,cubeSize,CubeData.PullInfo(originCube,Algorithm.SavedFilters[ftu][move][j],3))
 						}
@@ -2836,8 +2883,48 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 								
 								}
 							}
-						break;
+							break;
 						
+						}
+						break;
+					}
+					case(CubeDataType.Piece):{
+						switch(plane){
+							case(0):{
+								for(var l = 0;l<direction+1;l++){
+									copyDestinationToOrigin();
+									
+									if(planeLocation == 0){
+										for(var c = 0;c<size*size;c++){
+											destinationFilter[(size-1-(c % size))*size+Math.floor(c/size)] = originFilter[c];
+										}
+
+									}
+									else if(planeLocation == size-1){
+										offset = size * size + (size-2)*(2*size + (size-2)*2);
+										for(var c = 0;c<size*size;c++){
+											destinationFilter[offset+(size-1-(c % size))*size+Math.floor(c/size)] = (c==size-1 || c == size*(size-1))?originFilter[offset+c]+numberOfLocations*2:originFilter[offset+c];
+										}
+									}else{
+										offset=size*size+(planeLocation-1)*(2*size+(size-2)*2);
+										for(var c = 0;c<size-2;c++){
+										/*bot to bac*/destinationFilter[offset + size + c*2]              = originFilter[offset +  1 + (size - 3 - c)];
+										/*bac to top*/destinationFilter[offset + size + (size-2)*2 + 1 + c]            = originFilter[offset + size + c*2];
+										/*top to frt*/destinationFilter[offset + size + 1 + (size - 3 - c) * 2] = originFilter[offset + size + (size-2)*2 + 1 + c];
+										/*frt to bot*/destinationFilter[offset +  1 + (size - 3 - c)]            = originFilter[offset + size + 1 + (size - 3 - c) * 2];
+										}
+
+									}
+									
+								}
+								break;
+							}
+							case(1):{
+								break;
+							}
+							case(2):{
+								break;
+							}
 						}
 					}
 				}
@@ -2999,6 +3086,102 @@ var Controls = {
 		}
 	}
 
+};
+var ScoreMethods = {
+	Surface:0,
+	Piece:0
+};
+var Solver = {
+	SolveCube:function(data,format,success,failure){
+		//todo
+	},
+	ScoreCube:function(data,format,size,scoreMethod=ScoreMethods.Surface,cubes=[0]){
+
+				switch(scoreMethod){
+					case(ScoreMethods.Surface):{
+						var scores = [];
+						var cubeScore = 0;
+						for(var i = 0; i<cubes.length;i++){
+							cubeScore=0;
+							cube = cubes[i];
+							for(var j = 0;j<size*size;j++){
+								var x = j%size;
+								var y = Math.floor(j/size);//note: orientation varies from side to side, which ever one makes the math easiest to calculate.
+								var s0c = CubeData.PullSide(data,format,size,cube,x+y*size);//side 0 color, all sides are done at once
+								var s1c = CubeData.PullSide(data,format,size,cube,x+y*(size*4)+size*size);
+								var s2c = CubeData.PullSide(data,format,size,cube,x*2+y*(size*4)+size*size+size);
+								var s3c = CubeData.PullSide(data,format,size,cube,x*2+y*(size*4)+size*size+size);
+								var s4c = CubeData.PullSide(data,format,size,cube,x+y*(size*4)+size*size+size*3);
+								var s5c = CubeData.PullSide(data,format,size,cube,x+y*size+size*size+size*(size*4));
+								if(x>0){
+									if(s0c === CubeData.PullSide(data,format,size,cube,(x-1)+y*size))
+										cubeScore++;
+									if(s1c === CubeData.PullSide(data,format,size,cube,(x-1)+y*(size*4)+size*size))
+										cubeScore++;
+									if(s2c === CubeData.PullSide(data,format,size,cube,(x-1)*2+y*(size*4)+size*size+size))
+										cubeScore++;
+									if(s3c === CubeData.PullSide(data,format,size,cube,(x-1)*2+y*(size*4)+size*size+size))
+										cubeScore++;
+									if(s4c === CubeData.PullSide(data,format,size,cube,(x-1)+y*(size*4)+size*size+size*3))
+										cubeScore++;
+									if(s5c === CubeData.PullSide(data,format,size,cube,(x-1)+y*size+size*size+size*(size*4)))
+										cubeScore++;
+								}
+
+								if(x<size-1){
+									if(s0c === CubeData.PullSide(data,format,size,cube,(x+1)+y*size))
+										cubeScore++;
+									if(s1c === CubeData.PullSide(data,format,size,cube,(x+1)+y*(size*4)+size*size))
+										cubeScore++;
+									if(s2c === CubeData.PullSide(data,format,size,cube,(x+1)*2+y*(size*4)+size*size+size))
+										cubeScore++;
+									if(s3c === CubeData.PullSide(data,format,size,cube,(x+1)*2+y*(size*4)+size*size+size))
+										cubeScore++;
+									if(s4c === CubeData.PullSide(data,format,size,cube,(x+1)+y*(size*4)+size*size+size*3))
+										cubeScore++;
+									if(s5c === CubeData.PullSide(data,format,size,cube,(x+1)+y*size+size*size+size*(size*4)))
+										cubeScore++;
+								}
+
+								if(y>0){
+									if(s0c === CubeData.PullSide(data,format,size,cube,x+(y-1)*size))
+										cubeScore++;
+									if(s1c === CubeData.PullSide(data,format,size,cube,x+(y-1)*(size*4)+size*size))
+										cubeScore++;
+									if(s2c === CubeData.PullSide(data,format,size,cube,x*2+(y-1)*(size*4)+size*size+size))
+										cubeScore++;
+									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y-1)*(size*4)+size*size+size))
+										cubeScore++;
+									if(s4c === CubeData.PullSide(data,format,size,cube,x+(y-1)*(size*4)+size*size+size*3))
+										cubeScore++;
+									if(s5c === CubeData.PullSide(data,format,size,cube,x+(y-1)*size+size*size+size*(size*4)))
+										cubeScore++;
+								}
+								if(y<size-1){
+									if(s0c === CubeData.PullSide(data,format,size,cube,x+(y+1)*size))
+										cubeScore++;
+									if(s1c === CubeData.PullSide(data,format,size,cube,x+(y+1)*(size*4)+size*size))
+										cubeScore++;
+									if(s2c === CubeData.PullSide(data,format,size,cube,x*2+(y+1)*(size*4)+size*size+size))
+										cubeScore++;
+									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y+1)*(size*4)+size*size+size))
+										cubeScore++;
+									if(s4c === CubeData.PullSide(data,format,size,cube,x+(y+1)*(size*4)+size*size+size*3))
+										cubeScore++;
+									if(s5c === CubeData.PullSide(data,format,size,cube,x+(y+1)*size+size*size+size*(size*4)))
+										cubeScore++;
+								}
+
+
+							}
+						
+							scores.push(cubeScore);
+						}
+						return scores;
+						break;
+					}
+				}
+	}
 };
 var Study = {
 	FileElement:document.createElement("Input"),
@@ -3211,6 +3394,8 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 		var savedArray = new Uint8Array(Math.ceil(POT/8));
 		CubeData.ChangeBinaryData(savedArray,0,move,POT);
 		Algorithm.TurnCube(this.data,0,this.format,this.size,savedArray);
+		
+		console.log(Solver.ScoreCube(this.data,this.format,this.size));//STUDY DEBUG
 	}
 	this.render = function(shouldAnimate){
 		//shouldAnimate decides if the cube should progress its animation or not.
@@ -3356,6 +3541,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 					}else{
 						this.rotating = false;
 					}
+					this.resetCubies();
 				}else{
 					var per = this.animationTime/this.animationDuration;
 					this.currentDegrees = per * per * this.targetDegrees;
@@ -3481,7 +3667,7 @@ function start(){
 	Controls.SetUp();
 	Renderer.SetUpCamera();
 	Renderer.Clear();
-	testCube = new vCube(5,CubeDataType.Surface,generateSolvedCube(5,CubeDataType.Surface),undefined,undefined,undefined,true);
+	testCube = new vCube(3,CubeDataType.Surface,generateSolvedCube(3,CubeDataType.Surface),undefined,undefined,undefined,true);
 	testCube.render();
 	draw();
 }
@@ -3494,7 +3680,7 @@ function draw(){
 	/*
 	gl.useProgram(Renderer.DebugProgram);//debug for drawing the color map to the screen
 					
-	gl.uniform1i(Renderer.DebugUniforms.main_texture,0);
+	gl.uniform1i(Renderer.DebugUniforms.main_texture,2);
 				
 	gl.bindBuffer(gl.ARRAY_BUFFER,debugVBuffer);
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,debugEBuffer);
@@ -3518,8 +3704,19 @@ function draw(){
 }
 /*
 Notes and TO DO
-It would probably be better time wise draw to the main screen and then the map (resulting in running the code twice) rather than constantly switching shader programs between main and map
-
+Allow vCubes to have a time seeker/be controlled by a slider
+Create turn filter for piece type data
+	Add this feature to rearrange cubies in side of the vCube array to allow for PROPER coordinate selecting
+Allow vCubes to be edited (surface type only) (Maybe force all vCubes to have a surface data type for memory reasons?)
+Create Settings object - object that handels all settings and setting operations (such as visual, language, and various other items)
+Create Solver object - object that handels all solving operations
+	Add Solver.Score method that will score the cubes based on different criteria to give a total
+	Add Solver.solve method, solves the cube. (Possibly using A* algorithm?)
+	Add Solver.CheckIfPossible method.
+	Add Solver.CheckIfValid method.
+Actualy build mobile functionality, as UI is unfunctional on mobile.
+Optimize algorithm code
+Run tests
 */
 //apply super flip to 3by3
 /*nray = [3,2,
@@ -3543,6 +3740,57 @@ It would probably be better time wise draw to the main screen and then the map (
 3,1,
 5,1];
 for(var i = 0;i<nray.length;i+=2){testCube.addRotation(nray[i],nray[i+1]);}*/
+var allCubes;
+function DOSTUFF(){
+allCubes = CubeData.Create(CubeDataType.Surface,3,32076);
+var solvedCube = generateSolvedCube(3,CubeDataType.Surface);
+for(var i = 0;i<32076;i++){//428166
+	//cubeSize,AlgLength,AlgNumber,compressed
+	var workingCube = CubeData.Copy(solvedCube);
+	var algorithm = Algorithm.GetAlgorithm(3,4,i,true);
+	cList.push(i);
+	//data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true
+	Algorithm.TurnCube(workingCube,0,CubeDataType.Surface,3,algorithm,4,true);
+	CubeData.PasteCube(allCubes,CubeDataType.Surface,workingCube,i,3);
+	if(i%100==0)
+	console.log(i);
+}
+}
+var sameCount=0;
+var sectionCount = 0;
+var pairList = [];
+var cList=[];
+var i1 = 0;
+var i2 = 0;
+function DOSTUFFPART2(){
+	for(var i = 0;i<32076;i++){//428166
+		for(var j = i+1;j<32076;j++){//428166
+		if(i!=j){
+			sectionCount=0;
+			for(var k = 0;k<6;k++){
+				i1 = CubeData.PullInfo(allCubes,i*6+k,27);
+				i2 = CubeData.PullInfo(allCubes,j*6+k,27);
+				if(i1===i2){
+					sectionCount++;
+				}else{
+					break;
+				}
+			}
+			if(sectionCount==6){
+				sameCount++;
+				pairList.push([i,j]);
+				break;
+			}
+
+		}
+		
+	}
+		console.log(i);
+		
+	}
+}
+
+
         </script>
     </body>
 </html>
