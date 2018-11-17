@@ -422,16 +422,6 @@ Compact: Bits per Cube: 24 Bytes: 3
 
 
 var solved = [0,0,0,0,0,0,0,0,0, 1,1,1, 2,3 ,2,3 ,2,3 ,4,4,4, 1,1,1, 2,3 ,2,3 ,2,3 ,4,4,4, 1,1,1, 2,3 ,2,3 ,2,3 ,4,4,4, 5,5,5,5,5,5,5,5,5 ];
-function aSolved(ded=false){
-	aCube = CubeData.Create(CubeDataType.Surface,3,1);
-	for(var i = 0;i<solved.length;i++){
-		CubeData.Change(aCube,CubeDataType.Surface,0,i,3,solved[i]);
-	}
-	bCube = CubeData.Convert(aCube,CubeDataType.Surface,CubeDataType.Piece,3,true);
-	if(ded)
-	return aCube;
-	return bCube;
-}
 
 function generateSolvedCube(size = 3,type = 0){
 	aCube = CubeData.Create(CubeDataType.Surface,size,1);
@@ -3396,7 +3386,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 		Algorithm.TurnCube(this.data,0,this.format,this.size,savedArray);
 		
 		console.log(Solver.ScoreCube(this.data,this.format,this.size));//STUDY DEBUG
-	}
+	};
 	this.render = function(shouldAnimate){
 		//shouldAnimate decides if the cube should progress its animation or not.
 
@@ -3585,6 +3575,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						for(var i = 0;i<cl;i++){
 							var location = [this.cubies[i].model[3][3]+this.size/2-0.5,this.cubies[i].model[3][7]+this.size/2-0.5,this.cubies[i].model[3][11]+this.size/2-0.5];
 							//TODO FIX ^THIS^ IT'S A HACK AND SHOULD NOT BE DONE THIS WAY!!!^^^
+							//We should not have to use the matrix model to tell where the cubie is...
 							if(location[plane] == planeLocation){
 								this.rotatingCubies.push(i);
 							}
