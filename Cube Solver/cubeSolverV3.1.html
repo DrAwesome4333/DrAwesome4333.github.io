@@ -2745,7 +2745,7 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 		var layer;
 		var direction;
 		var isOdd = (size % 2 == 1);
-		var plane = 0;//0 is along z value, 1 is y, 2 is x
+		var plane = 0;//0 is a slice of x, 1 is a slice of y, 2 is a slice of z
 		var planeLocation = 0;//tells which slice of cube you are on.
 		var offset = 0;
 
@@ -2773,7 +2773,7 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 				if(isOdd){
 					plane = Math.floor(layer/(size-1));
 					planeLocation = layer%(size-1);
-					if(planeLocation + 1 > size/2){
+					if(planeLocation + 1 > size/2){//because odd cubes should not have their center turned
 						planeLocation++;
 					}
 				}else{
@@ -2887,30 +2887,41 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 						break;
 					}
 					case(CubeDataType.Piece):{
+						//Notes: to add a home value, you need to add the number of locations mult by the home value change to have the turner update the cube properly.
+						// Home change can go above 2 as the final value saved in data will be corrected to be in the right range. However it is nice to have the values
+						//in the range they should be to begin with
 						switch(plane){
 							case(0):{
 								for(var l = 0;l<direction+1;l++){
 									copyDestinationToOrigin();
 									
 									if(planeLocation == 0){
-										for(var c = 0;c<size*size;c++){
+										for(var c = 0;c<size*size;c++){//left side
 											destinationFilter[(size-1-(c % size))*size+Math.floor(c/size)] = originFilter[c];
 										}
 
-									}
-									else if(planeLocation == size-1){
+									}else if(planeLocation == size-1){
 										offset = size * size + (size-2)*(2*size + (size-2)*2);
-										for(var c = 0;c<size*size;c++){
-											destinationFilter[offset+(size-1-(c % size))*size+Math.floor(c/size)] = (c==size-1 || c == size*(size-1))?originFilter[offset+c]+numberOfLocations*2:originFilter[offset+c];
+										//       ^Left side    ^V layer  ^top and Bottom layers and then all remaining centers on front and back
+										for(var c = 0;c<size*size;c++){//right side
+											if(c==size-1)
+												destinationFilter[offset+(size-1-(c % size))*size+Math.floor(c/size)] = (originFilter[offset+c]+numberOfLocations)%(numberOfLocations*3);//Special case for right bottom back corner
+											else	
+												destinationFilter[offset+(size-1-(c % size))*size+Math.floor(c/size)] = (( c == size*(size-1))?originFilter[offset+c]+numberOfLocations*2:originFilter[offset+c])%(numberOfLocations*3);
 										}
 									}else{
 										offset=size*size+(planeLocation-1)*(2*size+(size-2)*2);
-										for(var c = 0;c<size-2;c++){
+										for(var c = 0;c<size-2;c++){//centers that are perp to the plane
 										/*bot to bac*/destinationFilter[offset + size + c*2]              = originFilter[offset +  1 + (size - 3 - c)];
 										/*bac to top*/destinationFilter[offset + size + (size-2)*2 + 1 + c]            = originFilter[offset + size + c*2];
 										/*top to frt*/destinationFilter[offset + size + 1 + (size - 3 - c) * 2] = originFilter[offset + size + (size-2)*2 + 1 + c];
 										/*frt to bot*/destinationFilter[offset +  1 + (size - 3 - c)]            = originFilter[offset + size + 1 + (size - 3 - c) * 2];
 										}
+										//edges
+										destinationFilter[offset] = (originFilter[offset+size-1]+numberOfLocations)%(numberOfLocations*2);
+										destinationFilter[offset + 2*(size-2) + size] = originFilter[offset];
+										destinationFilter[offset+ 2*(size-2) + size*2-1] = (originFilter[offset + 2*(size-2) + size]+numberOfLocations)%(numberOfLocations*2);
+										destinationFilter[offset+size-1] = originFilter[offset+ 2*(size-2) + size*2-1];
 
 									}
 									
