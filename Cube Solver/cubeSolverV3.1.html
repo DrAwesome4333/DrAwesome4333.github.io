@@ -2929,6 +2929,67 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 								break;
 							}
 							case(1):{
+								for(var l = 0;l<direction+1;l++){
+									copyDestinationToOrigin();
+									
+									var layerJump = (size- 1)*4;
+									if(planeLocation == 0){
+										for(var c = 0;c<size-2;c++){//bottom side centers & edges
+											//centers
+											var offSet = size*size+1;
+											for(var d=0;d<size-2;d++){
+												destinationFilter[offSet + d*layerJump + (size-3-c)] = originFilter[offSet + c*layerJump + d];
+											}
+											//edges
+											/*LD to DF*/destinationFilter[size*size+size-1+c*layerJump] = (originFilter[1+c]+numberOfLocations)%(numberOfLocations*2);
+											/*DF to RD*/destinationFilter[size*size+layerJump*(size-2)+size-2-c] = originFilter[size*size+size-1+c*layerJump];
+											/*RD to DB*/destinationFilter[size*size+(size-3-c)*layerJump] = originFilter[size*size+layerJump*(size-2)+size-2-c];
+											/*DB to LD*/destinationFilter[1+c] = (originFilter[size*size+(size-3-c)*layerJump]+numberOfLocations)%(numberOfLocations*2);
+
+										}
+										//corners
+										/*RDB to LDB*/destinationFilter[0] = (originFilter[size*size+layerJump*(size-2)]+numberOfLocations*2)%(numberOfLocations*3);
+										/*LDB to LDF*/destinationFilter[size-1] = (originFilter[0]+numberOfLocations*2)%(numberOfLocations*3);
+										/*LDF to RDF*/destinationFilter[size*size+layerJump*(size-2)+size-1] = (originFilter[size-1]+numberOfLocations*2)%(numberOfLocations*3);
+										/*RDF to RDB*/destinationFilter[size*size+layerJump*(size-2)] = originFilter[size*size+layerJump*(size-2)+size-1];
+
+
+									}else if(planeLocation == size-1){
+										for(var c = 0;c<size-2;c++){//bottom side centers & edges
+											//centers
+											var offSet = size*size+3+3*(size-2);
+											for(var d=0;d<size-2;d++){
+												destinationFilter[offSet + d*layerJump + (size-3-c)] = originFilter[offSet + c*layerJump + d];
+											}
+											//edges
+											/*LU to UF*/destinationFilter[size*size+(size-2)*4+3+c*layerJump] = originFilter[size*(size-1)+1+c];
+											/*UF to RU*/destinationFilter[size*size+layerJump*(size-2)+(size-1)*size+size-2-c] = (originFilter[size*size+(size-2)*4+3+c*layerJump]+numberOfLocations)%(numberOfLocations*2);
+											/*RU to UB*/destinationFilter[size*size+(size-3-c)*layerJump+2+(size-2)*3] = (originFilter[size*size+layerJump*(size-2)+(size-1)*size+size-2-c]+numberOfLocations)%(numberOfLocations*2);
+											/*UB to LU*/destinationFilter[size*(size-1)+1+c] = originFilter[size*size+(size-3-c)*layerJump+2+(size-2)*3];
+
+										}
+										//corners
+										/*RUB to LUB*/destinationFilter[size*(size-1)] = originFilter[size*size+layerJump*(size-2)+size*(size-1)];
+										/*LUB to LUF*/destinationFilter[size*(size-1)+size-1] = (originFilter[size*(size-1)]+numberOfLocations)%(numberOfLocations*3);
+										/*LUF to RUF*/destinationFilter[size*size+layerJump*(size-2)+size-1+size*(size-1)] = originFilter[size*(size-1)+size-1];
+										/*RUF to RUB*/destinationFilter[size*size+layerJump*(size-2)+size*(size-1)] = (originFilter[size*size+layerJump*(size-2)+size-1+size*(size-1)]+numberOfLocations*2)%(numberOfLocations*3);
+									}else{
+										offset=size+1+size*(planeLocation-1);
+										for(var c = 0;c<size-2;c++){//centers that are perp to the plane
+										/*bac to lef*/destinationFilter[offset + c]              = originFilter[size*size+size+c*layerJump+(planeLocation-1)*2];
+										/*lef to frt*/destinationFilter[size*size+size+1+c*layerJump+(planeLocation-1)*2]            = originFilter[offset + c];
+										/*frt to rig*/destinationFilter[size*size+(size-2)*layerJump+size+(size-2-c)+size*(planeLocation-1)] = originFilter[size*size+size+1+c*layerJump+(planeLocation-1)*2];
+										/*rig to bac*/destinationFilter[size*size+size+c*layerJump+(planeLocation-1)*2]            = originFilter[size*size+(size-2)*layerJump+size+(size-2-c)+size*(planeLocation-1)];
+										}
+										//edges
+										/*RB to LB*/destinationFilter[size+(planeLocation-1)*size] = originFilter[size*size+(size-2)*layerJump+size+(planeLocation-1)*size];
+										/*LB to LF*/destinationFilter[size+planeLocation*size-1] = (originFilter[size+(planeLocation-1)*size]+numberOfLocations)%(numberOfLocations*2);
+										/*LF to RF*/destinationFilter[size*size+(size-2)*layerJump+size+planeLocation*size-1] = originFilter[size+planeLocation*size-1];
+										/*RF to RB*/destinationFilter[size*size+(size-2)*layerJump+size+(planeLocation-1)*size] = (originFilter[size*size+(size-2)*layerJump+size+planeLocation*size-1]+numberOfLocations)%(numberOfLocations*2);
+
+									}
+									
+								}
 								break;
 							}
 							case(2):{
