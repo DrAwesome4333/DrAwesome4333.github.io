@@ -3002,7 +3002,7 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 											//centers
 											var offSet = size*size+size;
 											for(var d=0;d<size-2;d++){
-												destinationFilter[offSet + d*layerJump + c*2] = originFilter[offSet + c*layerJump + d*2];
+												destinationFilter[offSet + d*layerJump + c*2] = originFilter[offSet + c*layerJump + (size-3-d)*2];
 											}
 											//edges
 											/*UB to LB*/destinationFilter[size+size*c] = (originFilter[size*size+3*(size-2)+2+c*layerJump]+numberOfLocations)%(numberOfLocations*2);
@@ -3023,7 +3023,7 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 											//centers
 											var offSet = size*size+size+1;
 											for(var d=0;d<size-2;d++){
-												destinationFilter[offSet + d*layerJump + c*2] = originFilter[offSet + c*layerJump + d*2];
+												destinationFilter[offSet + d*layerJump + c*2] = originFilter[offSet + c*layerJump + (size-3-d)*2];
 											}
 											//edges
 											/*UF to LF*/destinationFilter[size+size*c+size-1] = (originFilter[size*size+3*(size-2)+2+c*layerJump+size-1]+numberOfLocations)%(numberOfLocations*2);
@@ -3092,14 +3092,14 @@ var Controls = {
 				var disCubie = false;
 				for(var j = 0; j<VCubeList[info[0]].cubies[i].dataLink.length;j++){
 					if(VCubeList[info[0]].cubies[i].dataLink[j] === (info[1]*256+info[2])){
-						//VCubeList[info[0]].cubies[i].highlightedSides[j]=true;
+						VCubeList[info[0]].cubies[i].highlightedSides[j]=true;
 						disCubie = true;
 					}else{
-						//VCubeList[info[0]].cubies[i].highlightedSides[j]=false;
+						VCubeList[info[0]].cubies[i].highlightedSides[j]=false;
 					}
 				}
 
-				VCubeList[info[0]].cubies[i].inError = disCubie;
+				//VCubeList[info[0]].cubies[i].inError = disCubie;
 			}
 		}else{
 			if(!Controls.MouseIsDown){
@@ -3411,6 +3411,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 			for(var j = 0;j<c.type+1;j++){
 				newColors[j] = CubeData.PullSide(this.data,this.format,this.size,0,c.dataLink[j]);
 			}
+			c.home = 0;
 			Renderer.UpdateModel(c,0,newColors);
 		}
 	};
@@ -3526,16 +3527,68 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 		CubeData.ChangeBinaryData(savedArray,0,move,POT);
 		Algorithm.TurnCube(this.data,0,this.format,this.size,savedArray);
 		
-		console.log(Solver.ScoreCube(this.data,this.format,this.size));//STUDY DEBUG
+		//console.log(Solver.ScoreCube(this.data,this.format,this.size));//STUDY DEBUG
 	};
+	this.rotateCubies = function(move){//updates the cubies position in the cubie list for proper coordinate selecting for animations and cube editing
+
+		//turns can be simplified into pieces that are swapped and transformed, using a lot of the cubeData utilities made previously, this should not be a hard task.
+		var ftu = -1;//filter to use
+		for(var i = 0;i<Algorithm.SavedFilters.length;i+=3){//check for the filters we need for the moves we are doing, if they are not already built, build them.
+			if(Algorithm.SavedFilters[i]==this.size && Algorithm.SavedFilters[i+1]==CubeDataType.Piece){
+				ftu = i+2;
+				break;
+			}
+		}
+		if(ftu == -1){
+			Algorithm.SavedFilters.push(this.size,CubeDataType.Piece,Algorithm.BuildFilters(this.size,CubeDataType.Piece));
+			ftu=Algorithm.SavedFilters.length-1;
+		}
+		var destinationList;
+
+
+			destinationList = this.cubies.slice(0);
+				var filterLength = Algorithm.SavedFilters[ftu][move].length;
+				var spareObject;
+				var LocationCount = this.size*this.size*this.size-(this.size-2)*(this.size-2)*(this.size-2);
+
+						for(var j = 0;j<filterLength;j++){
+							var originLocation = Algorithm.SavedFilters[ftu][move][j];
+							originLocation %= LocationCount;
+							destinationList[j]=this.cubies[originLocation];
+							var xyz = CubeData.GetPieceCoords(j,this.size);
+							var x = xyz[0];
+							var y = xyz[1];
+							var z = xyz[2];
+							var dl = CubeData.GetSides(x,y,z,this.size);
+							var cubieIdData = [[this.idColor/256,0,0],[this.idColor/256,0,0],[this.idColor/256,0,0]];
+							for(var i = 0;i<dl.length;i++){
+								cubieIdData[i][1] = Math.floor(dl[i]/256)/255;
+								cubieIdData[i][2] = (dl[i]%256)/255;
+							}
+							var cw = true;
+							if((x==0 && y == 0 && z!=0) || (x==0 && y != 0 && z!=0) || (x != 0 && y != 0 && z == 0) || (x != 0 && y == 0 && z == 0)){//finds the pieces where the data is not already clockwise when given through color[]
+								cw = false;
+							}
+							destinationList[j].dataLink = dl;
+							if(!cw && CubeData.CountSides(x,y,z,this.size)>2){
+								destinationList[j].dataLink = [dl[0],dl[2],dl[1]];
+								Renderer.UpdateModel(destinationList[j],1,[cubieIdData[0],cubieIdData[2],cubieIdData[1]]);
+							}
+							else
+								Renderer.UpdateModel(destinationList[j],1,cubieIdData);
+						}
+				this.cubies = destinationList.slice(0);
+						
+			
+	}
 	this.render = function(shouldAnimate){
 		//shouldAnimate decides if the cube should progress its animation or not.
 
 		
-		if(!this.timeControl && shouldAnimate){
+		if(!this.timeControl && shouldAnimate){//Is the cube just being moved but not controlled by an external source?
 			if(this.rotating){
 				this.animationTime++;
-				if(this.animationTime>=this.animationDuration){
+				if(this.animationTime>=this.animationDuration){//Is the animation done?
 					this.animationTime = 0;
 					
 					/*
@@ -3552,22 +3605,24 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 							 0,0,1,0,
 							 0,0,0,1];
 					*/
-					this.rotationMatrix[this.rotationLocations[0]] = Math.round(Math.cos(pr*this.targetDegrees));
+					this.rotationMatrix[this.rotationLocations[0]] = Math.round(Math.cos(pr*this.targetDegrees));//update the rotation matrix to reflect the goal position
 					this.rotationMatrix[this.rotationLocations[1]] = Math.round(-Math.sin(pr*this.targetDegrees));
 					this.rotationMatrix[this.rotationLocations[2]] = Math.round(Math.sin(pr*this.targetDegrees));
 					this.rotationMatrix[this.rotationLocations[3]] = Math.round(Math.cos(pr*this.targetDegrees));
 					for(var i = 0;i<this.rotatingCubies.length;i++){
-
+						//Add the rotation matrix applied through the temp matrix on the cubies to the cubies own model matrix and reset the temp matrix
 						this.cubies[this.rotatingCubies[i]].model[3] = Renderer.Mat4Multiply(this.rotationMatrix,this.cubies[this.rotatingCubies[i]].model[3]);
 						this.cubies[this.rotatingCubies[i]].model[6] = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
 
 					}
 					
 					this.rotatingCubies = [];
+					this.rotateCubies(this.rotationQue[0]);
 					if(!this.recording){
 						this.rotationQue.splice(0,1);
 					}
 					if(this.recording || this.retainStartData && this.rotationQue.length > this.quePosition + 1){
+						//Are we recording and is there more information in the que? if so don't damage the start data but start animating the next rotation
 						this.quePosition++;
 							
 						var layer;
@@ -3593,7 +3648,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						}
 						var cl = this.cubies.length;
 						for(var i = 0;i<cl;i++){
-							var location = CubeData.GetPieceCoords(i,this.size);
+							var location = CubeData.GetPieceCoords(i,this.size);//BUG FIX this will not work after the first rotaion right now
 							if(location[plane] == planeLocation){
 								this.rotatingCubies.push(i);
 							}
@@ -3618,8 +3673,8 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 									break;
 							
 						}
-					}else if(this.rotationQue.legnth > 0){
-						
+					}else if(this.rotationQue.length > 0){
+						//if we are not recoriding but still have some info in the que, animate and update the data as well for the next rotaion in que.
 						var layer;
 						var direction;
 						var isOdd = (this.size % 2 == 1);
@@ -3644,7 +3699,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						}
 						var cl = this.cubies.length;
 						for(var i = 0;i<cl;i++){
-							var location = CubeData.GetPieceCoords(i,this.size);
+							var location = CubeData.GetPieceCoords(i,this.size);//BUG FIX NOW
 							if(location[plane] == planeLocation){
 								this.rotatingCubies.push(i);
 							}
@@ -3673,7 +3728,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						this.rotating = false;
 					}
 					this.resetCubies();
-				}else{
+				}else{//if the animation is on going, update the rotation matrix for all the cubies that are affected
 					var per = this.animationTime/this.animationDuration;
 					this.currentDegrees = per * per * this.targetDegrees;
 					this.rotationMatrix[this.rotationLocations[0]] = Math.cos(pr*this.currentDegrees);
@@ -3685,7 +3740,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 					}
 				}
 
-			}else if(this.rotationQue.length > 0){
+			}else if(this.rotationQue.length > 0){//if we are not rotating right now, should we be?
 						this.rotating = true;
 						var layer;
 						var direction;
@@ -3714,9 +3769,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						var cl = this.cubies.length;
 						this.rotatingCubies = [];
 						for(var i = 0;i<cl;i++){
-							var location = [this.cubies[i].model[3][3]+this.size/2-0.5,this.cubies[i].model[3][7]+this.size/2-0.5,this.cubies[i].model[3][11]+this.size/2-0.5];
-							//TODO FIX ^THIS^ IT'S A HACK AND SHOULD NOT BE DONE THIS WAY!!!^^^
-							//We should not have to use the matrix model to tell where the cubie is...
+							var location = CubeData.GetPieceCoords(i,this.size);//BUG FIX this will not work after the first rotaion right now
 							if(location[plane] == planeLocation){
 								this.rotatingCubies.push(i);
 							}
