@@ -44,42 +44,42 @@
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#E68000;
+				background-color:#0000FF;
 				pointer-events:auto;
 			}
 			.color1{
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#FFFFFF;
+				background-color:#E68000;
 				pointer-events:auto;
 			}
 			.color2{
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#0000FF;
+				background-color:#FFFF00;
 				pointer-events:auto;
 			}
 			.color3{
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#00FF00;
+				background-color:#FFFFFF;
 				pointer-events:auto;
 			}
 			.color4{
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#FFFF00;
+				background-color:#FF0000;
 				pointer-events:auto;
 			}
 			.color5{
 				width:20px;
 				height:20px;
 				border-radius:3px;
-				background-color:#FF0000;
+				background-color:#00FF00;
 				pointer-events:auto;
 			}
 			.colorbg{
@@ -628,7 +628,7 @@ var CubeData={
 			case CubeDataType.Piece:{
 				switch (format2){
 					case CubeDataType.Surface:{
-						var count = Math.floor(data.length / (((size*size*size) - ((size-2)*(size-2)*(size-2)))*5 ) );
+						var count = Math.floor((data.length * 8) / (((size*size*size) - ((size-2)*(size-2)*(size-2)))*5 ) );
 						var newData = CubeData.Create(CubeDataType.Surface,size,count);
 						for(var i = 0; i < count * size * size * 6; i++){
 							CubeData.Change(newData,CubeDataType.Surface,Math.floor(i/(size * size * 6)), i%(size*size*6),size,CubeData.PullSide(data,CubeDataType.Piece,size,Math.floor(i/(size*size*6)),i%(size*size*6)));
@@ -937,6 +937,7 @@ var CubeData={
 				for(var i = 0;i<3;i++){
 					if(cw && locationFaces[i] == face){
 						surfaceIndex = i;
+						break;
 					}else if(!cw){
 						if(locationFaces[i] == face && i == 0)
 						surfaceIndex = 0;
@@ -3087,12 +3088,16 @@ var Controls = {
 			}else{
 				document.getElementById("cube_edit").style.cursor="move";
 			}
+			if(this.MouseClicked){
+							VCubeList[info[0]].changeSticker((info[1]*256+info[2]),selColor,true);
+			}
 			//highlight sides
 			for(var i = 0; i<VCubeList[info[0]].cubies.length;i++){
 				var disCubie = false;
 				for(var j = 0; j<VCubeList[info[0]].cubies[i].dataLink.length;j++){
 					if(VCubeList[info[0]].cubies[i].dataLink[j] === (info[1]*256+info[2])){
 						VCubeList[info[0]].cubies[i].highlightedSides[j]=true;
+					
 						disCubie = true;
 					}else{
 						VCubeList[info[0]].cubies[i].highlightedSides[j]=false;
@@ -3116,7 +3121,7 @@ var Controls = {
 	MouseIsDown:false,
 	MouseJustWentDown:false,
 	MouseClicked:false,
-	ClickTime:100,//how long a the mouse must be down for it to no longer be a click
+	ClickTime:200,//how long a the mouse must be down for it to no longer be a click
 	ClickTimer:null,
 	SelectedCube:-1,
 	SetUp:function(){
@@ -3403,6 +3408,28 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						0,scale/this.size,0,0,
 						0,0,scale/this.size,0,
 						0,0,0,1];
+	};
+	this.changeSticker = function(sticker,id,override=false){
+		//sticker is a number that identifies which sticker is being changed
+		//id is what color to change the sticker to
+		//override allows the function to automatically change the format of the cube to surface type if possible to change a single sticker
+		//returns true or false to tell if it was a success or not
+		if(this.format == CubeDataType.Surface){
+			CubeData.Change(this.data,CubeDataType.Surface,0,sticker,this.size,id);
+			this.updateColors();
+		}else if (this.format == CubeDataType.Piece && override){
+			this.data=CubeData.Convert(this.data,CubeDataType.Piece,CubeDataType.Surface,this.size,false);
+			this.format = CubeDataType.Surface;
+			return this.changeSticker(sticker,id);
+		}else{
+			if(this.format == CubeDataType.Piece && !override){
+				throw "Cannot change data type of cube without override enabled!";
+			}else if(this.format == CubeDataType.Compact){
+				throw "Cannot change data type of cube from compact data!";
+			}else{
+				throw "An error occured!";
+			}
+		}
 	};
 	this.updateColors = function(){//updates the colors on cubies to match that of the data, resets the cubies position as a result, should only be used on edit cubes or cubes that update the data as they go along.
 		for(var i = 0;i<this.cubies.length;i++){
@@ -3841,6 +3868,7 @@ var trans = -10;
 var op = document.getElementById("debugOP");
 var debugVBuffer = null;
 var debugEBuffer = null;
+var selColor=0;
 
 var VCubeList = [];
 function update(){
