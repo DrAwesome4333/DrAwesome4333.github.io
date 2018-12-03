@@ -3386,6 +3386,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 	this.cubies=[];
 	this.retainStartData = false;//tells if the data it has should be updated or not when rotating or if it is just visual
 	this.recording = false;//decides weither or not the rotation que should be emptied after each move.
+	this.edit = true;
 	this.timeControl = false;//tells wether or not the cube's animation is time controlled by something else such as a slider
 	this.animationTime = 0;
 	this.animationStart = 0;
@@ -3414,10 +3415,10 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 		//id is what color to change the sticker to
 		//override allows the function to automatically change the format of the cube to surface type if possible to change a single sticker
 		//returns true or false to tell if it was a success or not
-		if(this.format == CubeDataType.Surface){
+		if(this.format == CubeDataType.Surface && !this.recording && this.edit){
 			CubeData.Change(this.data,CubeDataType.Surface,0,sticker,this.size,id);
 			this.updateColors();
-		}else if (this.format == CubeDataType.Piece && override){
+		}else if (this.format == CubeDataType.Piece && override && !this.recording && this.edit){
 			this.data=CubeData.Convert(this.data,CubeDataType.Piece,CubeDataType.Surface,this.size,false);
 			this.format = CubeDataType.Surface;
 			return this.changeSticker(sticker,id);
@@ -3426,7 +3427,10 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 				throw "Cannot change data type of cube without override enabled!";
 			}else if(this.format == CubeDataType.Compact){
 				throw "Cannot change data type of cube from compact data!";
-			}else{
+			}else if(!(!this.recording && this.edit)){
+				throw "Cannot edit data, cube does not have editing enabled!";
+			}
+			else{
 				throw "An error occured!";
 			}
 		}
