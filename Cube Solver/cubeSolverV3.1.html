@@ -313,7 +313,7 @@
 					light_level=1.0;\n\
 				}\n\
 		        if(texture_mode == 0){\n\
-		            gl_FragColor = vec4(mix(iColor,back_color,data.r)*overlay_color*max(light_level,0.2),1.0);\n\
+		            gl_FragColor = vec4(mix(iColor,back_color,data.r)*overlay_color*max(light_level,0.4),1.0);\n\
 					gl_FragColor.rgb += spec;\n\
 		        }else if(texture_mode == 2){\n\
 					data.a=1.0;\n\
@@ -487,7 +487,7 @@ var CubeData={
 			var newArray = new Uint8Array(3);
 			
 			return newArray;
-		}else if(fomrat == CubeDataType.Fast){
+		}else if(format == CubeDataType.Fast){
 			var newArray = new Uint8Array(count*(size*size*6));
 
 			return newArray;
@@ -645,7 +645,7 @@ var CubeData={
 					}
 					case(CubeDataType.Fast):{
 						var newData = CubeData.Create(CubeDataType.Fast,size);
-						for(var i = 0;i<data.length;i++){
+						for(var i = 0;i<newData.length;i++){
 							newData[i]=CubeData.PullSide(data,format1,size,cube,i);
 						}
 						return newData;
@@ -684,7 +684,7 @@ var CubeData={
 					}
 					case(CubeDataType.Fast):{
 						var newData = CubeData.Create(CubeDataType.Fast,size);
-						for(var i = 0;i<data.length;i++){
+						for(var i = 0;i<newData.length;i++){
 							newData[i]=CubeData.PullSide(data,format1,size,cube,i);
 						}
 						return newData;
@@ -847,6 +847,7 @@ var CubeData={
 				for(var i = 0;i<cubeSize;i++){
 					newData[i]=data[i+cubeSize*cube];
 				}
+				return newData;
 			}
 		}
 	},
@@ -910,6 +911,8 @@ var CubeData={
 		var rInfo = 0;
 		if(format == CubeDataType.Surface){
 			rInfo = CubeData.PullInfo(data,cube*(size*size*6)+number,3);//Stickers / sides are already in a format that can easily be pulled
+		}else if(format == CubeDataType.Fast){
+			rInfo = data[cube*(size*size*6)+number];//Stickers / sides are already in a format that can easily be pulled
 		}else if(format == CubeDataType.Piece){
 			//TODO
 			//NEEDS MORE TESTING
@@ -1475,6 +1478,16 @@ var CubeData={
 			return size*size*6;
 		}
 		return 0;
+	},
+	TranslateCube:function(data,format,size){
+		/*
+		This function will read the corners and centers to update the color ID's so that when the cube is solved, the colors still follow
+		LBD order.
+		This means that if a cube has yellow on top instead of red but the color codes are set up so that red is on top, this will
+		read the stickers to see if all the red IDs need to be swapped with the Yellow IDs so the code can understand what is going on and when the cube is solved.
+		This will also change the Colors on the renderer so that they are all still the same color and the user does not see the translation.
+		*/
+		//TODO
 	},
 	PartString: "",
 	PieceCodes:["012","031","024","043","152","135","254","345",
@@ -2235,7 +2248,8 @@ var Renderer = {
 	     gl.flush();
 	},
     HasRun:false,
-    Models:[{
+    Models:[
+		{
 		//do not put these arrays in float 32 in this area of the code.
         center:[-0.5,-0.5,-0.5,  0.0,0.0,0.0,  -1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,  0.0,0.0,  0.0,0.0,1.0, 0.0,1.0,0.0,//Left
 				-0.5,-0.5, 0.5,  0.0,0.0,0.0,  -1.0,0.0,0.0,  0.0,0.0,0.0,  1.0,0.0,  1.0,0.0,  0.0,0.0,1.0, 0.0,1.0,0.0,
@@ -2351,7 +2365,8 @@ var Renderer = {
 		//New, E buffers (Faces) are now stored in 1 buffer that is shared among ALL CUBIES of the same type and style. This will cut down memory and and more importantly, drop the number of required uploads to buffers.
 		//so instead of [[face1],[face2],[face3],[body]] it will go [[face1,face2,face3,body],[face1Start,face1length....],buffer]	
 		//the cube can be broken into 4 parts, 1 for each color (3), and then another part that is not tied to a color but still renders as part of the piece. (in the current model, this is nothing)
-	},{
+	},
+		{
 		//do not put these arrays in float 32 in this area of the code.
         center:[-0.5,-0.5,-0.5,  0.0,0.0,0.0,  -1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,  0.0,0.0,  0.0,0.0,1.0, 0.0,1.0,0.0,//Left
 				-0.5,-0.5, 0.5,  0.0,0.0,0.0,  -1.0,0.0,0.0,  0.0,0.0,0.0,  1.0,0.0,  1.0,0.0,  0.0,0.0,1.0, 0.0,1.0,0.0,
@@ -2776,7 +2791,7 @@ var Algorithm = {
                     IndexRun(AlgNumber);
 				}
 	},
-	TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true){
+	TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true){
 		//Accepts moves in compressed format and does them to the cube
 		//should Edit states wiether or not the original data should remain the same
 		//if false, the new cube is just returned, if true, the data is updated to the new cube as well
@@ -2802,7 +2817,10 @@ var Algorithm = {
 			originCube = CubeData.PullCube(data,format,cube,cubeSize);
 			destinationCube = CubeData.Copy(originCube);
 			for(var i = 0;i<moveCount;i++){
-				move = CubeData.PullInfo(moves,i,POT);
+				if(compressed)
+					move = CubeData.PullInfo(moves,i,POT);
+				else
+					move = moves[i];
 				var filterLength = Algorithm.SavedFilters[ftu][move].length;
 				switch(format){
 					case(CubeDataType.Surface):{
@@ -3233,7 +3251,7 @@ var Controls = {
 		var info = new Uint8Array(4);
 		
 		gl.readPixels(X,Y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,info)
-		op.innerHTML="Cube Number: "+info[0] + ", Sticker Number: "+(info[1]*256+info[2])+", Mouse Location: "+X+" , "+Y;
+		//op.innerHTML="Cube Number: "+info[0] + ", Sticker Number: "+(info[1]*256+info[2])+", Mouse Location: "+X+" , "+Y;
 		if(info[0]!=255){
 			if(!Controls.MouseIsDown){
 			document.getElementById("cube_edit").style.cursor="pointer";
@@ -3385,11 +3403,42 @@ var ScoreMethods = {
 	Surface:0,
 	Piece:0
 };
+/**
+ * @Constructor
+ * @param {data} array
+*/
+function CubeNode(data,algorithm,score){
+	/**
+		* A cube node for solving
+		* @contructor
+	*/
+	this.data=data;
+	this.algorithm = algorithm;
+	this.score = score;
+	//this.children = [];
+	//this.active = true;
+}
 var Solver = {
+	Running:false,
+	Cancel:false,//used to stop the async proccess.
+	CubeSize:3,
+	MoveWeight:1,//Calculation: size*size*5
+	CubeData:null,
+	CubeNodes:[],
+	MaxNodes : 50000,
+	Result:[],
+	ScoreMax:0,
+	Status:1,
+	TryCount:0,
+	MaxTry:100,
+	StartTime:0,
+	EndTime:0,
+	//1 is running(if Running is true), 2 is failed(if running is false), 3 is success.
 	/**
 	* @param {vCube} vcube A cube to link to for failure and success(optional)
 	*/ 
 	SolveCube:function(data,format,size,success=this.Success,failure=this.Fail,vcube){
+		//testCube.data = new Uint8Array([141, 144, 36, 160, 85, 2, 100, 53, 8, 177, 52, 100, 102, 209, 13, 173, 210, 138, 85, 22, 0]);
 		//TODO
 		/*Solver.SolveCube(testCube.data,0,testCube.size,undefined,undefined,testCube)
 		Data is input cube in the format specified.
@@ -3451,6 +3500,120 @@ var Solver = {
 		}
 		for(var i = 0; i<vcube.cubies.length;i++){
 			 vcube.cubies[i].inError=false;
+		}
+		var possible = this.CheckIfPossible(data,format,size);
+		if(possible && !this.Running){
+			var fastData = CubeData.Convert(data,format,CubeDataType.Fast,size,false);
+			this.CubeNodes = [];
+			this.ScoreMax = (size-2)*(size-2)*24+(size-2)*24*3+48;
+			this.CubeNodes.push(new CubeNode(fastData,[],this.ScoreMax-this.ScoreCube(fastData,CubeDataType.Fast,size,ScoreMethods.Surface,[0])[0]));
+			this.MoveWeight = size*7;
+			this.CubeSize = size;
+			this.Running = true;
+			this.Status = 1;
+			this.Cancel = false;
+			this.CubeData = fastData;
+			this.StartTime = performance.now();
+			this.Count = 0;
+			this.SolveControl();
+		}
+
+	},
+	SolveControl:function(){
+		for(var i = 0;i<Solver.MaxTry && Solver.Running;i++){
+			Solver.SolveRun();
+		}
+		
+		op.innerHTML = "Top Alg: "+Solver.CubeNodes[0].algorithm;
+		Solver.Count++;
+		if(Solver.Running){
+			requestAnimationFrame(Solver.SolveControl);
+		}
+	},
+	SolveRun:function(){
+		if(!Solver.Cancel && Solver.Running){
+			if(Solver.CubeNodes.length==0){//If we have run out of nodes, then something really went wrong and we should stop right now
+				Solver.Status = 2;
+				Solver.Running = false;
+				console.log("Ran out of nodes some how");
+				return;
+			}
+			if(Solver.ScoreCube(Solver.CubeNodes[0].data,CubeDataType.Fast,Solver.CubeSize)[0] === Solver.ScoreMax){
+				Solver.Status = 3;
+				Solver.Running = false;
+				Solver.Result = Solver.CubeNodes[0].algorithm;
+				console.log("Success!");
+				Solver.EndTime = performance.now();
+				console.log("Itterations: "+Solver.Count);
+				console.log("Duration: "+Math.round((Solver.EndTime-Solver.StartTime)/1000))
+				for(var i = 0;i<Solver.Result.length;i+=2){
+					testCube.addRotation(Solver.Result[i],Solver.Result[i+1]);
+				}
+			}else{
+				
+				var cubes = [];
+				var top5 = [];
+				var startData = Solver.CubeNodes[0].data;
+				var currentScore = Solver.ScoreCube(Solver.CubeNodes[0].data,CubeDataType.Fast,Solver.CubeSize)[0];
+				var layersToDo = [];
+				var allLayers = Algorithm.CountLayers(Solver.CubeSize);
+				var algLength = Solver.CubeNodes[0].algorithm.length/2;
+				var sAlg = Solver.CubeNodes[0].algorithm;
+				for(var i = 0;i<allLayers;i++){
+					if(Algorithm.CheckValidMove(i,Solver.CubeSize,algLength,Solver.CubeNodes[0].algorithm)){
+						layersToDo.push(i);
+					}
+				}
+				var lc = layersToDo.length;
+				for(var i = 0;i<lc;i++){
+					var layer = layersToDo[i];
+					//TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true)
+					var c1 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer],1,false,false);
+					var c2 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer+allLayers],1,false,false);
+					var c3 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer + allLayers*2],1,false,false);
+					//if(Solver.ScoreCube(c1,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
+						cubes.push(c1,layer,0,Solver.ScoreCube(c1,CubeDataType.Fast,Solver.CubeSize)[0]);
+				//	if(Solver.ScoreCube(c2,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
+						cubes.push(c2,layer,1,Solver.ScoreCube(c2,CubeDataType.Fast,Solver.CubeSize)[0]);
+					//if(Solver.ScoreCube(c3,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
+						cubes.push(c3,layer,2,Solver.ScoreCube(c3,CubeDataType.Fast,Solver.CubeSize)[0]);
+				}
+				Solver.CubeNodes.shift();
+				for(var i = 0;i<cubes.length;i+=4){
+					var low = Infinity;
+					for(var j=0;j<top5.length;j++){
+						if(cubes[top5[j]+3]<low){
+							low = cubes[top5[j]+3];
+						}
+					}
+
+					if(cubes[i+3]>=low || top5.length<12){
+						top5.push(i);
+						if(top5.length>12){
+							var lowest = 0
+							for(var j=0;j<top5.length;j++){
+								if(cubes[top5[j]+3]<cubes[top5[lowest]+3]){
+									lowest = j;
+								}
+							}
+							top5.splice(lowest,1);
+						}
+					}
+				}
+				for(var i = 0;i<top5.length;i++){
+					var alg = sAlg.concat([cubes[top5[i]+1],cubes[top5[i]+2]]);
+					var newNode = new CubeNode(cubes[top5[i]],alg,Solver.ScoreMax-cubes[top5[i]+3]+alg.length/2*Solver.MoveWeight);
+					Solver.InsertCubeNode(newNode);
+				}
+				///requestAnimationFrame(Solver.SolveRun);
+			}
+		}else{
+			if(Solver.Cancel){
+				Solver.Running = false;
+				Solver.Status = 2;
+			}else{
+				Solver.Status = 3;
+			}
 		}
 	},
 	ScoreCube:function(data,format,size,scoreMethod=ScoreMethods.Surface,cubes=[0]){
@@ -3634,7 +3797,46 @@ var Solver = {
 		 return [true];
 	},
 	CheckIfPossible:function(data,format,size){
-
+		//Cube must be valid , AKA have all pieces and no invalid pieces for this to work(passed CheckCube test)
+		
+		//Swap test, must be an even number of swaps
+		var swaps = 0;
+		var testData = CubeData.Convert(data,format,CubeDataType.Piece,size,false);
+		var checkList = [];//Tells us what pieces we have visited so far.
+		for(var i=0;i<(size*size*size)-(size-2)*(size-2)*(size-2);i++)
+			checkList.push(false);
+		//Corner Swaps
+		var cornerLocations = [0,size-1,size*(size-1),size*size-1,size*size+(size-2)*(size+size-2)*2,size*size+(size-2)*(size+size-2)*2+size-1,size*size+(size-2)*(size+size-2)*2+size*(size-1),size*size+(size-2)*(size+size-2)*2+size*size-1]
+		/*for(var i = 0;i<8;i++){
+			 var currentPiece = CubeData.PullInfo(data,cornerLocations[i],5)%8;
+			 if(!checkList[i]){
+				if(currentPiece == i){
+					CheckList[i]=true;//check this piece off the list as it is in its own spot
+				}else{
+					
+				}
+			 }
+		}*/
+		return true;
+	},
+	InsertCubeNode:function(node){
+		var index = 0;
+		var length = Solver.CubeNodes.length
+		for(index = 0;index<length;index++){
+			if(Solver.CubeNodes[index].score>node.score){
+				break;
+			}
+		}
+		if(index!=length){
+			Solver.CubeNodes.splice(index,0,node);
+			if(Solver.CubeNodes.length>Solver.MaxNodes){
+				Solver.CubeNodes.pop();
+			}
+		}else if(length<Solver.MaxNodes){
+			Solver.CubeNodes.push(node);
+		}else{
+			return false;
+		}
 	}
 
 };
@@ -4010,6 +4212,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 					
 					this.rotatingCubies = [];
 					this.rotateCubies(this.rotationQue[0]);
+					this.rotate(this.rotationQue[0]);
 					if(!this.recording){
 						this.rotationQue.splice(0,1);
 					}
@@ -4073,7 +4276,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 						var plane = 0;//0 is along z value, 1 is y, 2 is x
 						var planeLocation = 0;//tells which slice of cube you are on.
 						layer = this.rotationQue[0];
-						this.rotate(layer);
+						//this.rotate(layer);
 						direction = Math.floor(layer/Algorithm.CountLayers(this.size));//add one to this to see how many times a rotation should be done
 						layer %= Algorithm.CountLayers(this.size);
 						
@@ -4143,7 +4346,7 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 							layer = this.rotationQue[this.quePosition];
 						}else{
 							layer = this.rotationQue[0];
-							this.rotate(layer);
+							//this.rotate(layer);
 						}
 						direction = Math.floor(layer/Algorithm.CountLayers(this.size));//add one to this to see how many times a rotation should be done
 						layer %= Algorithm.CountLayers(this.size);
@@ -4245,7 +4448,7 @@ function start(){
 	Controls.SetUp();
 	Renderer.SetUpCamera();
 	Renderer.Clear();
-	testCube = new vCube(5,CubeDataType.Surface,generateSolvedCube(5,CubeDataType.Surface),undefined,undefined,undefined,true);
+	testCube = new vCube(3,CubeDataType.Surface,generateSolvedCube(3,CubeDataType.Surface),undefined,undefined,undefined,true);
 	testCube.render();
 	draw();
 }
