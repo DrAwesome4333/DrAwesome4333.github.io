@@ -4,7 +4,16 @@
 	<title>Audio Visualizer 3.0</title>
 	<link rel="icon" 
       type="image/x-icon" 
-      href="https://drawesome4333.github.io/favicon.ico">
+	  href="https://drawesome4333.github.io/favicon.ico">
+	  <style>
+	  .playlistItem{
+		cursor:grab;
+		border:1pt black solid;
+	  }
+	  #Playlist{
+		  width:25vw;
+	  }
+	  </style>
 </head>
 <body>
 <audio id="audio" controls>
@@ -12,18 +21,21 @@
  HTML5 Audio element is not supported on your browser.
 </audio>
 <br>
-<input type="button" value="Start Listening" onclick="start();">
+<input type="button" value="Start Listening" onclick="start();requestMic();">
 <br>
-<p onclick="var eve=new MouseEvent('click');fEle.dispatchEvent(eve);">Load a file</p>
+<p onclick="var eve=new MouseEvent('click');start();fEle.dispatchEvent(eve);">Load a file</p>
 
 <input type="file" id="files" accept="audio/*;" multiple style="display:none;">
 <p id="op"></p>
 <canvas id="can" width = 1000 height = 300></canvas>
+<div id = "Playlist"></div>
 <script>
 var aSrc=document.getElementById("src");
 var aEle=document.getElementById("audio");
 var fEle=document.getElementById("files");
+var pEle = document.getElementById("Playlist");
 var op=document.getElementById("op");
+var hasStarted = false;
 var audioCtx;
 var source;
 var mSource;
@@ -61,6 +73,7 @@ var Graphics = {
 function Song(fileElement,fileNumber){
 	this.length = 0;
 	this.title = "Unknown";
+	this.fileName = fileElement.files[fileNumber].name;
 	this.artist = "Unkown Artist";
 	this.album = "Unkown Album";
 	this.composer = "";
@@ -69,8 +82,30 @@ function Song(fileElement,fileNumber){
 	this.format = "";
 	this.fileElement = fileElement;//describes which file element holds this song's files
 	this.fileNumber = fileNumber;
+	this.URL = URL.createObjectURL(fileElement.files[fileNumber]);//used to store the URL created to pass song as a source to the audio player
 	this.active = true;//so user can deactivate a song
-
+	this.playlistItem = document.createElement("div");
+	this.playlistItem.innerHTML=this.fileName;
+	this.playlistItem.classList.add("playlistItem");
+	//this.playlistItem.style.cursor = "grab";
+	this.playlistItem.addEventListener("click",function(){
+		var songId = this.id.substring(5,10);
+		var songNumber = parseInt(songId,10);
+		aSrc.src = Player.songs[songNumber].URL;
+		aEle.load();
+		aEle.play()
+	});
+	var idString = (Player.songs.length).toString();
+	while(idString.length<5){
+		idString = "0"+idString;
+	}
+	this.playlistItem.id="song"+idString;
+	var checkBox = document.createElement("input");
+	checkBox.type="checkbox";
+	checkBox.style.cursor="pointer";
+	checkBox.checked=true;
+	this.playlistItem.appendChild(checkBox);
+	pEle.appendChild(this.playlistItem);
 }
 
 var Audio = {
@@ -129,36 +164,50 @@ var Player = {
 		skipDisabled:null,
 		backDisabled:null,
 		rewindDisabled:null
+	},
+	loadSongs:function(fileList){
+		var fLength= fileList.length
+		for(var sc = 0;sc<fLength;sc++){
+			var newSong = new Song(fEle,sc);
+			Player.songs.push(newSong);
+		}
 	}
 
 }
 
 var fileElements=[];//a list of file elements that can hold the music files
 function start(){
+	if (hasStarted)
+		return;
+	hasStarted = true;
 	audioCtx= new (window.AudioContext || window.webkitAudioContext)();
-source=audioCtx.createMediaElementSource(aEle);
-analyser=audioCtx.createAnalyser();
-gainNode = audioCtx.createGain();
-source.connect(analyser);
-analyser.connect(gainNode);
-gainNode.connect(audioCtx.destination);
-gainNode.gain.setValueAtTime(0, audioCtx.currentTime);//Mute audio so it doesn't create feedback
-analyser.fftSize=2048;
-fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);mSource.disconnect(analyser)})
-arr=new Uint8Array(analyser.frequencyBinCount);
-dataArray = new Uint8Array(analyser.frequencyBinCount);
-if (navigator.mediaDevices.getUserMedia) {
-  navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
-    mSource = audioCtx.createMediaStreamSource(stream);
+	source=audioCtx.createMediaElementSource(aEle);
+	analyser=audioCtx.createAnalyser();
+	gainNode = audioCtx.createGain();
+	source.connect(analyser);
+	analyser.connect(gainNode);
+	gainNode.connect(audioCtx.destination);
+	gainNode.gain.setValueAtTime(0, audioCtx.currentTime);//Mute audio so it doesn't create feedback
+	analyser.fftSize=2048;
+	fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);if(mSource){mSource.disconnect(analyser)}
+	Player.loadSongs(fEle.files);
+	})
+	//fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);if(mSource){mSource.disconnect(analyser)}})
+	arr=new Uint8Array(analyser.frequencyBinCount);
+	dataArray = new Uint8Array(analyser.frequencyBinCount);
+	update();
+};
+function requestMic(){
+	if (navigator.mediaDevices.getUserMedia) {
+  		navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
+    	mSource = audioCtx.createMediaStreamSource(stream);
 		mSource.connect(analyser);
-	console.log(stream)
+		console.log(stream)
   }).catch(errorCallback);
 } else {
   alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
 }
-  
-update();
-};
+}
 function update(){
 	requestAnimationFrame(update);
 	analyser.getByteFrequencyData(arr);
@@ -196,7 +245,6 @@ var errorCallback = function(e) {
 	alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
     console.log(e);
   };
-
 </script>
 
 </body>
