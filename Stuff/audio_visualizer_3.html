@@ -58,18 +58,18 @@ var Graphics = {
 	}
 
 }
-
 function Song(fileElement,fileNumber){
 	this.length = 0;
 	this.title = "Unknown";
 	this.artist = "Unkown Artist";
 	this.album = "Unkown Album";
 	this.composer = "";
-	this.cover = null;
+	this.cover = null;//cover image file if one exists
 	this.flagged = false;//if true this song has an error that wont allow it to play
 	this.format = "";
 	this.fileElement = fileElement;//describes which file element holds this song's files
 	this.fileNumber = fileNumber;
+	this.active = true;//so user can deactivate a song
 
 }
 
@@ -98,7 +98,7 @@ var Player = {
 	playing:false,
 	shuffle:false,
 	repeat:0,//0 for no repats, 1 for repeat playlist, 2 for repeat song
-	controls:{
+	controls:{//List of HTML elements for the controls on screen
 		controlContainer:null,
 		playButton:null,//play and pause
 		timeLine:null,
@@ -113,7 +113,7 @@ var Player = {
 		volumeBack:null,
 		repeatButton:null
 	},
-	resources:{
+	resources:{//List of images
 		pause:null,
 		play:null,
 		repeatAll:null,
