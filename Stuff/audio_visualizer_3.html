@@ -7,11 +7,26 @@
 	  href="https://drawesome4333.github.io/favicon.ico">
 	  <style>
 	  .playlistItem{
-		cursor:grab;
+		cursor:pointer;
 		border:1pt black solid;
+		transition:all 0.25s ease-in-out;
+	  }
+	  .playlistItem:hover{
+		  background-color:rgb(240,240,240);
+	  }
+	  .songInError{
+		 background-color:rgb(240,140,140); 
+	  }
+	  .songPlaying{
+		  background-color:rgb(140,140,240); 
+	  }
+	  .songDisabeled{
+		  background-color:rgb(140,140,140); 
 	  }
 	  #Playlist{
 		  width:25vw;
+		  height:50vh;
+		  overflow:scroll;
 	  }
 	  </style>
 </head>
@@ -91,9 +106,19 @@ function Song(fileElement,fileNumber){
 	this.playlistItem.addEventListener("click",function(){
 		var songId = this.id.substring(5,10);
 		var songNumber = parseInt(songId,10);
+		if(!Player.songs[songNumber].active||this.flagged){//Don't try to play it if it is flagged or disabled
+			return;
+		}
+		if(Player.songID>=0){
+			
+		Player.songs[Player.songID].playlistItem.classList.remove("songPlaying");
+		//console.log(Player.songID)
+		}
+		Player.songID=songNumber;
 		aSrc.src = Player.songs[songNumber].URL;
 		aEle.load();
-		aEle.play()
+		aEle.play();
+		Player.songs[songNumber].playlistItem.classList.add("songPlaying");
 	});
 	var idString = (Player.songs.length).toString();
 	while(idString.length<5){
@@ -104,8 +129,28 @@ function Song(fileElement,fileNumber){
 	checkBox.type="checkbox";
 	checkBox.style.cursor="pointer";
 	checkBox.checked=true;
+	
+	checkBox.addEventListener("click",function(){
+		var songId = this.parentElement.id.substring(5,10);
+		var songNumber = parseInt(songId,10);
+		Player.songs[songNumber].active=this.checked;
+		if(this.checked && !Player.songs[songNumber].isDisabeled()){
+			Player.songs[songNumber].playlistItem.classList.remove("songDisabeled");
+		}else if(this.checked){
+			this.checked = false;
+			Player.songs[songNumber].active=false;
+		}else{
+			Player.songs[songNumber].playlistItem.classList.add("songDisabeled");
+		}
+	});
 	this.playlistItem.appendChild(checkBox);
 	pEle.appendChild(this.playlistItem);
+	this.isDisabeled = function(){
+		if(!this.active || this.flagged){
+			return true;
+		}
+		return false;
+	}
 }
 
 var Audio = {
