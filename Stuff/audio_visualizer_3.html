@@ -12,16 +12,25 @@
 		transition:all 0.25s ease-in-out;
 	  }
 	  .playlistItem:hover{
-		  background-color:rgb(240,240,240);
+		  background-color:rgb(240, 240, 240);
 	  }
 	  .songInError{
 		 background-color:rgb(240,140,140); 
 	  }
+	  .songInError:hover{
+		 background-color:rgb(170, 94, 94); 
+	  }
 	  .songPlaying{
 		  background-color:rgb(140,140,240); 
 	  }
-	  .songDisabeled{
+	  .songPlaying:hover{
+		  background-color:rgb(94,94,170); 
+	  }
+	  .songDisabled{
 		  background-color:rgb(140,140,140); 
+	  }
+	  .songDisabled:hover{
+		  background-color:rgb(94,94,94); 
 	  }
 	  #Playlist{
 		  width:25vw;
@@ -102,23 +111,28 @@ function Song(fileElement,fileNumber){
 	this.playlistItem = document.createElement("div");
 	this.playlistItem.innerHTML=this.fileName;
 	this.playlistItem.classList.add("playlistItem");
+	this.isDisabled = function(){
+		if(!this.active || this.flagged){
+			return true;
+		}
+		return false;
+	}
 	//this.playlistItem.style.cursor = "grab";
-	this.playlistItem.addEventListener("click",function(){
-		var songId = this.id.substring(5,10);
-		var songNumber = parseInt(songId,10);
-		if(!Player.songs[songNumber].active||this.flagged){//Don't try to play it if it is flagged or disabled
+	this.playlistItem.addEventListener("dblclick",function(){
+		var songId = parseInt(this.id.substring(5,10),10);
+		if(!Player.songs[songId].active||this.flagged){//Don't try to play it if it is flagged or Disabled
 			return;
 		}
-		if(Player.songID>=0){
+		if(Player.songId>=0){
 			
-		Player.songs[Player.songID].playlistItem.classList.remove("songPlaying");
-		//console.log(Player.songID)
+		Player.songs[Player.songId].playlistItem.classList.remove("songPlaying");
+		//console.log(Player.songId)
 		}
-		Player.songID=songNumber;
-		aSrc.src = Player.songs[songNumber].URL;
+		Player.songId=songId;
+		aSrc.src = Player.songs[songId].URL;
 		aEle.load();
 		aEle.play();
-		Player.songs[songNumber].playlistItem.classList.add("songPlaying");
+		Player.songs[songId].playlistItem.classList.add("songPlaying");
 	});
 	var idString = (Player.songs.length).toString();
 	while(idString.length<5){
@@ -129,28 +143,26 @@ function Song(fileElement,fileNumber){
 	checkBox.type="checkbox";
 	checkBox.style.cursor="pointer";
 	checkBox.checked=true;
+	checkBox.title="Disable Song";
 	
 	checkBox.addEventListener("click",function(){
-		var songId = this.parentElement.id.substring(5,10);
-		var songNumber = parseInt(songId,10);
-		Player.songs[songNumber].active=this.checked;
-		if(this.checked && !Player.songs[songNumber].isDisabeled()){
-			Player.songs[songNumber].playlistItem.classList.remove("songDisabeled");
-		}else if(this.checked){
+		var songId = parseInt(this.parentElement.id.substring(5,10),10);
+		Player.songs[songId].active=this.checked;
+		if(this.checked && !Player.songs[songId].isDisabled()){//checks if the song is Disabled for another reason before activating song.
+			Player.songs[songId].playlistItem.classList.remove("songDisabled");
+		}else if(this.checked){//if the last check failed but the check mark was checked, keep the song Disabled as it may be flagged.
 			this.checked = false;
-			Player.songs[songNumber].active=false;
+			Player.songs[songId].active=false;
+			this.style.cursor="not-allowed";
+			this.title="An error occurred with this song file";
 		}else{
-			Player.songs[songNumber].playlistItem.classList.add("songDisabeled");
+			Player.songs[songId].playlistItem.classList.add("songDisabled");
+			this.title="Enable Song";
 		}
+		event.stopPropagation();
 	});
 	this.playlistItem.appendChild(checkBox);
 	pEle.appendChild(this.playlistItem);
-	this.isDisabeled = function(){
-		if(!this.active || this.flagged){
-			return true;
-		}
-		return false;
-	}
 }
 
 var Audio = {
@@ -173,7 +185,9 @@ var Audio = {
 
 var Player = {
 	songs:[],
-	songId:-1,
+	songOrder:[],
+	songId:-1,//Identifies the song in the songs list currently playing, this list can only be added to, cannot change order or the ID system breaks down
+	songNumber:-1,//Identifies the song in the songOrder list, which is a list of song ID's that correspond to the songs list.
 	paused:true,
 	playing:false,
 	shuffle:false,
@@ -182,7 +196,7 @@ var Player = {
 		controlContainer:null,
 		playButton:null,//play and pause
 		timeLine:null,
-		timeBack:null,
+		timeBack:null,//background of the line
 		timeDot:null,
 		fastforwardButton:null,
 		rewindButton:null,
@@ -191,7 +205,9 @@ var Player = {
 		volumeDot:null,
 		volumeLine:null,
 		volumeBack:null,
-		repeatButton:null
+		repeatButton:null,
+		shuffleButton:null,
+		optionButton:null
 	},
 	resources:{//List of images
 		pause:null,
@@ -199,6 +215,8 @@ var Player = {
 		repeatAll:null,
 		repeatOne:null,
 		repeatNone:null,
+		shuffleOn:null,
+		shuffleOff:null,
 		fastforward:null,
 		skip:null,
 		back:null,
@@ -208,7 +226,8 @@ var Player = {
 		playDisabled:null,
 		skipDisabled:null,
 		backDisabled:null,
-		rewindDisabled:null
+		rewindDisabled:null,
+		fastforwardDisabled:null
 	},
 	loadSongs:function(fileList){
 		var fLength= fileList.length
