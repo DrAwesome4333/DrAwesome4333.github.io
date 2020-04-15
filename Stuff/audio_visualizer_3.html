@@ -45,7 +45,7 @@
  HTML5 Audio element is not supported on your browser.
 </audio>
 <br>
-<input type="button" value="Start Listening" onclick="start();requestMic();">
+<input type="button" value="Start Listening" onclick="start();requestMic();"><select id="input_select" onchange = "tryMic(parseInt(this.value));"></select>
 <br>
 <p onclick="var eve=new MouseEvent('click');start();fEle.dispatchEvent(eve);">Load a file</p>
 
@@ -58,11 +58,13 @@ var aSrc=document.getElementById("src");
 var aEle=document.getElementById("audio");
 var fEle=document.getElementById("files");
 var pEle = document.getElementById("Playlist");
+var iEle = document.getElementById("input_select");
 var op=document.getElementById("op");
 var hasStarted = false;
 var audioCtx;
 var source;
-var mSource;
+var mSource;//microphone source
+var audioDevices = [];
 var ct = document.getElementById("can").getContext("2d");
 var analyser;
 var gainNode;
@@ -191,6 +193,7 @@ var Player = {
 	paused:true,
 	playing:false,
 	shuffle:false,
+	volume:1,
 	repeat:0,//0 for no repats, 1 for repeat playlist, 2 for repeat song
 	controls:{//List of HTML elements for the controls on screen
 		controlContainer:null,
@@ -261,16 +264,47 @@ function start(){
 	dataArray = new Uint8Array(analyser.frequencyBinCount);
 	update();
 };
-function requestMic(){
+async function requestMic(){
 	if (navigator.mediaDevices.getUserMedia) {
   		navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
     	mSource = audioCtx.createMediaStreamSource(stream);
 		mSource.connect(analyser);
-		console.log(stream)
+		console.log(stream);
+		
   }).catch(errorCallback);
+  var allDevices = await navigator.mediaDevices.enumerateDevices();
+  let length = allDevices.length;
+  audioDevices=[];
+  while(iEle.firstChild){
+	  iEle.removeChild(iEle.firstChild);
+  }
+  for(let i = 0;i<length;i++){
+	  if(allDevices[i].kind=="audioinput"){
+		audioDevices.push(allDevices[i]);
+		var newChild = document.createElement("option");
+		newChild.innerHTML=allDevices[i].label;
+		newChild.value = audioDevices.length-1;
+		iEle.appendChild(newChild);
+	  }
+  }
 } else {
   alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
 }
+
+}
+function tryMic(index){
+	if(index>=0 && audioDevices.length){
+		if(mSource){
+			mSource.disconnect(analyser);//disconnect if connected
+			mSource = null;
+		}
+		navigator.mediaDevices.getUserMedia({audio:{deviceId:audioDevices[index].deviceId}}).then( function(stream) {
+    	mSource = audioCtx.createMediaStreamSource(stream);
+		mSource.connect(analyser);
+		console.log(stream);
+		
+  }).catch(errorCallback);
+	}
 }
 function update(){
 	requestAnimationFrame(update);
