@@ -12,25 +12,13 @@
 		transition:all 0.25s ease-in-out;
 	  }
 	  .playlistItem:hover{
-		  background-color:rgb(240, 240, 240);
+		  background-color:rgb(240,240,240);
 	  }
-	  .songInError{
-		 background-color:rgb(240,140,140); 
+	  .playing{
+		  background-color:rgb(141, 141, 248);
 	  }
-	  .songInError:hover{
-		 background-color:rgb(170, 94, 94); 
-	  }
-	  .songPlaying{
-		  background-color:rgb(140,140,240); 
-	  }
-	  .songPlaying:hover{
-		  background-color:rgb(94,94,170); 
-	  }
-	  .songDisabled{
-		  background-color:rgb(140,140,140); 
-	  }
-	  .songDisabled:hover{
-		  background-color:rgb(94,94,94); 
+	  .error{
+		  background-color:rgb(240,150,150);
 	  }
 	  #Playlist{
 		  width:25vw;
@@ -45,7 +33,7 @@
  HTML5 Audio element is not supported on your browser.
 </audio>
 <br>
-<input type="button" value="Start Listening" onclick="start();requestMic();"><select id="input_select" onchange = "tryMic(parseInt(this.value));"></select>
+<input type="button" value="Start Listening" onclick="start();requestMic();">
 <br>
 <p onclick="var eve=new MouseEvent('click');start();fEle.dispatchEvent(eve);">Load a file</p>
 
@@ -58,13 +46,11 @@ var aSrc=document.getElementById("src");
 var aEle=document.getElementById("audio");
 var fEle=document.getElementById("files");
 var pEle = document.getElementById("Playlist");
-var iEle = document.getElementById("input_select");
 var op=document.getElementById("op");
 var hasStarted = false;
 var audioCtx;
 var source;
-var mSource;//microphone source
-var audioDevices = [];
+var mSource;
 var ct = document.getElementById("can").getContext("2d");
 var analyser;
 var gainNode;
@@ -113,28 +99,13 @@ function Song(fileElement,fileNumber){
 	this.playlistItem = document.createElement("div");
 	this.playlistItem.innerHTML=this.fileName;
 	this.playlistItem.classList.add("playlistItem");
-	this.isDisabled = function(){
-		if(!this.active || this.flagged){
-			return true;
-		}
-		return false;
-	}
 	//this.playlistItem.style.cursor = "grab";
-	this.playlistItem.addEventListener("dblclick",function(){
-		var songId = parseInt(this.id.substring(5,10),10);
-		if(!Player.songs[songId].active||this.flagged){//Don't try to play it if it is flagged or Disabled
-			return;
-		}
-		if(Player.songId>=0){
-			
-		Player.songs[Player.songId].playlistItem.classList.remove("songPlaying");
-		//console.log(Player.songId)
-		}
-		Player.songId=songId;
-		aSrc.src = Player.songs[songId].URL;
+	this.playlistItem.addEventListener("click",function(){
+		var songId = this.id.substring(5,10);
+		var songNumber = parseInt(songId,10);
+		aSrc.src = Player.songs[songNumber].URL;
 		aEle.load();
-		aEle.play();
-		Player.songs[songId].playlistItem.classList.add("songPlaying");
+		aEle.play()
 	});
 	var idString = (Player.songs.length).toString();
 	while(idString.length<5){
@@ -145,24 +116,6 @@ function Song(fileElement,fileNumber){
 	checkBox.type="checkbox";
 	checkBox.style.cursor="pointer";
 	checkBox.checked=true;
-	checkBox.title="Disable Song";
-	
-	checkBox.addEventListener("click",function(){
-		var songId = parseInt(this.parentElement.id.substring(5,10),10);
-		Player.songs[songId].active=this.checked;
-		if(this.checked && !Player.songs[songId].isDisabled()){//checks if the song is Disabled for another reason before activating song.
-			Player.songs[songId].playlistItem.classList.remove("songDisabled");
-		}else if(this.checked){//if the last check failed but the check mark was checked, keep the song Disabled as it may be flagged.
-			this.checked = false;
-			Player.songs[songId].active=false;
-			this.style.cursor="not-allowed";
-			this.title="An error occurred with this song file";
-		}else{
-			Player.songs[songId].playlistItem.classList.add("songDisabled");
-			this.title="Enable Song";
-		}
-		event.stopPropagation();
-	});
 	this.playlistItem.appendChild(checkBox);
 	pEle.appendChild(this.playlistItem);
 }
@@ -187,19 +140,16 @@ var Audio = {
 
 var Player = {
 	songs:[],
-	songOrder:[],
-	songId:-1,//Identifies the song in the songs list currently playing, this list can only be added to, cannot change order or the ID system breaks down
-	songNumber:-1,//Identifies the song in the songOrder list, which is a list of song ID's that correspond to the songs list.
+	songId:-1,
 	paused:true,
 	playing:false,
 	shuffle:false,
-	volume:1,
 	repeat:0,//0 for no repats, 1 for repeat playlist, 2 for repeat song
 	controls:{//List of HTML elements for the controls on screen
 		controlContainer:null,
 		playButton:null,//play and pause
 		timeLine:null,
-		timeBack:null,//background of the line
+		timeBack:null,
 		timeDot:null,
 		fastforwardButton:null,
 		rewindButton:null,
@@ -208,9 +158,7 @@ var Player = {
 		volumeDot:null,
 		volumeLine:null,
 		volumeBack:null,
-		repeatButton:null,
-		shuffleButton:null,
-		optionButton:null
+		repeatButton:null
 	},
 	resources:{//List of images
 		pause:null,
@@ -218,8 +166,6 @@ var Player = {
 		repeatAll:null,
 		repeatOne:null,
 		repeatNone:null,
-		shuffleOn:null,
-		shuffleOff:null,
 		fastforward:null,
 		skip:null,
 		back:null,
@@ -229,8 +175,7 @@ var Player = {
 		playDisabled:null,
 		skipDisabled:null,
 		backDisabled:null,
-		rewindDisabled:null,
-		fastforwardDisabled:null
+		rewindDisabled:null
 	},
 	loadSongs:function(fileList){
 		var fLength= fileList.length
@@ -264,47 +209,16 @@ function start(){
 	dataArray = new Uint8Array(analyser.frequencyBinCount);
 	update();
 };
-async function requestMic(){
+function requestMic(){
 	if (navigator.mediaDevices.getUserMedia) {
   		navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
     	mSource = audioCtx.createMediaStreamSource(stream);
 		mSource.connect(analyser);
-		console.log(stream);
-		
+		console.log(stream)
   }).catch(errorCallback);
-  var allDevices = await navigator.mediaDevices.enumerateDevices();
-  let length = allDevices.length;
-  audioDevices=[];
-  while(iEle.firstChild){
-	  iEle.removeChild(iEle.firstChild);
-  }
-  for(let i = 0;i<length;i++){
-	  if(allDevices[i].kind=="audioinput"){
-		audioDevices.push(allDevices[i]);
-		var newChild = document.createElement("option");
-		newChild.innerHTML=allDevices[i].label;
-		newChild.value = audioDevices.length-1;
-		iEle.appendChild(newChild);
-	  }
-  }
 } else {
   alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
 }
-
-}
-function tryMic(index){
-	if(index>=0 && audioDevices.length){
-		if(mSource){
-			mSource.disconnect(analyser);//disconnect if connected
-			mSource = null;
-		}
-		navigator.mediaDevices.getUserMedia({audio:{deviceId:audioDevices[index].deviceId}}).then( function(stream) {
-    	mSource = audioCtx.createMediaStreamSource(stream);
-		mSource.connect(analyser);
-		console.log(stream);
-		
-  }).catch(errorCallback);
-	}
 }
 function update(){
 	requestAnimationFrame(update);
