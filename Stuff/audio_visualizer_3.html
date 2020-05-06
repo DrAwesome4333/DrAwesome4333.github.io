@@ -10,6 +10,7 @@
 		cursor:pointer;
 		border:1pt black solid;
 		transition:all 0.25s ease-in-out;
+		position:relative;
 	  }
 	  .playlistItem:hover{
 		  background-color:rgb(240, 240, 240);
@@ -33,9 +34,10 @@
 		  background-color:rgb(94,94,94); 
 	  }
 	  #Playlist{
-		  width:25vw;
+		  width:50vw;
 		  height:50vh;
 		  overflow:scroll;
+		  position: relative;
 	  }
 	  </style>
 </head>
@@ -61,13 +63,8 @@ var pEle = document.getElementById("Playlist");
 var iEle = document.getElementById("input_select");
 var op=document.getElementById("op");
 var hasStarted = false;
-var audioCtx;
-var source;
-var mSource;//microphone source
 var audioDevices = [];
 var ct = document.getElementById("can").getContext("2d");
-var analyser;
-var gainNode;
 var arr;
 var dataArray;
 
@@ -98,6 +95,7 @@ var Graphics = {
 }
 function Song(fileElement,fileNumber){
 	this.length = 0;
+	this.id = Player.songs.length;
 	this.title = "Unknown";
 	this.fileName = fileElement.files[fileNumber].name;
 	this.artist = "Unkown Artist";
@@ -119,23 +117,79 @@ function Song(fileElement,fileNumber){
 		}
 		return false;
 	}
+	this.play=function(){//returns true if successful
+		start();//incase the code has not started yet
+		
+		if(Audio.mic.playing){
+			Audio.mic.playing = false;
+			Audio.mic.source.disconnect(Audio.analyser);
+			Audio.state.source = 0;
+		}
+
+		if(this.isDisabled()){
+			return false;
+		}
+		
+		if(Player.songId>=0){
+			Player.songs[Player.songId].playlistItem.classList.remove("songPlaying");
+		}
+
+		Player.songId=this.id;
+		Audio.gainNode.gain.setValueAtTime(Player.volume,Audio.ctx.currentTime);
+		aSrc.src = this.URL;
+		aEle.load();
+		aEle.play();
+		this.playlistItem.classList.add("songPlaying");
+		for(var i = 0;i<Player.songOrder.length;i++){//find itself in the songOrder list to get the number so play can coninue from there if shuffeled
+			if(Player.songOrder[i]===this){
+				Player.songNumber = i;
+				break;
+			}
+		}
+		return true;
+	}
 	//this.playlistItem.style.cursor = "grab";
 	this.playlistItem.addEventListener("dblclick",function(){
 		var songId = parseInt(this.id.substring(5,10),10);
-		if(!Player.songs[songId].active||this.flagged){//Don't try to play it if it is flagged or Disabled
-			return;
+		Player.songs[songId].play();
+	});
+	this.playlistItem.draggable=true;
+	this.playlistItem.addEventListener("dragstart",function(e){
+		e.dataTransfer.setData("text",e.target.id);
+	});
+	this.playlistItem.addEventListener("dragover",function(e){
+		e.preventDefault();
+	});
+	this.playlistItem.addEventListener("drop",function(e){
+		e.preventDefault();
+		var id = e.dataTransfer.getData("text");
+		var movedEle = document.getElementById(id);
+		pEle.insertBefore(movedEle,this);
+		var songId = parseInt(this.id.substring(5,10),10);
+		var movedId = parseInt(movedEle.id.substring(5,10),10);
+		var oldIndex = -1;
+		var newIndex = 0;
+		for(;newIndex<Player.songOrder.length;newIndex++){
+			if(Player.songOrder[newIndex].id==songId){
+				Player.songOrder.splice(newIndex,0,Player.songs[movedId]);//insert the song before the one that is reciving the drop
+				newIndex++;
+			}
+			if(Player.songOrder[newIndex].id==movedId){
+				oldIndex = newIndex;
+			}
+		}
+		if(oldIndex>=0){
+			Player.songOrder.splice(oldIndex,1);//remove old song if it was found
 		}
 		if(Player.songId>=0){
-			
-		Player.songs[Player.songId].playlistItem.classList.remove("songPlaying");
-		//console.log(Player.songId)
+			for(var i = 0;i<Player.songOrder.length;i++){//Update the song number as the list changed
+			if(Player.songOrder[i].id===Player.songId){
+				Player.songNumber = i;
+				break;
+			}
 		}
-		Player.songId=songId;
-		aSrc.src = Player.songs[songId].URL;
-		aEle.load();
-		aEle.play();
-		Player.songs[songId].playlistItem.classList.add("songPlaying");
-	});
+		}
+	})
 	var idString = (Player.songs.length).toString();
 	while(idString.length<5){
 		idString = "0"+idString;
@@ -157,6 +211,8 @@ function Song(fileElement,fileNumber){
 			Player.songs[songId].active=false;
 			this.style.cursor="not-allowed";
 			this.title="An error occurred with this song file";
+			Player.songs[songId].playlistItem.classList.remove("songDisabled");
+			Player.songs[songId].playlistItem.classList.add("songInError");
 		}else{
 			Player.songs[songId].playlistItem.classList.add("songDisabled");
 			this.title="Enable Song";
@@ -166,15 +222,15 @@ function Song(fileElement,fileNumber){
 	this.playlistItem.appendChild(checkBox);
 	pEle.appendChild(this.playlistItem);
 }
-
 var Audio = {
 	ctx:null,
 	gainNode:null,
+	analyser:null,
 	state:{
 		volume:0,
 		source:-1,//-1 for none, 0 for music, 1 for microphone
 	},
-	microphone:{
+	mic:{
 		source:null,//the aduio context source
 		playing:false//tells if the microphone is active or not
 	},
@@ -237,6 +293,7 @@ var Player = {
 		for(var sc = 0;sc<fLength;sc++){
 			var newSong = new Song(fEle,sc);
 			Player.songs.push(newSong);
+			Player.songOrder.push(Player.songs[Player.songs.length-1]);//add to the song order
 		}
 	}
 
@@ -247,46 +304,49 @@ function start(){
 	if (hasStarted)
 		return;
 	hasStarted = true;
-	audioCtx= new (window.AudioContext || window.webkitAudioContext)();
-	source=audioCtx.createMediaElementSource(aEle);
-	analyser=audioCtx.createAnalyser();
-	gainNode = audioCtx.createGain();
-	source.connect(analyser);
-	analyser.connect(gainNode);
-	gainNode.connect(audioCtx.destination);
-	gainNode.gain.setValueAtTime(0, audioCtx.currentTime);//Mute audio so it doesn't create feedback
-	analyser.fftSize=2048;
-	fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);if(mSource){mSource.disconnect(analyser)}
-	Player.loadSongs(fEle.files);
+	Audio.ctx= new (window.AudioContext || window.webkitAudioContext)();
+	Audio.music.source=Audio.ctx.createMediaElementSource(aEle);
+	Audio.analyser=Audio.ctx.createAnalyser();
+	Audio.gainNode = Audio.ctx.createGain();
+	Audio.music.source.connect(Audio.analyser);
+	Audio.analyser.connect(Audio.gainNode);
+	Audio.gainNode.connect(Audio.ctx.destination);
+	Audio.gainNode.gain.setValueAtTime(0, Audio.ctx.currentTime);//Mute audio so it doesn't create feedback
+	Audio.analyser.fftSize=2048;
+	fEle.addEventListener("change",function(){
+		Audio.gainNode.gain.setValueAtTime(1,Audio.ctx.currentTime);
+		if(Audio.mic.playing){
+			Audio.mic.source.disconnect(Audio.analyser);
+			Audio.mic.playing=false;
+			}
+		Player.loadSongs(fEle.files);
 	})
-	//fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,audioCtx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-	arr=new Uint8Array(analyser.frequencyBinCount);
-	dataArray = new Uint8Array(analyser.frequencyBinCount);
+	//fEle.addEventListener("change",function(){aSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Audio.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
+	arr=new Uint8Array(Audio.analyser.frequencyBinCount);
+	dataArray = new Uint8Array(Audio.analyser.frequencyBinCount);
 	update();
 };
 async function requestMic(){
-	if (navigator.mediaDevices.getUserMedia) {
-  		navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( function(stream) {
-    	mSource = audioCtx.createMediaStreamSource(stream);
-		mSource.connect(analyser);
-		console.log(stream);
-		
-  }).catch(errorCallback);
-  var allDevices = await navigator.mediaDevices.enumerateDevices();
-  let length = allDevices.length;
-  audioDevices=[];
-  while(iEle.firstChild){
-	  iEle.removeChild(iEle.firstChild);
-  }
-  for(let i = 0;i<length;i++){
-	  if(allDevices[i].kind=="audioinput"){
-		audioDevices.push(allDevices[i]);
-		var newChild = document.createElement("option");
-		newChild.innerHTML=allDevices[i].label;
-		newChild.value = audioDevices.length-1;
-		iEle.appendChild(newChild);
-	  }
-  }
+if (navigator.mediaDevices.getUserMedia) {
+	var allDevices = await navigator.mediaDevices.enumerateDevices();
+  	let length = allDevices.length;
+  	audioDevices=[];
+  	while(iEle.firstChild){
+	  	iEle.removeChild(iEle.firstChild);
+ 	 }
+ 	 for(let i = 0;i<length;i++){
+		  if(allDevices[i].kind=="audioinput"){
+			audioDevices.push(allDevices[i]);
+			var newChild = document.createElement("option");
+			newChild.innerHTML=allDevices[i].label;
+			newChild.value = audioDevices.length-1;
+			iEle.appendChild(newChild);
+		  }
+ 	 }
+		if(audioDevices.length>0){
+		tryMic(0);
+		}
+  
 } else {
   alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
 }
@@ -294,13 +354,18 @@ async function requestMic(){
 }
 function tryMic(index){
 	if(index>=0 && audioDevices.length){
-		if(mSource){
-			mSource.disconnect(analyser);//disconnect if connected
-			mSource = null;
+		if(Audio.mic.playing){
+			Audio.mic.source.disconnect(Audio.analyser);//disconnect if connected
+			Audio.mic.source = null;
+			Audio.mic.playing = false;
 		}
 		navigator.mediaDevices.getUserMedia({audio:{deviceId:audioDevices[index].deviceId}}).then( function(stream) {
-    	mSource = audioCtx.createMediaStreamSource(stream);
-		mSource.connect(analyser);
+		Audio.mic.source = Audio.ctx.createMediaStreamSource(stream);
+		Audio.mic.source.connect(Audio.analyser);
+		Audio.mic.playing = true;
+		Audio.state.source = 1;
+		Audio.gainNode.gain.setValueAtTime(0,Audio.ctx.currentTime);
+		aEle.pause();
 		console.log(stream);
 		
   }).catch(errorCallback);
@@ -308,10 +373,10 @@ function tryMic(index){
 }
 function update(){
 	requestAnimationFrame(update);
-	analyser.getByteFrequencyData(arr);
+	Audio.analyser.getByteFrequencyData(arr);
 									//op.innerHTML=Math.max.apply(null,arr);
 
-  analyser.getByteTimeDomainData(dataArray);
+	Audio.analyser.getByteTimeDomainData(dataArray);
 	
 	ct.clearRect(0,0,1000,300);
 	ct.strokeStyle="black";
@@ -340,7 +405,7 @@ ct.stroke();
 	
 }
 var errorCallback = function(e) {
-	alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
+	alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead\n"+e)
     console.log(e);
   };
 </script>
