@@ -344,7 +344,12 @@ var Player = {
 		skipDisabled:null,
 		backDisabled:null,
 		rewindDisabled:null,
-		fastforwardDisabled:null
+		fastforwardDisabled:null,
+		defaultCover:new Image(256,256),
+	},
+	loadResources:function(){
+		this.resources.defaultCover.src="Audio_Resources/Disc.png";
+		document.body.appendChild(this.resources.defaultCover);
 	},
 	loadSongs:function(fileList){
 		var fLength= fileList.length
