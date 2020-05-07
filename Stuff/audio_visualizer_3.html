@@ -15,6 +15,9 @@
 	  .playlistItem:hover{
 		  background-color:rgb(240, 240, 240);
 	  }
+	  .playlistItem:-moz-dragover{
+		border-top:3pt solid blue;
+	  }
 	  .songInError{
 		 background-color:rgb(240,140,140); 
 	  }
@@ -60,6 +63,7 @@ var aSrc=document.getElementById("src");
 var aEle=document.getElementById("audio");
 var fEle=document.getElementById("files");
 var pEle = document.getElementById("Playlist");
+var specialEle=document.createElement("Div");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
 var iEle = document.getElementById("input_select");
 var op=document.getElementById("op");
 var hasStarted = false;
@@ -67,6 +71,47 @@ var audioDevices = [];
 var ct = document.getElementById("can").getContext("2d");
 var arr;
 var dataArray;
+aEle.addEventListener("error",function(e){console.log("An error was triggered");console.log(e)});
+aEle.addEventListener("progress",function(e){Player.songs[Player.songId].hasProgressed=true;});
+aEle.addEventListener("stalled",function(e){console.log("A stalled was triggered");console.log(e)});
+aEle.addEventListener("ended",function(e){Player.nextSong();});
+specialEle.innerHTML=" ";
+specialEle.style.width="100%";
+specialEle.style.height = "5vh";
+pEle.appendChild(specialEle);
+
+specialEle.addEventListener("dragover",function(e){
+		e.preventDefault();
+	});
+	specialEle.addEventListener("drop",function(e){
+		e.preventDefault();
+		var id = e.dataTransfer.getData("text");
+		var movedEle = document.getElementById(id);
+		pEle.insertBefore(movedEle,this);
+		var movedId = parseInt(movedEle.id.substring(5,10),10);
+		var oldIndex = -1;
+		var newIndex = 0;
+		Player.songOrder.push(Player.songs[movedId]);
+		for(;newIndex<Player.songOrder.length;newIndex++){
+				//insert the song before the one that is reciving the drop
+			
+			if(Player.songOrder[newIndex].id==movedId){
+				oldIndex = newIndex;
+				break;
+			}
+		}
+		if(oldIndex>=0){
+			Player.songOrder.splice(oldIndex,1);//remove old song if it was found
+		}
+		if(Player.songId>=0){
+			for(var i = 0;i<Player.songOrder.length;i++){//Update the song number as the list changed
+			if(Player.songOrder[i].id===Player.songId){
+				Player.songNumber = i;
+				break;
+			}
+		}
+		}
+	})
 
 var Graphics = {
 	canvas:document.createElement("CANVAS"),
@@ -104,6 +149,7 @@ function Song(fileElement,fileNumber){
 	this.cover = null;//cover image file if one exists
 	this.flagged = false;//if true this song has an error that wont allow it to play
 	this.format = "";
+	this.hasProgressed = false;//helps catch songs that will not load
 	this.fileElement = fileElement;//describes which file element holds this song's files
 	this.fileNumber = fileNumber;
 	this.URL = URL.createObjectURL(fileElement.files[fileNumber]);//used to store the URL created to pass song as a source to the audio player
@@ -138,8 +184,20 @@ function Song(fileElement,fileNumber){
 		Audio.gainNode.gain.setValueAtTime(Player.volume,Audio.ctx.currentTime);
 		aSrc.src = this.URL;
 		aEle.load();
-		aEle.play();
-		this.playlistItem.classList.add("songPlaying");
+		aEle.play().then(function(){Player.songOrder[Player.songNumber].playlistItem.classList.add("songPlaying");}).catch(function(e){console.log(e)});
+		setTimeout(function(){
+			var song = Player.songs[Player.songId];
+			if(!song.hasProgressed){
+				song.flagged=true;
+				song.active=false;
+				song.checkBox.checked=false;
+				song.checkBox.title="This song failed to load.";
+				song.checkBox.style.cursor="not-allowed";
+				song.playlistItem.classList.add("songInError");
+				Player.nextSong();
+			}
+		},1000)
+		//this.playlistItem.classList.add("songPlaying");
 		for(var i = 0;i<Player.songOrder.length;i++){//find itself in the songOrder list to get the number so play can coninue from there if shuffeled
 			if(Player.songOrder[i]===this){
 				Player.songNumber = i;
@@ -195,13 +253,13 @@ function Song(fileElement,fileNumber){
 		idString = "0"+idString;
 	}
 	this.playlistItem.id="song"+idString;
-	var checkBox = document.createElement("input");
-	checkBox.type="checkbox";
-	checkBox.style.cursor="pointer";
-	checkBox.checked=true;
-	checkBox.title="Disable Song";
+	this.checkBox = document.createElement("input");
+	this.checkBox.type="checkbox";
+	this.checkBox.style.cursor="pointer";
+	this.checkBox.checked=true;
+	this.checkBox.title="Disable Song";
 	
-	checkBox.addEventListener("click",function(){
+	this.checkBox.addEventListener("click",function(){
 		var songId = parseInt(this.parentElement.id.substring(5,10),10);
 		Player.songs[songId].active=this.checked;
 		if(this.checked && !Player.songs[songId].isDisabled()){//checks if the song is Disabled for another reason before activating song.
@@ -219,8 +277,8 @@ function Song(fileElement,fileNumber){
 		}
 		event.stopPropagation();
 	});
-	this.playlistItem.appendChild(checkBox);
-	pEle.appendChild(this.playlistItem);
+	this.playlistItem.appendChild(this.checkBox);
+	pEle.insertBefore(this.playlistItem,specialEle);
 }
 var Audio = {
 	ctx:null,
@@ -250,7 +308,7 @@ var Player = {
 	playing:false,
 	shuffle:false,
 	volume:1,
-	repeat:0,//0 for no repats, 1 for repeat playlist, 2 for repeat song
+	repeat:0,//0 for no repeats, 1 for repeat playlist, 2 for repeat song, 3 for play one song
 	controls:{//List of HTML elements for the controls on screen
 		controlContainer:null,
 		playButton:null,//play and pause
@@ -294,6 +352,56 @@ var Player = {
 			var newSong = new Song(fEle,sc);
 			Player.songs.push(newSong);
 			Player.songOrder.push(Player.songs[Player.songs.length-1]);//add to the song order
+		}
+	},
+	nextSong:function(){
+		switch(this.repeat){
+			case 0:
+				this.songNumber++;
+				if(this.songNumber>=this.songOrder.length){//we have reached the end of the playlist
+					this.songNumber = 0;
+					return;
+				}
+				var suc = this.songOrder[this.songNumber].play();
+				if(!suc){//the play failed
+					Player.nextSong();
+				}
+			
+				break;
+			case 1:
+				this.songNumber++;
+				if(this.songNumber>=this.songOrder.length){
+					this.songNumber = 0;
+				}
+				var suc = this.songOrder[this.songNumber].play();
+				if(!suc){//the play failed
+					Player.nextSong();
+				}
+			
+				break;
+			case 2:
+				if(this.songOrder[this.songNumber].isDisabled())
+					return;
+				this.songOrder[this.songNumber].play();
+			
+				break;
+			case 3:
+				return;
+				break;
+			default:
+				return;
+			
+
+		}
+	},
+	shuffleSongs:function(){
+		var remainingSongs = Player.songOrder.slice(0);
+		for(var i = 0;remainingSongs.length>0;i++){
+			var numberOfSongs = remainingSongs.length;
+			var songSelected = Math.floor(Math.random()*numberOfSongs);
+			Player.songOrder[i]=remainingSongs[songSelected];
+			pEle.insertBefore(Player.songOrder[i].playlistItem,specialEle);
+			remainingSongs.splice(songSelected,1);
 		}
 	}
 
