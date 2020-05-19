@@ -161,7 +161,7 @@
 	  }
 	  </style>
 </head>
-<body onload="document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');" onresize = "document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');">
+<body onload="document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');" onresize = "document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');if(Graphics.gl){Graphics.resize();};">
 <div id="SidePanel">
 	<div id="SidePanelArrow" onclick="this.parentElement.classList.toggle('hideToLeft');this.classList.toggle('hideToLeft')" onmousemove="ArrowTimer=3;this.style.opacity=1;"></div>
 	<div id="Player">
@@ -260,7 +260,99 @@ specialEle.addEventListener("dragover",function(e){
 		}
 		}
 	})
+function Cube(x,y,z,size,color){
+this.x = x;
+this.y = y;
+this.z = z;
+this.size = size;//the size of the model
+this.scale = 1;//how the model is scaled
+this.color = color;
+this.bufferLength = 36;
+this.rotation = [0,0,0];//in degs.
+this.modelMat = Graphics.matrix.identity(4);
+this.normalMat = Graphics.matrix.identity(3);
+this.VBO = Graphics.gl.createBuffer();
+this.IBO = Graphics.gl.createBuffer();
+var lazyArray = [];
+for(var i = 0;i<6;i++){
+	lazyArray.push(i*4,i*4+1,i*4+2,i*4,i*4+3,i*4+1)//because I am too lazy to type a 36 element array.
+}
+Graphics.gl.bindBuffer(Graphics.gl.ELEMENT_ARRAY_BUFFER,this.IBO);
+Graphics.gl.bufferData(Graphics.gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(lazyArray),Graphics.gl.STATIC_DRAW);
+//[x,y,x,r,g,b,nx,ny,nz,tx,ty]
+this.buildVBO = function(){//used to update the VBO on a size or color (not scale) change
+	var hs = this.size/2;//half size
+	var c = this.color;
+	var anotherArray = [ 
+		-hs, hs, hs, c[0],c[1],c[2], 0, 0, 1, 0,0,//front
+		 hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1, 1,1,
+		 hs, hs, hs, c[0],c[1],c[2], 0, 0, 1, 1,0,
+		-hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1, 0,1,
+  
+		-hs, hs,-hs, c[0],c[1],c[2],-1, 0, 0, 0,0,//left
+		-hs,-hs, hs, c[0],c[1],c[2],-1, 0, 0, 1,1,
+		-hs, hs, hs, c[0],c[1],c[2],-1, 0, 0, 1,0,
+		-hs,-hs,-hs, c[0],c[1],c[2],-1, 0, 0, 0,1,
+  
+		 hs, hs, hs, c[0],c[1],c[2], 1, 0, 0, 0,0,//right
+		 hs,-hs,-hs, c[0],c[1],c[2], 1, 0, 0, 1,1,
+		 hs, hs,-hs, c[0],c[1],c[2], 1, 0, 0, 1,0,
+		 hs,-hs, hs, c[0],c[1],c[2], 1, 0, 0, 0,1,
+  
+		-hs, hs,-hs, c[0],c[1],c[2], 0, 1, 0, 0,0,//top
+		 hs, hs, hs, c[0],c[1],c[2], 0, 1, 0, 1,1,
+		 hs, hs,-hs, c[0],c[1],c[2], 0, 1, 0, 1,0,
+		-hs, hs, hs, c[0],c[1],c[2], 0, 1, 0, 0,1,
+  
+		-hs,-hs, hs, c[0],c[1],c[2], 0,-1, 0, 0,0,//bottom
+		 hs,-hs,-hs, c[0],c[1],c[2], 0,-1, 0, 1,1,
+		 hs,-hs, hs, c[0],c[1],c[2], 0,-1, 0, 1,0,
+		-hs,-hs,-hs, c[0],c[1],c[2], 0,-1, 0, 0,1,
+  
+		 hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1, 0,0,//back
+		-hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1, 1,1,
+		-hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1, 1,0,
+		 hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1, 0,1
+	]
+	Graphics.gl.bindBuffer(Graphics.gl.ARRAY_BUFFER,this.VBO);
+	Graphics.gl.bufferData(Graphics.gl.ARRAY_BUFFER,new Float32Array(anotherArray),Graphics.gl.STATIC_DRAW);
+}
+this.buildModelMat=function(){
+var xr = this.rotation[0]*Math.PI/180;
+var yr = this.rotation[1]*Math.PI/180;
+var zr = this.rotation[2]*Math.PI/180;
+var xm = [1,0,0,
+		  0, Math.cos(xr),-Math.sin(xr),
+		  0, Math.sin(xr),Math.cos(xr)];
+var ym = [Math.cos(yr),0,Math.sin(yr),
+		  0,1 ,0,
+		  -Math.sin(yr), 0,Math.cos(yr)];
+var zm = [Math.cos(zr), -Math.sin(zr) ,0,
+          Math.sin(zr),Math.cos(zr) ,0,
+		 0, 0,1];
+this.normalMat = Graphics.matrix.mult3x3([this.scale,0,0,
+										 0,this.scale,0,
+										 0,0,this.scale],xm);
+this.normalMat = Graphics.matrix.mult3x3(this.normalMat,ym);
+this.normalMat = Graphics.matrix.mult3x3(this.normalMat,ym);
+this.modelMat = Graphics.matrix.mult4x4([this.normalMat[0],this.normalMat[1],this.normalMat[2],0,
+										 this.normalMat[3],this.normalMat[4],this.normalMat[5],0,
+				 						 this.normalMat[6],this.normalMat[7],this.normalMat[8],0,
+				 						 0,0,0,1],
+										[1,0,0,0,
+				 0,1,0,0,
+				 0,0,1,0,
+				 this.x,this.y,this.z,1])/*
+this.modelMat = [1,0,0,0,
+				 0,1,0,0,
+				 0,0,1,0,
+				 this.x,this.y,this.z,1];
+this.normalMat = Graphics.matrix.identity(3);*/
 
+};
+this.buildVBO();
+this.buildModelMat();
+}
 var Graphics = {
 	canvas:document.createElement("CANVAS"),
 	gl:null,
@@ -277,13 +369,290 @@ var Graphics = {
 	particles:{
 		
 	},
-	cubes:{
-
-	},
+	cubes:[],
 	state:{
 		mode:-1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
 		particles:true//wether or not to do particles on modes that don't require it
+	},
+	textures:{
+		plainWhite:null
+	},
+	shaderSources:{
+		mainVertexShader:"\n\
+		attribute vec3 pos;\n\
+		attribute vec3 color;\n\
+		attribute vec2 tex;\n\
+		attribute vec3 normal;\n\
+		varying vec3 f_pos;\n\
+		varying vec3 f_color;\n\
+		varying vec3 f_normal;\n\
+		varying vec2 f_tex;\n\
+		uniform mat4 world;\n\
+		uniform mat4 model;\n\
+		uniform mat4 perspective;\n\
+		uniform mat3 normal_matrix;\n\
+		void main(void){\n\
+			f_color = color;\n\
+			f_normal = normal_matrix*normal;\n\
+			f_tex = tex;\n\
+			f_pos = (world*model*vec4(pos,1.0)).xyz;\n\
+			gl_Position=(perspective*world*model*vec4(pos,1.0));\n\
+		}",
+		mainFragmentShader:"\n\
+		precision mediump float;\n\
+		varying vec3 f_pos;\n\
+		varying vec3 f_color;\n\
+		varying vec3 f_normal;\n\
+		varying vec2 f_tex;\n\
+		uniform vec3 light_pos[8];\n\
+		uniform vec3 light_color[8];\n\
+		uniform sampler2D texture;\n\
+		uniform vec3 fog_color;\n\
+		uniform vec3 ambient_color;\n\
+		void main(void){\n\
+			\n\
+			vec3 normal = normalize(f_normal);\n\
+			vec3 total_light = vec3(0.0,0.0,0.0);\n\
+			float light_strength = 0.0;\n\
+			float spec_strength = 0.0;\n\
+			vec3 surface_to_light = vec3(0.0,0.0,0.0);\n\
+			vec3 surface_to_camera = normalize(-f_pos);\n\
+			vec3 half_vector = vec3(0.0,0.0,0.0);\n\
+			vec3 base = f_color * texture2D(texture,f_tex).rgb;\n\
+			\n\
+			for(int i = 0;i < 8;i++){\n\
+				surface_to_light = normalize(light_pos[i]-f_pos);\n\
+				light_strength = max(dot(normal,surface_to_light),0.0);\n\
+				half_vector = normalize(surface_to_light+surface_to_camera);\n\
+				spec_strength = pow(max(dot(half_vector,normal),0.0),100.0);\n\
+				total_light+=base*(light_strength*light_color[i]);\n\
+				total_light+=base*(spec_strength*light_color[i]);\n\
+			}\n\
+			total_light+=ambient_color*base;\n\
+			float amount = smoothstep(900.0, 1000.0, gl_FragCoord.z);\n\
+			gl_FragColor = vec4(mix(total_light,fog_color,amount),1.0);\n\
+			\n\
+		}"
+	},
+	uniforms:{
+		main:{
+			world:null,
+			model:null,
+			perspective:null,
+			normal_matrix:null,
+			light_pos:null,
+			light_color:null,
+			texture:null,
+			fog_color:null,
+			ambient_color:null
+
+		}
+	},
+	attributes:{
+		main:{
+			pos:null,
+			color:null,
+			tex:null,
+			normal:null
+		}
+	},
+	programs:{
+		main:null
+	},
+	shaders:{
+		vertexShaders:{
+			main:null
+		},
+		fragmentShaders:{
+			main:null
+		}
+	},
+	matrix:{
+		mult4x4:function(matA,matB){
+			return [
+				matA[ 0]*matB[0]+matA[ 1]*matB[4]+matA[ 2]*matB[8]+matA[ 3]*matB[12], matA[ 0]*matB[1]+matA[ 1]*matB[5]+matA[ 2]*matB[9]+matA[ 3]*matB[13], matA[ 0]*matB[2]+matA[ 1]*matB[6]+matA[ 2]*matB[10]+matA[ 3]*matB[14], matA[ 0]*matB[3]+matA[ 1]*matB[7]+matA[ 2]*matB[11]+matA[ 3]*matB[15],
+				matA[ 4]*matB[0]+matA[ 5]*matB[4]+matA[ 6]*matB[8]+matA[ 7]*matB[12], matA[ 4]*matB[1]+matA[ 5]*matB[5]+matA[ 6]*matB[9]+matA[ 7]*matB[13], matA[ 4]*matB[2]+matA[ 5]*matB[6]+matA[ 6]*matB[10]+matA[ 7]*matB[14], matA[ 4]*matB[3]+matA[ 5]*matB[7]+matA[ 6]*matB[11]+matA[ 7]*matB[15],
+				matA[ 8]*matB[0]+matA[ 9]*matB[4]+matA[10]*matB[8]+matA[11]*matB[12], matA[ 8]*matB[1]+matA[ 9]*matB[5]+matA[10]*matB[9]+matA[11]*matB[13], matA[ 8]*matB[2]+matA[ 9]*matB[6]+matA[10]*matB[10]+matA[11]*matB[14], matA[ 8]*matB[3]+matA[ 9]*matB[7]+matA[10]*matB[11]+matA[11]*matB[15],
+				matA[12]*matB[0]+matA[13]*matB[4]+matA[14]*matB[8]+matA[15]*matB[12], matA[12]*matB[1]+matA[13]*matB[5]+matA[14]*matB[9]+matA[15]*matB[13], matA[12]*matB[2]+matA[13]*matB[6]+matA[14]*matB[10]+matA[15]*matB[14], matA[12]*matB[3]+matA[13]*matB[7]+matA[14]*matB[11]+matA[15]*matB[15],
+			];
+		},
+		mult3x3:function(matA,matB){
+			return [
+				matA[0]*matB[0]+matA[1]*matB[3]+matA[2]*matB[6], matA[0]*matB[1]+matA[1]*matB[4]+matA[2]*matB[7], matA[0]*matB[2]+matA[1]*matB[5]+matA[2]*matB[8],
+				matA[3]*matB[0]+matA[4]*matB[3]+matA[5]*matB[6], matA[3]*matB[1]+matA[4]*matB[4]+matA[5]*matB[7], matA[3]*matB[2]+matA[4]*matB[5]+matA[5]*matB[8],
+				matA[6]*matB[0]+matA[7]*matB[3]+matA[8]*matB[6], matA[6]*matB[1]+matA[7]*matB[4]+matA[8]*matB[7], matA[6]*matB[2]+matA[7]*matB[5]+matA[8]*matB[8]
+			
+			];
+		},
+		identity:function(size){
+			switch(size){
+				case 2:
+					return [1,0,
+					        0,1];
+					break;
+				case 3:
+					return [1,0,0,
+							0,1,0,
+							0,0,1];
+					break;
+				case 4:
+					return [1,0,0,0,
+							0,1,0,0,
+							0,0,1,0,
+							0,0,0,1]
+					break;
+			}
+		}
+	},
+	buildShader(shaderSource,type){
+		var shader = this.gl.createShader(type);
+		this.gl.shaderSource(shader,shaderSource);
+		this.gl.compileShader(shader);
+		console.log(this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS));
+		console.log(this.gl.getShaderInfoLog(shader));
+		return shader;
+	},
+	buildProgram(vertexShader,fragmentShader){
+		var program = this.gl.createProgram();
+		this.gl.attachShader(program,vertexShader);
+		this.gl.attachShader(program,fragmentShader);
+		this.gl.linkProgram(program);
+		return program;
+	},
+	start:function() {
+		if(this.mode>=0){
+			return;
+		}
+		this.gl = this.canvas.getContext("webgl"||"experimental-webgl");
+		if(this.gl==undefined || this.gl==null){
+			this.mode = -2;
+			console.log("Error: could not obtain WebGL context");
+			alert("Faild to start visualizer!\nMake sure your web browser is up to date!")
+			return;
+		}
+		this.canvas.style.zIndex="-2";
+		this.canvas.style.width="100%";
+		this.canvas.style.height="100%";
+		this.canvas.style.top = "0px";
+		this.canvas.style.left="0px";
+		this.canvas.style.position = "absolute";
+		document.body.appendChild(this.canvas);
+		this.shaders.vertexShaders.main = this.buildShader(this.shaderSources.mainVertexShader,this.gl.VERTEX_SHADER);
+		this.shaders.fragmentShaders.main = this.buildShader(this.shaderSources.mainFragmentShader,this.gl.FRAGMENT_SHADER);
+		this.programs.main = this.buildProgram(this.shaders.vertexShaders.main,this.shaders.fragmentShaders.main);
+		this.gl.useProgram(this.programs.main);
+		this.attributes.main.pos = this.gl.getAttribLocation(this.programs.main,"pos");
+		this.attributes.main.color = this.gl.getAttribLocation(this.programs.main,"color");
+		this.attributes.main.normal = this.gl.getAttribLocation(this.programs.main,"normal");
+		this.attributes.main.tex = this.gl.getAttribLocation(this.programs.main,"tex");
+
+		this.uniforms.main.world = this.gl.getUniformLocation(this.programs.main,"world");
+		this.uniforms.main.perspective = this.gl.getUniformLocation(this.programs.main,"perspective");
+		this.uniforms.main.texture = this.gl.getUniformLocation(this.programs.main,"texture");
+		this.uniforms.main.ambient_color = this.gl.getUniformLocation(this.programs.main,"ambient_color");
+		this.uniforms.main.fog_color = this.gl.getUniformLocation(this.programs.main,"fog_color");
+		this.uniforms.main.light_color = this.gl.getUniformLocation(this.programs.main,"light_color");
+		this.uniforms.main.light_pos = this.gl.getUniformLocation(this.programs.main,"light_pos");
+		this.uniforms.main.normal_matrix = this.gl.getUniformLocation(this.programs.main,"normal_matrix");
+		this.uniforms.main.model = this.gl.getUniformLocation(this.programs.main,"model");
+
+		this.gl.enableVertexAttribArray(this.attributes.main.pos);
+		this.gl.enableVertexAttribArray(this.attributes.main.color);
+		this.gl.enableVertexAttribArray(this.attributes.main.normal);
+		this.gl.enableVertexAttribArray(this.attributes.main.tex);
+		this.gl.activeTexture(this.gl.TEXTURE0);
+		this.textures.plainWhite = this.gl.createTexture();
+		this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
+ 
+		// Fill the texture with a 1x1 white pixel.
+		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE,  new Uint8Array([255, 255, 255, 255]));
+		//no need to set up the uniform as it defaults to 0 and there is only one texture
+		
+  		this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
+		this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix,false,this.matrix.identity(3));
+		this.gl.uniformMatrix4fv(this.uniforms.main.model,false,this.matrix.identity(4));
+		this.gl.uniformMatrix4fv(this.uniforms.main.world,false,this.matrix.identity(4));
+		this.gl.uniformMatrix4fv(this.uniforms.main.perspective,false,this.matrix.identity(4));
+		this.gl.uniform3fv(this.uniforms.main.ambient_color,[0.05,0.05,0.05]);
+		this.gl.uniform3fv(this.uniforms.main.light_color,[0.5,0.5,0.5, 1.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0]);
+		this.gl.uniform3fv(this.uniforms.main.light_pos,[Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, 0.1,0.1,0.1, 0.1,0.1,0.1, 0.1,0.1,0.1, 0.1,0.1,0.1])
+		this.resize();
+		this.gl.enable(this.gl.DEPTH_TEST);
+		this.gl.depthFunc(this.gl.LEQUAL);
+		this.gl.clearDepth(1.0);
+		this.gl.enable(this.gl.CULL_FACE);
+		this.gl.clearColor(0.0,0.0,0.0,1.0);
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		this.cubes=[];
+		for(var i = 0; i<10*10*10;i++){
+			var x = i%10-4.5;
+			var y = Math.floor(i/10)%10-4.5;
+			var z = -Math.floor(i/100)-4.5;
+
+			this.cubes.push(new Cube(x*15,y*15,z*15,5,[1,1,1]));
+
+		}
+
+	},
+	resize:function(){
+		var newWidth = this.canvas.getBoundingClientRect().width;
+		var newHeight= this.canvas.getBoundingClientRect().height;
+		this.canvas.width = newWidth;
+		this.canvas.height = newHeight;
+		if(this.gl){
+			this.gl.viewport(0,0,newWidth,newHeight);
+			var f = Math.tan(Math.PI * 0.5 - 0.5 * 90*Math.PI/180);
+			var rangeInv = 1.0 / (1 - 10000);
+			var aspect = newWidth/newHeight;
+			perspectiveMatrix = [
+			f / aspect, 0, 0, 0,
+			0, f, 0, 0,
+			0, 0, (1 + 10000) * rangeInv, -1,
+			0, 0, 1 * 10000 * rangeInv * 2, 0
+			]
+			this.gl.uniformMatrix4fv(this.uniforms.main.perspective,false,perspectiveMatrix);
+		}
+	},
+	render:function(){
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		for(var i = 0;i<this.cubes.length;i++){
+			var cc = this.cubes[i];
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER,cc.VBO);
+			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER,cc.IBO);
+			//[x,y,x,r,g,b,nx,ny,nz,tx,ty]
+			this.gl.uniformMatrix4fv(this.uniforms.main.model,false,cc.modelMat);
+			this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix,false,cc.normalMat);
+
+			this.gl.vertexAttribPointer(this.attributes.main.pos,3,this.gl.FLOAT,false,4*(11),0);
+			this.gl.vertexAttribPointer(this.attributes.main.color,3,this.gl.FLOAT,false,4*(11),3*4);
+			this.gl.vertexAttribPointer(this.attributes.main.normal,3,this.gl.FLOAT,false,4*(11),6*4);
+			this.gl.vertexAttribPointer(this.attributes.main.tex,2,this.gl.FLOAT,false,4*(11),9*4);
+			
+			this.gl.drawElements(this.gl.TRIANGLES, cc.bufferLength , this.gl.UNSIGNED_SHORT, 0);
+			cc.rotation[0]+=Math.random();
+			cc.rotation[1]+=Math.random();
+			cc.rotation[2]+=Math.random();
+			cc.buildModelMat();
+		}//*/
+		/*var aBuffer = this.gl.createBuffer();
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,aBuffer);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER,new Float32Array([0.0,0.0,-100, 1.0,0.0,1.0, 0.0,0.0,-1.0, 0.0,0.0,
+		500.0,500.0,-100, 1.0,1.0,0.0, 0.0,0.0,-1.0, 0.0,0.0,
+		500.0,0.0,-100, 0.0,1.0,1.0, 0.0,0.0,-1.0, 0.0,0.0 ]),Graphics.gl.STATIC_DRAW);
+		var anotherBuffer = this.gl.createBuffer();
+		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, anotherBuffer);
+		this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2]),Graphics.gl.STATIC_DRAW)
+
+		this.gl.vertexAttribPointer(this.attributes.main.pos,3,this.gl.FLOAT,false,4*(11),0);
+		this.gl.vertexAttribPointer(this.attributes.main.color,3,this.gl.FLOAT,false,4*(11),3*4);
+		this.gl.vertexAttribPointer(this.attributes.main.normal,3,this.gl.FLOAT,false,4*(11),6*4);
+		this.gl.vertexAttribPointer(this.attributes.main.tex,2,this.gl.FLOAT,false,4*(11),9*4);
+		
+		this.gl.drawElements(this.gl.TRIANGLES, 3 , this.gl.UNSIGNED_SHORT, 0);
+		//this.gl.flush();*/
+
 	}
+	
 
 }
 function Song(fileElement,fileNumber){
@@ -613,6 +982,7 @@ function start(){
 	arr=new Uint8Array(Audio.analyser.frequencyBinCount);
 	dataArray = new Uint8Array(Audio.analyser.frequencyBinCount);
 	Player.loadResources();
+	Graphics.start();
 	update();
 };
 async function requestMic(){
@@ -693,7 +1063,7 @@ function update(){
 ct.strokeStyle="rgba(255,0,0,128)"
 					
 ct.stroke();
-
+Graphics.render();
 	
 }
 var errorCallback = function(e) {
