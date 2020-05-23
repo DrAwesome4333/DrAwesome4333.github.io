@@ -260,10 +260,22 @@ specialEle.addEventListener("dragover",function(e){
 		}
 		}
 	})
-function Cube(x,y,z,size,color){
+function Cube(x,y,z,size,color,light){
 this.x = x;
 this.y = y;
 this.z = z;
+this.ox = 0;//orbit point
+this.oy = -200;
+this.oz = -500;
+this.power = 0;
+this.light = light;
+this.tilt = (Math.random()-0.5)*10;
+this.orbit = Math.random()*360;
+this.tiltOffset =  Math.random()*360;//so all the cubes don't make an x
+this.maxDistance = 600;
+this.minDistance = 50;
+this.orbitDistance = 300;
+this.musicSection = Math.floor(Math.random()*1024);
 this.size = size;//the size of the model
 this.scale = 1;//how the model is scaled
 this.color = color;
@@ -283,39 +295,79 @@ Graphics.gl.bufferData(Graphics.gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(lazyArra
 this.buildVBO = function(){//used to update the VBO on a size or color (not scale) change
 	var hs = this.size/2;//half size
 	var c = this.color;
+	var f = 1;
+	if(this.light>-1){
+		f = -1;
+	}
 	var anotherArray = [ 
-		-hs, hs, hs, c[0],c[1],c[2], 0, 0, 1, 0,0,//front
-		 hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1, 1,1,
-		 hs, hs, hs, c[0],c[1],c[2], 0, 0, 1, 1,0,
-		-hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1, 0,1,
+		-hs, hs, hs, c[0],c[1],c[2], 0, 0, 1*f, 0,0,//front
+		 hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1*f, 1,1,
+		 hs, hs, hs, c[0],c[1],c[2], 0, 0, 1*f, 1,0,
+		-hs,-hs, hs, c[0],c[1],c[2], 0, 0, 1*f, 0,1,
   
-		-hs, hs,-hs, c[0],c[1],c[2],-1, 0, 0, 0,0,//left
-		-hs,-hs, hs, c[0],c[1],c[2],-1, 0, 0, 1,1,
-		-hs, hs, hs, c[0],c[1],c[2],-1, 0, 0, 1,0,
-		-hs,-hs,-hs, c[0],c[1],c[2],-1, 0, 0, 0,1,
+		-hs, hs,-hs, c[0],c[1],c[2],-1*f, 0, 0, 0,0,//left
+		-hs,-hs, hs, c[0],c[1],c[2],-1*f, 0, 0, 1,1,
+		-hs, hs, hs, c[0],c[1],c[2],-1*f, 0, 0, 1,0,
+		-hs,-hs,-hs, c[0],c[1],c[2],-1*f, 0, 0, 0,1,
   
-		 hs, hs, hs, c[0],c[1],c[2], 1, 0, 0, 0,0,//right
-		 hs,-hs,-hs, c[0],c[1],c[2], 1, 0, 0, 1,1,
-		 hs, hs,-hs, c[0],c[1],c[2], 1, 0, 0, 1,0,
-		 hs,-hs, hs, c[0],c[1],c[2], 1, 0, 0, 0,1,
+		 hs, hs, hs, c[0],c[1],c[2], 1*f, 0, 0, 0,0,//right
+		 hs,-hs,-hs, c[0],c[1],c[2], 1*f, 0, 0, 1,1,
+		 hs, hs,-hs, c[0],c[1],c[2], 1*f, 0, 0, 1,0,
+		 hs,-hs, hs, c[0],c[1],c[2], 1*f, 0, 0, 0,1,
   
-		-hs, hs,-hs, c[0],c[1],c[2], 0, 1, 0, 0,0,//top
-		 hs, hs, hs, c[0],c[1],c[2], 0, 1, 0, 1,1,
-		 hs, hs,-hs, c[0],c[1],c[2], 0, 1, 0, 1,0,
-		-hs, hs, hs, c[0],c[1],c[2], 0, 1, 0, 0,1,
+		-hs, hs,-hs, c[0],c[1],c[2], 0, 1*f, 0, 0,0,//top
+		 hs, hs, hs, c[0],c[1],c[2], 0, 1*f, 0, 1,1,
+		 hs, hs,-hs, c[0],c[1],c[2], 0, 1*f, 0, 1,0,
+		-hs, hs, hs, c[0],c[1],c[2], 0, 1*f, 0, 0,1,
   
-		-hs,-hs, hs, c[0],c[1],c[2], 0,-1, 0, 0,0,//bottom
-		 hs,-hs,-hs, c[0],c[1],c[2], 0,-1, 0, 1,1,
-		 hs,-hs, hs, c[0],c[1],c[2], 0,-1, 0, 1,0,
-		-hs,-hs,-hs, c[0],c[1],c[2], 0,-1, 0, 0,1,
+		-hs,-hs, hs, c[0],c[1],c[2], 0,-1*f, 0, 0,0,//bottom
+		 hs,-hs,-hs, c[0],c[1],c[2], 0,-1*f, 0, 1,1,
+		 hs,-hs, hs, c[0],c[1],c[2], 0,-1*f, 0, 1,0,
+		-hs,-hs,-hs, c[0],c[1],c[2], 0,-1*f, 0, 0,1,
   
-		 hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1, 0,0,//back
-		-hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1, 1,1,
-		-hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1, 1,0,
-		 hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1, 0,1
+		 hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1*f, 0,0,//back
+		-hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1*f, 1,1,
+		-hs, hs,-hs, c[0],c[1],c[2], 0, 0,-1*f, 1,0,
+		 hs,-hs,-hs, c[0],c[1],c[2], 0, 0,-1*f, 0,1
 	]
 	Graphics.gl.bindBuffer(Graphics.gl.ARRAY_BUFFER,this.VBO);
 	Graphics.gl.bufferData(Graphics.gl.ARRAY_BUFFER,new Float32Array(anotherArray),Graphics.gl.STATIC_DRAW);
+}
+this.update=function(){
+	if(this.power<arr[this.musicSection]/255){
+		this.power = arr[this.musicSection]/255;
+	}else{
+		if(this.power>0)
+		this.power-=0.1;
+		if(this.power<0){
+			this.power = 0;
+		}
+	}
+	
+	this.scale = this.power*5;
+	this.orbit += this.power/10 * (1-(this.orbitDistance/this.maxDistance)*0.5);
+	this.orbit %= 360;
+	this.orbitDistance += ((this.power*6)-2)/(this.maxDistance/this.orbitDistance);
+	this.rotation[0]+=this.power;
+	this.rotation[1]+=this.power+0.1;
+	if(this.orbitDistance>this.maxDistance){
+		this.orbitDistance = this.maxDistance;
+	}else if(this.orbitDistance<this.minDistance){
+		this.orbitDistance = this.minDistance;
+	}
+	this.x = this.orbitDistance*Math.cos(this.orbit);
+	this.y = 0;
+	this.z = this.orbitDistance*Math.sin(this.orbit);
+	this.x = this.x*Math.cos(this.tilt) - this.y*Math.sin(this.tilt);
+	this.y = this.y*Math.cos(this.tilt) + this.x*Math.sin(this.tilt)+this.oy;
+	this.x = this.x*Math.cos(this.tiltOffset) - this.z*Math.sin(this.tiltOffset)+this.ox;
+	this.z = this.z*Math.cos(this.tiltOffset) + this.x*Math.sin(this.tiltOffset)+this.oz;
+	this.buildModelMat();
+	if(this.light>-1){
+		Graphics.lightPos[this.light*3]=this.x;
+		Graphics.lightPos[this.light*3+1]=this.y;
+		Graphics.lightPos[this.light*3+2]=this.z;
+	}
 }
 this.buildModelMat=function(){
 var xr = this.rotation[0]*Math.PI/180;
@@ -369,6 +421,8 @@ var Graphics = {
 	particles:{
 		
 	},
+	lightPos:[0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0],
+	lightColor:[0.5,0.5,0.5, 0.5,0.0,0.0, 0.0,0.5,0.0, 0.5,0.5,0.0, 0.0,0.0,0.5, 0.5,0.0,0.5, 0.0,0.5,0.5, 0.0,0.0,0.5],
 	cubes:[],
 	state:{
 		mode:-1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
@@ -567,15 +621,18 @@ var Graphics = {
 		// Fill the texture with a 1x1 white pixel.
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE,  new Uint8Array([255, 255, 255, 255]));
 		//no need to set up the uniform as it defaults to 0 and there is only one texture
-		
+		let r = -30*Math.PI/180;
   		this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
 		this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix,false,this.matrix.identity(3));
 		this.gl.uniformMatrix4fv(this.uniforms.main.model,false,this.matrix.identity(4));
-		this.gl.uniformMatrix4fv(this.uniforms.main.world,false,this.matrix.identity(4));
+		this.gl.uniformMatrix4fv(this.uniforms.main.world,false,[1,0,0,0,
+		  0, Math.cos(r),-Math.sin(r),0,
+		  0, Math.sin(r),Math.cos(r),0,
+		  0,0,0,1]);
 		this.gl.uniformMatrix4fv(this.uniforms.main.perspective,false,this.matrix.identity(4));
 		this.gl.uniform3fv(this.uniforms.main.ambient_color,[0.05,0.05,0.05]);
-		this.gl.uniform3fv(this.uniforms.main.light_color,[0.5,0.5,0.5, 1.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0]);
-		this.gl.uniform3fv(this.uniforms.main.light_pos,[Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, Math.random()*150-75,Math.random()*150-75,Math.random()*150+75, 0.1,0.1,0.1, 0.1,0.1,0.1, 0.1,0.1,0.1, 0.1,0.1,0.1])
+		this.gl.uniform3fv(this.uniforms.main.light_color,this.lightColor);
+		this.gl.uniform3fv(this.uniforms.main.light_pos,this.lightPos)
 		this.resize();
 		this.gl.enable(this.gl.DEPTH_TEST);
 		this.gl.depthFunc(this.gl.LEQUAL);
@@ -583,13 +640,29 @@ var Graphics = {
 		this.gl.enable(this.gl.CULL_FACE);
 		this.gl.clearColor(0.0,0.0,0.0,1.0);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		var chosenLights = [];
+		var possibleList = [];
+		var numberOfCubes = 500;
 		this.cubes=[];
-		for(var i = 0; i<10*10*10;i++){
-			var x = i%10-4.5;
-			var y = Math.floor(i/10)%10-4.5;
-			var z = -Math.floor(i/100)-4.5;
-
-			this.cubes.push(new Cube(x*15,y*15,z*15,5,[1,1,1]));
+		for(var i=0;i<numberOfCubes;i++){
+			possibleList.push(i);
+		}
+		for(var i=0;i<8;i++){
+			var random = Math.floor(Math.random()*possibleList.length);
+			chosenLights.push(possibleList[random]);
+			possibleList.splice(random,1);
+		}
+		for(var i = 0; i<numberOfCubes;i++){
+			var x = Math.random()*150-75;
+			var y = Math.random()*150-75;
+			var z = -Math.random()*150-75;
+			var l = -1;
+			for(var j = 0;j<8;j++){
+				if(chosenLights[j]==i){
+					l = j;
+				}
+			}
+			this.cubes.push(new Cube(x,y,z,Math.random()*5+5,[1,1,1],l));
 
 		}
 
@@ -615,8 +688,12 @@ var Graphics = {
 	},
 	render:function(){
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		
+		this.gl.uniform3fv(this.uniforms.main.light_color,this.lightColor);
+		this.gl.uniform3fv(this.uniforms.main.light_pos,this.lightPos)
 		for(var i = 0;i<this.cubes.length;i++){
 			var cc = this.cubes[i];
+			cc.update();
 			this.gl.bindBuffer(this.gl.ARRAY_BUFFER,cc.VBO);
 			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER,cc.IBO);
 			//[x,y,x,r,g,b,nx,ny,nz,tx,ty]
@@ -629,10 +706,8 @@ var Graphics = {
 			this.gl.vertexAttribPointer(this.attributes.main.tex,2,this.gl.FLOAT,false,4*(11),9*4);
 			
 			this.gl.drawElements(this.gl.TRIANGLES, cc.bufferLength , this.gl.UNSIGNED_SHORT, 0);
-			cc.rotation[0]+=Math.random();
-			cc.rotation[1]+=Math.random();
-			cc.rotation[2]+=Math.random();
-			cc.buildModelMat();
+			
+			//cc.buildModelMat();
 		}//*/
 		/*var aBuffer = this.gl.createBuffer();
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,aBuffer);
@@ -969,7 +1044,7 @@ function start(){
 	Audio.analyser.connect(Audio.gainNode);
 	Audio.gainNode.connect(Audio.ctx.destination);
 	Audio.gainNode.gain.setValueAtTime(0, Audio.ctx.currentTime);//Mute audio so it doesn't create feedback
-	Audio.analyser.fftSize=2048;
+	Audio.analyser.fftSize=1024;
 	fEle.addEventListener("change",function(){
 		Audio.gainNode.gain.setValueAtTime(1,Audio.ctx.currentTime);
 		if(Audio.mic.playing){
@@ -1042,7 +1117,7 @@ function update(){
 	canvas.height = height;
 	ct.clearRect(0,0,width,height);
 	ct.strokeStyle="White";
-	ct.fillStyle="Green";
+	ct.fillStyle="rgba(0,255,0,0.5)";
 	ct.beginPath();
 	ct.moveTo(0,-arr[0]+(height/2));
 	for(var i = 1;i<arr.length;i++){
@@ -1050,8 +1125,8 @@ function update(){
 	}
 	ct.lineTo(width,height);
 	ct.lineTo(0,height);
-	ct.fill();
-	ct.stroke();
+//	ct.fill();
+//	ct.stroke();
 
 	ct.beginPath();
 	ct.moveTo(0,-dataArray[0]+height/2);
@@ -1060,9 +1135,9 @@ function update(){
 	}
 	ct.lineTo(width,height);
 	ct.lineTo(0,height);
-ct.strokeStyle="rgba(255,0,0,128)"
+ct.strokeStyle="rgba(255,0,0,0.5)"
 					
-ct.stroke();
+//ct.stroke();
 Graphics.render();
 	
 }
