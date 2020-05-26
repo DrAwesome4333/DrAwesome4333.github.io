@@ -265,15 +265,15 @@ this.x = x;
 this.y = y;
 this.z = z;
 this.ox = 0;//orbit point
-this.oy = -200;
-this.oz = -500;
+this.oy = 0;
+this.oz = -650;
 this.power = 0;
 this.light = light;
-this.tilt = (Math.random()-0.5)*10;
+this.tilt = (Math.random()-0.5)*60;
 this.orbit = Math.random()*360;
-this.tiltOffset =  Math.random()*360;//so all the cubes don't make an x
+this.tiltOffset =  Math.random()*360/180*Math.PI;//so all the cubes don't make an x
 this.maxDistance = 600;
-this.minDistance = 50;
+this.minDistance = 100;
 this.orbitDistance = 300;
 this.musicSection = Math.floor(Math.random()*1024);
 this.size = size;//the size of the model
@@ -345,9 +345,9 @@ this.update=function(){
 	}
 	
 	this.scale = this.power*5;
-	this.orbit += this.power/10 * (1-(this.orbitDistance/this.maxDistance)*0.5);
+	this.orbit += this.power* 1.5 *(this.maxDistance/this.orbitDistance);
 	this.orbit %= 360;
-	this.orbitDistance += ((this.power*6)-2)/(this.maxDistance/this.orbitDistance);
+	this.orbitDistance += (this.power*this.power-0.15)*(this.maxDistance/this.orbitDistance);
 	this.rotation[0]+=this.power;
 	this.rotation[1]+=this.power+0.1;
 	if(this.orbitDistance>this.maxDistance){
@@ -355,13 +355,22 @@ this.update=function(){
 	}else if(this.orbitDistance<this.minDistance){
 		this.orbitDistance = this.minDistance;
 	}
-	this.x = this.orbitDistance*Math.cos(this.orbit);
+	var orbit = this.orbit/180*Math.PI;
+	var tilt = this.tilt/180*Math.PI;
+	var oldX = 0;
+	var oldY = 0;
+	var oldZ = 0;
+	this.x = this.orbitDistance*Math.cos(orbit);
 	this.y = 0;
-	this.z = this.orbitDistance*Math.sin(this.orbit);
-	this.x = this.x*Math.cos(this.tilt) - this.y*Math.sin(this.tilt);
-	this.y = this.y*Math.cos(this.tilt) + this.x*Math.sin(this.tilt)+this.oy;
-	this.x = this.x*Math.cos(this.tiltOffset) - this.z*Math.sin(this.tiltOffset)+this.ox;
-	this.z = this.z*Math.cos(this.tiltOffset) + this.x*Math.sin(this.tiltOffset)+this.oz;
+	this.z = this.orbitDistance*Math.sin(orbit);
+	oldX = this.x;
+	oldY = this.y;
+	this.x = oldX*Math.cos(tilt) - oldY*Math.sin(tilt);
+	this.y = oldX*Math.sin(tilt) + oldY*Math.cos(tilt)+this.oy;
+	oldX = this.x;
+	oldZ = this.z;
+	this.x = oldX*Math.cos(this.tiltOffset) - oldZ*Math.sin(this.tiltOffset)+this.ox;
+	this.z = oldX*Math.sin(this.tiltOffset) + oldZ*Math.cos(this.tiltOffset)+this.oz;
 	this.buildModelMat();
 	if(this.light>-1){
 		Graphics.lightPos[this.light*3]=this.x;
@@ -427,6 +436,17 @@ var Graphics = {
 	state:{
 		mode:-1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
 		particles:true//wether or not to do particles on modes that don't require it
+	},
+	camera:{
+		height:0,
+		target:{
+			x:0,
+			y:0,
+			z:-650
+		},
+		matrix:null,
+		angle:0,
+		direction:1
 	},
 	textures:{
 		plainWhite:null
@@ -642,7 +662,7 @@ var Graphics = {
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		var chosenLights = [];
 		var possibleList = [];
-		var numberOfCubes = 500;
+		var numberOfCubes = 1000;
 		this.cubes=[];
 		for(var i=0;i<numberOfCubes;i++){
 			possibleList.push(i);
@@ -687,6 +707,26 @@ var Graphics = {
 		}
 	},
 	render:function(){
+		var camera = this.camera;
+		camera.angle += camera.direction;
+		if(camera.angle>90){
+			camera.direction = -0.1;
+		}
+		if(camera.angle<-90){
+			camera.direction = 0.1;
+		}
+		camera.height = -Math.sin(camera.angle/180*Math.PI)*500;
+		var r = Math.asin(camera.height/Math.sqrt(camera.height ** 2 + camera.target.z ** 2));
+		var camMatrix = [1,0,0,0,
+		  0, Math.cos(r),-Math.sin(r),0,
+		  0, Math.sin(r),Math.cos(r),0,
+		  0,0,0,1];
+		camMatrix = this.matrix.mult4x4([1,0,0,0,
+										    0,1,0,0,
+											0,0,1,0,
+											0,camera.height,0,1],camMatrix);
+		this.gl.uniformMatrix4fv(this.uniforms.main.world,false, camMatrix);
+
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		
 		this.gl.uniform3fv(this.uniforms.main.light_color,this.lightColor);
