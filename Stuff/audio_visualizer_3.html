@@ -345,9 +345,9 @@ this.update=function(){
 	}
 	
 	this.scale = this.power*5;
-	this.orbit += this.power* 1.5 *(this.maxDistance/this.orbitDistance);
+	this.orbit += this.power * 1.5  *(this.maxDistance/this.orbitDistance);
 	this.orbit %= 360;
-	this.orbitDistance += (this.power*this.power-0.15)*(this.maxDistance/this.orbitDistance);
+	this.orbitDistance += (this.power*this.power-0.25)*10*(this.maxDistance/this.orbitDistance);
 	this.rotation[0]+=this.power;
 	this.rotation[1]+=this.power+0.1;
 	if(this.orbitDistance>this.maxDistance){
