@@ -176,11 +176,11 @@
 	
 		<div id="canvas" class="page"></div>
         <div id="loading_screen" class="page">
-            <center>
+            <div style  = "text-align: center;">
                 <h1 style="text-align: center;">Cube Solver</h1>
                 <br>
                 <input type="button" value="Start" onclick="hidePages(-1,['cube_edit','canvas'],[]);">
-            </center>
+			</div>
         </div>
         <div id="cube_edit" class="page">
 			<div id="side_bar" style="width:50px;height:50vh;border-radius:3px;position:absolute;top:25vh;left:-3px;background-color:#323232;transition:all 0.5s ease-in-out;z-index:1;">
@@ -2453,7 +2453,7 @@ var Algorithm = {
     hasLeft: false,
     cubeCount :0,
 	cubeSize : 0,
-	movesPerRun : 10000,//the maximum amount of times that the IndexRun should run per frame, allows for this event to be async.
+	movesPerRun : 1000,//the maximum amount of times that the IndexRun should run per frame, allows for this event to be async.
     time : 0,
     oldTime : 0,
     newTime : 0,
@@ -3416,7 +3416,9 @@ function CubeNode(data,algorithm,score){
 	this.algorithm = algorithm;
 	this.score = score;
 	//this.children = [];
-	//this.active = true;
+	this.active = true;
+	this.next = -1;
+	this.last = -1;//the index of the next cubenode -1 is none.
 }
 var Solver = {
 	Running:false,
@@ -3424,8 +3426,15 @@ var Solver = {
 	CubeSize:3,
 	MoveWeight:1,//Calculation: size*size*5
 	CubeData:null,
-	CubeNodes:[],
+	CubeNodes:[],//All the Cube Nodes
+	StartNode:-1,//the first node in the list as shifting an array gets crazy slow so we just change the first node on the list to move the new start cube
+	//then each cube gets updated to know what cube is next in the list
+	EndNode:-1,
+	NodeListLength:0,
 	MaxNodes : 50000,
+	IndexedNodes:[],//a list of nodes that are indexed to help sorting the list go faster. 100 values may be saved here [nodeNumber, vaule]
+	//to help these will be in order with the final node always being in here to help get rid of the no go values right a way. No more looping 50,000 times per turn!
+	DeadNodes:[],//a list of dead nodes
 	Result:[],
 	ScoreMax:0,
 	Status:1,
@@ -3506,7 +3515,14 @@ var Solver = {
 			var fastData = CubeData.Convert(data,format,CubeDataType.Fast,size,false);
 			this.CubeNodes = [];
 			this.ScoreMax = (size-2)*(size-2)*24+(size-2)*24*3+48;
+			
+			this.DangerScoreLow = Solver.ScoreCube(Algorithm.TurnCube(generateSolvedCube(size,CubeDataType.Fast),0,CubeDataType.Fast,size,[0,0],1,false,false),CubeDataType.Fast,3)[0];
+			console.log(this.ScoreMax,this.DangerScoreLow);
+			this.StartNode = 0;
+			this.EndNode = 0;
+			this.NodeListLength = 1;
 			this.CubeNodes.push(new CubeNode(fastData,[],this.ScoreMax-this.ScoreCube(fastData,CubeDataType.Fast,size,ScoreMethods.Surface,[0])[0]));
+			this.DeadNodes = [];
 			this.MoveWeight = size*7;
 			this.CubeSize = size;
 			this.Running = true;
@@ -3524,7 +3540,7 @@ var Solver = {
 			Solver.SolveRun();
 		}
 		
-		op.innerHTML = "Top Alg: "+Solver.CubeNodes[0].algorithm;
+		op.innerHTML = "Top Alg: "+(Solver.CubeNodes[Solver.StartNode] ? Solver.CubeNodes[Solver.StartNode].algorithm:"No nodes found");
 		Solver.Count++;
 		if(Solver.Running){
 			requestAnimationFrame(Solver.SolveControl);
@@ -3532,16 +3548,16 @@ var Solver = {
 	},
 	SolveRun:function(){
 		if(!Solver.Cancel && Solver.Running){
-			if(Solver.CubeNodes.length==0){//If we have run out of nodes, then something really went wrong and we should stop right now
+			if(Solver.StartNode==-1){//If we have run out of nodes, then something really went wrong and we should stop right now
 				Solver.Status = 2;
 				Solver.Running = false;
 				console.log("Ran out of nodes some how");
 				return;
 			}
-			if(Solver.ScoreCube(Solver.CubeNodes[0].data,CubeDataType.Fast,Solver.CubeSize)[0] === Solver.ScoreMax){
+			if(Solver.ScoreCube(Solver.CubeNodes[Solver.StartNode].data,CubeDataType.Fast,Solver.CubeSize)[0] === Solver.ScoreMax){
 				Solver.Status = 3;
 				Solver.Running = false;
-				Solver.Result = Solver.CubeNodes[0].algorithm;
+				Solver.Result = Solver.CubeNodes[Solver.StartNode] ? Solver.CubeNodes[Solver.StartNode].algorithm:"No nodes found";
 				console.log("Success!");
 				Solver.EndTime = performance.now();
 				console.log("Itterations: "+Solver.Count);
@@ -3553,14 +3569,15 @@ var Solver = {
 				
 				var cubes = [];
 				var top5 = [];
-				var startData = Solver.CubeNodes[0].data;
-				var currentScore = Solver.ScoreCube(Solver.CubeNodes[0].data,CubeDataType.Fast,Solver.CubeSize)[0];
+				var cnode = Solver.NextNode();
+				var startData = cnode.data;
+				var currentScore = Solver.ScoreCube(cnode.data,CubeDataType.Fast,Solver.CubeSize)[0];
 				var layersToDo = [];
 				var allLayers = Algorithm.CountLayers(Solver.CubeSize);
-				var algLength = Solver.CubeNodes[0].algorithm.length/2;
-				var sAlg = Solver.CubeNodes[0].algorithm;
+				var algLength = cnode.algorithm.length/2;
+				var sAlg = cnode.algorithm;
 				for(var i = 0;i<allLayers;i++){
-					if(Algorithm.CheckValidMove(i,Solver.CubeSize,algLength,Solver.CubeNodes[0].algorithm)){
+					if(Algorithm.CheckValidMove(i,Solver.CubeSize,algLength,cnode.algorithm)){
 						layersToDo.push(i);
 					}
 				}
@@ -3571,14 +3588,17 @@ var Solver = {
 					var c1 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer],1,false,false);
 					var c2 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer+allLayers],1,false,false);
 					var c3 = Algorithm.TurnCube(startData,0,CubeDataType.Fast,Solver.CubeSize,[layer + allLayers*2],1,false,false);
-					//if(Solver.ScoreCube(c1,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
-						cubes.push(c1,layer,0,Solver.ScoreCube(c1,CubeDataType.Fast,Solver.CubeSize)[0]);
-				//	if(Solver.ScoreCube(c2,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
-						cubes.push(c2,layer,1,Solver.ScoreCube(c2,CubeDataType.Fast,Solver.CubeSize)[0]);
-					//if(Solver.ScoreCube(c3,CubeDataType.Fast,Solver.CubeSize)[0]>=currentScore)
-						cubes.push(c3,layer,2,Solver.ScoreCube(c3,CubeDataType.Fast,Solver.CubeSize)[0]);
+					var s1 = Solver.ScoreCube(c1,CubeDataType.Fast,Solver.CubeSize)[0];
+					var s2 = Solver.ScoreCube(c2,CubeDataType.Fast,Solver.CubeSize)[0];
+					var s3 = Solver.ScoreCube(c3,CubeDataType.Fast,Solver.CubeSize)[0];
+					if(!(s1>Solver.DangerScoreLow && s1 != Solver.ScoreMax) )//not in the danger zone of close to but not finnished cubes
+						cubes.push(c1,layer,0,s1);
+					if(!(s2>Solver.DangerScoreLow && s2 != Solver.ScoreMax) )
+						cubes.push(c2,layer,1,s2);
+					if(!(s3>Solver.DangerScoreLow && s3 != Solver.ScoreMax) )
+						cubes.push(c3,layer,2,s3);
 				}
-				Solver.CubeNodes.shift();
+				
 				for(var i = 0;i<cubes.length;i+=4){
 					var low = Infinity;
 					for(var j=0;j<top5.length;j++){
@@ -3798,7 +3818,7 @@ var Solver = {
 	},
 	CheckIfPossible:function(data,format,size){
 		//Cube must be valid , AKA have all pieces and no invalid pieces for this to work(passed CheckCube test)
-		
+		//TODO
 		//Swap test, must be an even number of swaps
 		var swaps = 0;
 		var testData = CubeData.Convert(data,format,CubeDataType.Piece,size,false);
@@ -3820,22 +3840,137 @@ var Solver = {
 		return true;
 	},
 	InsertCubeNode:function(node){
+		//debugger;
 		var index = 0;
-		var length = Solver.CubeNodes.length
+		var lastNodeId = -1;
+		var currentNodeId = Solver.EndNode;
+		var nextNodeId = -1;
+		if(currentNodeId!=-1){
+			lastNodeId = Solver.CubeNodes[currentNodeId].last;
+		}
+		var length = Solver.NodeListLength;
+		var passed = false;
+		var endmsg = "";
+		//debugger;
 		for(index = 0;index<length;index++){
-			if(Solver.CubeNodes[index].score>node.score){
+			if(Solver.CubeNodes[currentNodeId].score>node.score){
+				passed = true;
+				if(lastNodeId==-1){//we have hit the end of the list
+					break;
+				}else{
+					nextNodeId = currentNodeId;
+					currentNodeId = lastNodeId;
+					lastNodeId = Solver.CubeNodes[currentNodeId].last;
+				}
+			}else{
 				break;
 			}
 		}
-		if(index!=length){
-			Solver.CubeNodes.splice(index,0,node);
+		if(length < Solver.MaxNodes){
+			passed = true;
+		}
+		if(passed){
+			/*Solver.CubeNodes.splice(index,0,node);
 			if(Solver.CubeNodes.length>Solver.MaxNodes){
 				Solver.CubeNodes.pop();
+			}*/
+			var nodeToReplace = -1;
+			if(Solver.NodeListLength>=Solver.MaxNodes){//replace the end node
+				nodeToReplace = Solver.EndNode;
+				var endNode = Solver.CubeNodes[Solver.EndNode];
+				var newEndNode = Solver.CubeNodes[endNode.last];
+				endNode.active = false;
+				newEndNode.next = -1;
+				Solver.EndNode = endNode.last;
+				if(nextNodeId == nodeToReplace){
+					nextNodeId = -1;
+				}
+				endmsg +="End Replace"
+				//we don't take away from the total length as we will be replacing the old end node with a new node
+			}else{
+				if(Solver.DeadNodes.length>0){//replace a dead node
+				nodeToReplace = Solver.DeadNodes.shift();
+				Solver.NodeListLength++;
+				endmsg +="Dead Replace"
+				}else{
+					if(Solver.CubeNodes.length<Solver.MaxNodes){//create a new node
+						Solver.CubeNodes.push(undefined);
+						nodeToReplace = Solver.CubeNodes.length-1;
+						Solver.NodeListLength++;
+						endmsg +="New node"
+					}else{
+						console.log("Well this is awkward, we ran out of nodes.");
+					}
+				}
 			}
-		}else if(length<Solver.MaxNodes){
-			Solver.CubeNodes.push(node);
+			
+			if(nextNodeId == -1){//we are creating a new end node;
+				if(length>0){
+					var endNode = Solver.CubeNodes[Solver.EndNode];
+					endNode.next = nodeToReplace;
+					node.last = Solver.EndNode;
+					//default for next is -1 so we don't need to set it here
+					Solver.EndNode = nodeToReplace;
+					//?? delete Solver.CubeNodes[nodeToReplace];
+					Solver.CubeNodes[nodeToReplace] = node;
+					endmsg +="End attatch"
+				}else{//Placing in only node in list
+					Solver.CubeNodes[nodeToReplace] = node;
+					Solver.EndNode = nodeToReplace;
+					Solver.StartNode = nodeToReplace;
+					endmsg +="Only attatch"
+				}
+			}else if(lastNodeId == -1){// A start node
+				var startNode = Solver.CubeNodes[Solver.StartNode];
+				startNode.last = nodeToReplace;
+				node.next = Solver.StartNode;
+				//default for last is -1 so we don't need to set it here
+				Solver.StartNode = nodeToReplace;
+				//?? delete Solver.CubeNodes[nodeToReplace];
+				Solver.CubeNodes[nodeToReplace] = node;
+				endmsg +="Start attatch"
+			}else{//we are inserting in the middle
+				node.last = currentNodeId;
+				node.next = nextNodeId;
+				var currentNode = Solver.CubeNodes[currentNodeId];
+				currentNode.next = nodeToReplace;
+				var nextNode = Solver.CubeNodes[nextNodeId];
+				nextNode.last = nodeToReplace;
+				//?? delete Solver.CubeNodes[nodeToReplace];
+				Solver.CubeNodes[nodeToReplace]=node;
+				endmsg +="Mid attatch"
+			}
+			//var msg = (node.last)+" "+(nodeToReplace)+" "+(node.next)// + " Used "+ endmsg;
+			//console.log(msg);
+
+			
+			
 		}else{
 			return false;
+		}
+	},
+	NextNode:function(){
+		if(Solver.StartNode > -1){
+			var startNode = Solver.CubeNodes[Solver.StartNode];
+			var nextNodeID = startNode.next;
+			var nextNode;
+			Solver.DeadNodes.push(Solver.StartNode);
+			if(nextNodeID!=-1){
+				nextNode = Solver.CubeNodes[nextNodeID];
+				startNode.active = false;
+				nextNode.last = -1;
+				Solver.StartNode = nextNodeID;
+				Solver.NodeListLength --;
+				return startNode;
+			}else{//There is no more nodes!
+				startNode.active = false;
+				Solver.StartNode = -1;
+				Solver.EndNode = -1;
+				Solver.NodeListLength --;
+				return startNode;
+			}
+
+
 		}
 	}
 
