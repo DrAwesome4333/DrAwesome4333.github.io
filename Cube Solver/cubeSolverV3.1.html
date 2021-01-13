@@ -2468,9 +2468,24 @@ var Algorithm = {
 	gShouldCount:false,
 	lastCount:-1,
 	UncompressedAlgorithms:[],//an array that temporaily holds the data for algorithms that will later be compressed into a nice Uint8 Array.
-	SavedFilters:[],//saved like this [cubeSize,format,filterArray,...]
+	SavedFilters:[],//saved like this [cubeSize,format,MovesPerFilter,filterArray,...]
 	AlgIndex(size,depth){
-		Algorithm.Que.push(size,depth);
+		var shouldQue = true;
+		for(var i = 0; i<Algorithm.Cache.length;i+=4){
+			if(Algorithm.Cache[i]==size && Algorithm.Cache[i+1]==depth){//make sure we havent already cached the results.
+				console.log("Algorithm already cached");
+				return;
+			}
+		}
+		for(var i = 0; i<Algorithm.Que.length;i+=2){
+			if(Algorithm.Que[i]==size && Algorithm.Que[i+1]==depth){//make sure we havent already cached the results.
+				console.log("Algorithm already qued");
+				shouldQue = false;
+				break;
+			}
+		}
+		if(shouldQue)
+			Algorithm.Que.push(size,depth);
 		if(!Algorithm.running){
 			Algorithm.BeginRun();
 		}
@@ -2510,7 +2525,7 @@ var Algorithm = {
 		for(var i = 0; i<Algorithm.Cache.length;i+=4){
 			if(Algorithm.Cache[i]==Algorithm.cubeSize && Algorithm.Cache[i+1]==Algorithm.maxDepth){//make sure we havent already cached the results.
 				Algorithm.running = false;
-				Console.log("Algorithm already cached");
+				console.log("Algorithm already cached");
 			}
 		}
 		if(Algorithm.running)
@@ -2603,8 +2618,8 @@ var Algorithm = {
             },     
     IndexRun:function(){
                 if(!Algorithm.setup){
-                    Algorithm.setup = true;
-                    Algorithm.depth++;
+                    Algorithm.setup = true;//Posible Optimization, remove this, I am not sure why it was needed in the first place
+                   // Algorithm.depth++;
                 }else{
                     if(Algorithm.newMove){
                         Algorithm.moves[Algorithm.depth*2]=0;
@@ -2619,16 +2634,22 @@ var Algorithm = {
 							Algorithm.newMove=true;
                         }else{
                            	Algorithm.newMove = false;
-							   if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
+							   /*if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
 								Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
-								
-								Algorithm.cubeCount++;
+								if(Algorithm.maxDepth == 1)
+										console.log(Algorithm.moves.slice(0));
+								Algorithm.cubeCount++;*/
 							   
                         }
                             
                     }else{
 						
-					
+						if(Algorithm.depth == Algorithm.maxDepth-1){
+							if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
+										Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
+										
+									Algorithm.cubeCount++;
+								}
 							
                             
                         Algorithm.moves[Algorithm.depth*2+1]++;
@@ -2655,16 +2676,19 @@ var Algorithm = {
                                     Algorithm.depth++;
                                     
 									Algorithm.newMove=true;
-                                }
+                                }else{
+									
+								}
                             }
                         }else if(Algorithm.depth+1<=Algorithm.maxDepth-1){
 							Algorithm.depth++;
 							Algorithm.newMove=true;
                         }else{
-									if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
+									/*if(Algorithm.cubeCount % Algorithm.CacheResolution === 0)
 										Algorithm.UncompressedAlgorithms.push(Algorithm.moves.slice(0));
-									
-									Algorithm.cubeCount++;
+									if(Algorithm.maxDepth == 1)
+										console.log(Algorithm.moves.slice(0));
+									Algorithm.cubeCount++;*/
 								}
                     }
 
@@ -2843,21 +2867,21 @@ var Algorithm = {
                     IndexRun(AlgNumber);
 				}
 	},
-	TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true){
+	TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true, movesPerMove = 1){
 		//Accepts moves in compressed format and does them to the cube
-		//should Edit states wiether or not the original data should remain the same
+		//should Edit states wether or not the original data should remain the same
 		//if false, the new cube is just returned, if true, the data is updated to the new cube as well
 
 		//turns can be simplified into pieces that are swapped and transformed, using a lot of the cubeData utilities made previously, this should not be a hard task.
 		var ftu = -1;//filter to use
-		for(var i = 0;i<Algorithm.SavedFilters.length;i+=3){//check for the filters we need for the moves we are doing, if they are not already built, build them.
-			if(Algorithm.SavedFilters[i]==cubeSize && Algorithm.SavedFilters[i+1]==format){
-				ftu = i+2;
+		for(var i = 0;i<Algorithm.SavedFilters.length;i+=4){//check for the filters we need for the moves we are doing, if they are not already built, build them.
+			if(Algorithm.SavedFilters[i]==cubeSize && Algorithm.SavedFilters[i+1]==format && Algorithm.SavedFilters[i+2]==movesPerMove){
+				ftu = i+3;
 				break;
 			}
 		}
 		if(ftu == -1){
-			Algorithm.SavedFilters.push(cubeSize,format,Algorithm.BuildFilters(cubeSize,format));
+			Algorithm.SavedFilters.push(cubeSize,format,movesPerMove,Algorithm.BuildFilters(cubeSize,format));
 			ftu=Algorithm.SavedFilters.length-1;
 		}
 		var originCube;
@@ -2932,7 +2956,7 @@ var Algorithm = {
 		var numberOfMoves = Algorithm.CountLayers(size) * 3;
 		return numberOfMoves;
 	},
-	BuildFilters:function(size = 3, format = 0,moves = Algorithm.GetAllMoves(size),numberOfMoves = Algorithm.GetNumberOfMoves(size) ,moveLength = 1){
+	BuildFilters:function(size = 3, format = 0,moves = A2.GetAllMoves(size),numberOfMoves = A2.GetNumberOfMoves(size) ,moveLength = 1){
 /*
 size: the size of cube the filter is being built for
 format: the format of cube the filter is being built for
@@ -3292,6 +3316,15 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 	}
 
 };
+
+var A2 = {//this is just here so that VS Code will show me suggestions for the Algorithm Object
+	GetAllMoves:function(size){
+		Algorithm.GetAllMoves(size);
+	},
+	GetNumberOfMoves:function(size){
+		Algorithm.GetNumberOfMoves(size);
+	}
+}
 var Controls = {
 	GetMouseSelection:function(){//returns info about what the mouse is over in webgl
 		var xRatio = Renderer.MapSize / window.innerWidth;
@@ -4326,14 +4359,14 @@ function vCube(size=3,format=0,data=generateSolvedCube(size,format),scale = 5,st
 
 		//turns can be simplified into pieces that are swapped and transformed, using a lot of the cubeData utilities made previously, this should not be a hard task.
 		var ftu = -1;//filter to use
-		for(var i = 0;i<Algorithm.SavedFilters.length;i+=3){//check for the filters we need for the moves we are doing, if they are not already built, build them.
-			if(Algorithm.SavedFilters[i]==this.size && Algorithm.SavedFilters[i+1]==CubeDataType.Piece){
-				ftu = i+2;
+		for(var i = 0;i<Algorithm.SavedFilters.length;i+=4){//check for the filters we need for the moves we are doing, if they are not already built, build them.
+			if(Algorithm.SavedFilters[i]==this.size && Algorithm.SavedFilters[i+1]==CubeDataType.Piece && Algorithm.SavedFilters[i+2==1]){
+				ftu = i+3;
 				break;
 			}
 		}
 		if(ftu == -1){
-			Algorithm.SavedFilters.push(this.size,CubeDataType.Piece,Algorithm.BuildFilters(this.size,CubeDataType.Piece));
+			Algorithm.SavedFilters.push(this.size,CubeDataType.Piece,1,Algorithm.BuildFilters(this.size,CubeDataType.Piece));
 			ftu=Algorithm.SavedFilters.length-1;
 		}
 		var destinationList;
@@ -4690,6 +4723,8 @@ function draw(){
 	requestAnimationFrame(draw);
 	
 }
+
+
 /*
 Notes and TO DO
 Allow vCubes to have a time seeker/be controlled by a slider
@@ -4776,6 +4811,46 @@ function DOSTUFFPART2(){
 		console.log(i);
 		
 	}
+}
+
+var All3MoveAlgs = [];
+
+function ScoreAll3MoveCubes(cubeSize = 3){
+	//Search to see if the Algorithm was cached yet, if not request to start the run for it.
+	var isCreated=false;
+	var indexNumber = 0;
+	for(var i = 0;i<Algorithm.TotalAlgorithms.length;i+=3){
+		if(Algorithm.TotalAlgorithms[i]==cubeSize && Algorithm.TotalAlgorithms[i+1] == 3){
+			isCreated=true;
+			indexNumber = i;
+			break;
+		}
+	}
+	if(!isCreated){
+		console.log("3 Move Algorithms for a "+cubeSize+" sized cube have not been created, A request for it was made, please what for it to finish");
+		Algorithm.AlgIndex(cubeSize,3);
+		return;
+	}
+
+	All3MoveAlgs  = [];
+	for(var i=0;i<Algorithm.TotalAlgorithms[indexNumber+2];i++){
+		var newAlg = Algorithm.GetAlgorithm(cubeSize,3,i,false);
+		for(var j = 0;j<newAlg.length;j++){
+			All3MoveAlgs.push(newAlg[j]);
+		}
+	}
+	
+	/*var ftu = -1;//filter to use
+		for(var i = 0;i<Algorithm.SavedFilters.length;i+=4){//check for the filters we need for the moves we are doing, if they are not already built, build them.
+			if(Algorithm.SavedFilters[i]==cubeSize && Algorithm.SavedFilters[i+1]==CubeDataType.Fast && Algorithm.SavedFilters[i+2]==3){
+				ftu = i+3;
+				break;
+			}
+		}
+		if(ftu == -1){
+			Algorithm.SavedFilters.push(cubeSize,format,movesPerMove,Algorithm.BuildFilters(cubeSize,format));
+			ftu=Algorithm.SavedFilters.length-1;
+		}*/
 }
 
 
