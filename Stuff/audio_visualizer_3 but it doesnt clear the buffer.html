@@ -458,7 +458,8 @@ var Graphics = {
 		direction:1
 	},
 	textures:{
-		plainWhite:null
+		plainWhite:null,
+		transparentBlack:null
 	},
 	shaderSources:{
 		mainVertexShader:"\n\
@@ -513,7 +514,20 @@ var Graphics = {
 			}\n\
 			total_light+=ambient_color*base;\n\
 			float amount = smoothstep(900.0, 1000.0, gl_FragCoord.z);\n\
-			gl_FragColor = vec4(mix(total_light,fog_color,amount),1.0);\n\
+			gl_FragColor = vec4(mix(total_light,fog_color,amount),texture2D(texture,f_tex).a);\n\
+			\n\
+		}",
+		fadeVertexShader:"\n\
+		attribute vec2 pos;\n\
+		void main(void){\n\
+			gl_Position=vec4(pos,1.0,1.0);\n\
+		}",
+		fadeFragmentShader:"\n\
+		precision mediump float;\n\
+		uniform float opacity;\n\
+		void main(void){\n\
+			\n\
+			gl_FragColor = vec4(0.0,0.0,0.0,opacity);\n\
 			\n\
 		}"
 	},
@@ -529,6 +543,9 @@ var Graphics = {
 			fog_color:null,
 			ambient_color:null
 
+		},
+		fade:{
+			opacity:null
 		}
 	},
 	attributes:{
@@ -537,18 +554,28 @@ var Graphics = {
 			color:null,
 			tex:null,
 			normal:null
+		},
+		fade:{
+			pos:null
 		}
 	},
 	programs:{
-		main:null
+		main:null,
+		fade:null
 	},
 	shaders:{
 		vertexShaders:{
-			main:null
+			main:null,
+			fade:null
 		},
 		fragmentShaders:{
-			main:null
+			main:null,
+			fade:null
 		}
+	},
+	buffers:{
+		fadeCoverPoints:null,
+		fadeCoverTriangles:null
 	},
 	matrix:{
 		mult4x4:function(matA,matB){
@@ -606,7 +633,7 @@ var Graphics = {
 		if(this.mode>=0){
 			return;
 		}
-		this.gl = this.canvas.getContext("webgl"||"experimental-webgl",{ preserveDrawingBuffer: true });
+		this.gl = this.canvas.getContext("webgl"||"experimental-webgl",{ preserveDrawingBuffer: true,alpha: false });
 		if(this.gl==undefined || this.gl==null){
 			this.mode = -2;
 			console.log("Error: could not obtain WebGL context");
@@ -620,6 +647,26 @@ var Graphics = {
 		this.canvas.style.left="0px";
 		this.canvas.style.position = "absolute";
 		document.body.appendChild(this.canvas);
+
+		this.shaders.vertexShaders.fade = this.buildShader(this.shaderSources.fadeVertexShader,this.gl.VERTEX_SHADER);
+		this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.fadeFragmentShader,this.gl.FRAGMENT_SHADER);
+		this.programs.fade = this.buildProgram(this.shaders.vertexShaders.fade,this.shaders.fragmentShaders.fade);
+		this.gl.useProgram(this.programs.fade);
+		this.attributes.fade.pos = this.gl.getAttribLocation(this.programs.fade,"pos");
+
+		this.uniforms.fade.opacity = this.gl.getUniformLocation(this.programs.fade,"opacity");
+		this.gl.uniform1f(this.uniforms.fade.opacity,0.05);
+		this.gl.enableVertexAttribArray(this.attributes.fade.pos);
+
+		this.buffers.fadeCoverPoints = this.gl.createBuffer();
+		this.buffers.fadeCoverTriangles = this.gl.createBuffer();
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.buffers.fadeCoverPoints);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER,new Float32Array([-1.0,-1.0, 1.0,-1.0, 1.0,1.0, -1.0,1.0]),this.gl.STATIC_DRAW);
+
+		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER,this.buffers.fadeCoverTriangles);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER,new Uint16Array([0,1,2,0,2,3]),this.gl.STATIC_DRAW);
+
 		this.shaders.vertexShaders.main = this.buildShader(this.shaderSources.mainVertexShader,this.gl.VERTEX_SHADER);
 		this.shaders.fragmentShaders.main = this.buildShader(this.shaderSources.mainFragmentShader,this.gl.FRAGMENT_SHADER);
 		this.programs.main = this.buildProgram(this.shaders.vertexShaders.main,this.shaders.fragmentShaders.main);
@@ -643,7 +690,17 @@ var Graphics = {
 		this.gl.enableVertexAttribArray(this.attributes.main.color);
 		this.gl.enableVertexAttribArray(this.attributes.main.normal);
 		this.gl.enableVertexAttribArray(this.attributes.main.tex);
+
+
+		this.gl.enable(this.gl.BLEND);
+		this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 		this.gl.activeTexture(this.gl.TEXTURE0);
+		this.textures.transparentBlack = this.gl.createTexture();
+		this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.transparentBlack);
+ 
+		
+		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE,  new Uint8Array([0, 0, 0, 25]));
+
 		this.textures.plainWhite = this.gl.createTexture();
 		this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
  
@@ -716,6 +773,17 @@ var Graphics = {
 		}
 	},
 	render:function(){
+		this.gl.useProgram(this.programs.fade)
+
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.buffers.fadeCoverPoints);
+		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER,this.buffers.fadeCoverTriangles);
+
+		this.gl.vertexAttribPointer(this.attributes.fade.pos,2,this.gl.FLOAT,false,4*(2),0);
+
+		this.gl.drawElements(this.gl.TRIANGLES, 6 , this.gl.UNSIGNED_SHORT, 0);
+
+		this.gl.useProgram(this.programs.main);
+
 		var camera = this.camera;
 		camera.angle += camera.direction;
 		if(camera.angle>90){
