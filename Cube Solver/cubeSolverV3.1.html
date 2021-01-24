@@ -184,17 +184,17 @@
         </div>
         <div id="cube_edit" class="page">
 			<div id="side_bar" style="width:50px;height:50vh;border-radius:3px;position:absolute;top:25vh;left:-3px;background-color:#323232;transition:all 0.5s ease-in-out;z-index:1;">
-				<div class="color0 swatch" style="top: 4vh;" onclick="swbg.style.top='calc( 4vh - 4px)';selColor=0;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
-				<div class="color1 swatch" style="top:12vh;" onclick="swbg.style.top='calc(12vh - 4px)';selColor=1;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
-				<div class="color2 swatch" style="top:20vh;" onclick="swbg.style.top='calc(20vh - 4px)';selColor=2;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
-				<div class="color3 swatch" style="top:28vh;" onclick="swbg.style.top='calc(28vh - 4px)';selColor=3;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
-				<div class="color4 swatch" style="top:36vh;" onclick="swbg.style.top='calc(36vh - 4px)';selColor=4;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
-				<div class="color5 swatch" style="top:44vh;" onclick="swbg.style.top='calc(44vh - 4px)';selColor=5;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));"></div>
+				<div class="color0 swatch" style="top: 4vh;" onclick="swbg.style.top='calc( 4vh - 4px)';selColor=0;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
+				<div class="color1 swatch" style="top:12vh;" onclick="swbg.style.top='calc(12vh - 4px)';selColor=1;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
+				<div class="color2 swatch" style="top:20vh;" onclick="swbg.style.top='calc(20vh - 4px)';selColor=2;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
+				<div class="color3 swatch" style="top:28vh;" onclick="swbg.style.top='calc(28vh - 4px)';selColor=3;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
+				<div class="color4 swatch" style="top:36vh;" onclick="swbg.style.top='calc(36vh - 4px)';selColor=4;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
+				<div class="color5 swatch" style="top:44vh;" onclick="swbg.style.top='calc(44vh - 4px)';selColor=5;event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
 				<div class="colorbg" id="swbg"></div>
 			</div>
-			<input type="button" value="Options" onclick="hidePages(1,['options'],['canvas'])" style="position:absolute;bottom:0vh;left:0vh;">
-			<input type="button" value="Solve" onclick="/*mode=1;hidePages(-1,['cube_solve'],['canvas'])*/Solver.SolveCube(testCube.data,0,testCube.size,undefined,undefined,testCube)" ontouchstart="this.dispatchEvent(new MouseEvent('click'));" style="position:absolute;bottom:0vh;right:0vh;">
-			<input type="button" value="i" style="position:absolute;top:0vh;right:0vh;">
+			<input type="button" value="Options" onclick="hidePages(1,['options'],['canvas'])" style="position:absolute;bottom:0vh;left:0vh;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));">
+			<input type="button" value="Solve" onclick="/*mode=1;hidePages(-1,['cube_solve'],['canvas'])*/Solver.SolveCube(testCube.data,0,testCube.size,undefined,undefined,testCube);event.stopPropagation();" ontouchstart="this.dispatchEvent(new MouseEvent('click'));" style="position:absolute;bottom:0vh;right:0vh;">
+			<input type="button" value="i" style="position:absolute;top:0vh;right:0vh;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));">
 			<div id="debugOP" style="position:absolute;bottom:0px;left:20vh;color:white;"></div>
 		</div>
 		
@@ -1805,6 +1805,11 @@ var Renderer = {
 				this.bct.fillRect(x*32,y*32,32,32);
 			}
 		}//*/
+		for(var i = 0;i<500;i++){
+			this.bct.fillStyle = "rgb("+Math.floor(Math.random()*256)+","+Math.floor(Math.random()*256)+",255)";
+			this.bct.beginPath();
+			this.bct.fillRect(Math.floor(Math.random()*1024)+60,Math.floor(Math.random()*1024)+60,10,10)
+		}
 		this.bct.strokeStyle = "rgb(128,128,255)";
 		this.bct.lineWidth = 100;
 		this.bct.lineJoin="round";
@@ -1831,6 +1836,8 @@ var Renderer = {
 		this.bct.moveTo(60,60);
 		this.bct.lineTo(60,964);
 		this.bct.stroke();
+
+		
 		//*/
 	//	this.bumpImage = new Image(); Removed as I don't own these textures and should no use them for now
 		//this.bumpImage.src = "vpZuv.png";
@@ -2532,13 +2539,13 @@ var Algorithm = {
 			Algorithm.Indexer();
 
 	},
-	CountLayers:function(size){
+	CountLayers(size){
 		if(size<=1 && size%1===0)//checks for negative numbers and non integers.
 			return 0;
 			
 		return (size % 2 === 1) ? (size-1)*3 : (size*3);//checks if size is odd or even and returns correct value for the size.
 	},
-    MovesToText:function(moves,cubeSize,moveCount,compressed = true){
+    MovesToText(moves,cubeSize,moveCount,compressed = true){
 		 //TODO
 		 var POT = CubeData.CalculateBitLength(Algorithm.CountLayers(cubeSize)*3);
 		 var key = [];
@@ -2594,7 +2601,7 @@ var Algorithm = {
 		 }
                   return result;
             },
-    Indexer:function(){
+    Indexer(){
                 for(var a = 0;a<Algorithm.movesPerRun;a++){
                     if(Algorithm.moves[0] != 0){
                         Algorithm.hasLeft = true;
@@ -2616,7 +2623,7 @@ var Algorithm = {
 					}
 				}
             },     
-    IndexRun:function(){
+    IndexRun(){
                 if(!Algorithm.setup){
                     Algorithm.setup = true;//Posible Optimization, remove this, I am not sure why it was needed in the first place
                    // Algorithm.depth++;
@@ -2695,7 +2702,7 @@ var Algorithm = {
                 }
                 
             },
-    CheckValidMove:function(layer,size,depth,moves){
+    CheckValidMove(layer,size,depth,moves){
                 //disallows working on the same layer as the last move
                 //disallows working on a layer that has not been affected by the last move.
                 //scans all previous moves to see if the above layer has been affected by other moves, if it has not, then this
@@ -2738,7 +2745,7 @@ var Algorithm = {
 
                 return isValid;
             },
-	GetAlgorithm:function(cubeSize,AlgLength,AlgNumber,compressed){
+	GetAlgorithm(cubeSize,AlgLength,AlgNumber,compressed){
 		var isCreated = false;
 		var cacheIndex = 0;
 		for(var i = 0; i*4 < Algorithm.Cache.length;i++){
@@ -2797,7 +2804,7 @@ var Algorithm = {
 			return null;
 		}
 	},
-	RunTo:function(AlgNumber){
+	RunTo(AlgNumber){
 		
     	function IndexRun(algNumber){
                 if(!Algorithm.gSetup){
@@ -2867,7 +2874,7 @@ var Algorithm = {
                     IndexRun(AlgNumber);
 				}
 	},
-	TurnCube:function(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true, movesPerMove = 1){
+	TurnCube(data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true,compressed = true, movesPerMove = 1){
 		//Accepts moves in compressed format and does them to the cube
 		//should Edit states wether or not the original data should remain the same
 		//if false, the new cube is just returned, if true, the data is updated to the new cube as well
@@ -2956,7 +2963,7 @@ var Algorithm = {
 		var numberOfMoves = Algorithm.CountLayers(size) * 3;
 		return numberOfMoves;
 	},
-	BuildFilters:function(size = 3, format = 0,moves = A2.GetAllMoves(size),numberOfMoves = A2.GetNumberOfMoves(size) ,moveLength = 1){
+	BuildFilters(size = 3, format = 0,moves = A2.GetAllMoves(size),numberOfMoves = A2.GetNumberOfMoves(size) ,moveLength = 1){
 /*
 size: the size of cube the filter is being built for
 format: the format of cube the filter is being built for
@@ -2981,6 +2988,7 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 
 		the array of filters is then returned.
 		*/
+		//debugger;
 		var builtFilters = [];
 		var pMoves = Algorithm.CountLayers(size) * 3;
 		var POT = CubeData.CalculateBitLength(pMoves);
@@ -3313,16 +3321,34 @@ an example use of moveLength is when I have a bunch of 2 move algorithms to be c
 		}
 		return builtFilters;
 
+	},
+	CompressMoves(moves,cubeSize){
+		var layerCount =  Algorithm.CountLayers(cubeSize);
+		var maxValue = layerCount*3;
+		var POT = CubeData.CalculateBitLength(maxValue);
+		var MovesArray = new Uint8Array(Math.ceil((POT*moves.length)/8));
+		for(var i = 0;i<moves.length/2;i++){
+			CubeData.ChangeBinaryData(MovesArray,i*POT,moves[i*2]+moves[i*2+1]*layerCount,POT);
+			
+		}
+		return MovesArray;
 	}
 
 };
 
 var A2 = {//this is just here so that VS Code will show me suggestions for the Algorithm Object
-	GetAllMoves:function(size){
-		Algorithm.GetAllMoves(size);
+	GetAllMoves(size){
+		var numberOfMoves = ((size % 2 === 1) ? (size-1)*3 : (size*3)) * 3;
+		var POT = CubeData.CalculateBitLength(numberOfMoves);
+		var MovesArray = new Uint8Array(Math.ceil((POT*numberOfMoves)/8));
+		for(var i = 0;i<numberOfMoves;i++){
+			CubeData.ChangeBinaryData(MovesArray,i*POT,i,POT);
+		}
+		return MovesArray;
 	},
-	GetNumberOfMoves:function(size){
-		Algorithm.GetNumberOfMoves(size);
+	GetNumberOfMoves(size){
+		var numberOfMoves = ((size % 2 === 1) ? (size-1)*3 : (size*3)) * 3;
+		return numberOfMoves;
 	}
 }
 var Controls = {
@@ -3748,7 +3774,7 @@ var Solver = {
 								var s0c = CubeData.PullSide(data,format,size,cube,x+y*size);//side 0 color, all sides are done at once
 								var s1c = CubeData.PullSide(data,format,size,cube,x+y*(size*4)+size*size);
 								var s2c = CubeData.PullSide(data,format,size,cube,x*2+y*(size*4)+size*size+size);
-								var s3c = CubeData.PullSide(data,format,size,cube,x*2+y*(size*4)+size*size+size);
+								var s3c = CubeData.PullSide(data,format,size,cube,x*2+y*(size*4)+size*size+size+1);
 								var s4c = CubeData.PullSide(data,format,size,cube,x+y*(size*4)+size*size+size*3);
 								var s5c = CubeData.PullSide(data,format,size,cube,x+y*size+size*size+size*(size*4));
 								if(x>0){
@@ -3758,7 +3784,7 @@ var Solver = {
 										cubeScore++;
 									if(s2c === CubeData.PullSide(data,format,size,cube,(x-1)*2+y*(size*4)+size*size+size))
 										cubeScore++;
-									if(s3c === CubeData.PullSide(data,format,size,cube,(x-1)*2+y*(size*4)+size*size+size))
+									if(s3c === CubeData.PullSide(data,format,size,cube,(x-1)*2+y*(size*4)+size*size+size+1))
 										cubeScore++;
 									if(s4c === CubeData.PullSide(data,format,size,cube,(x-1)+y*(size*4)+size*size+size*3))
 										cubeScore++;
@@ -3773,7 +3799,7 @@ var Solver = {
 										cubeScore++;
 									if(s2c === CubeData.PullSide(data,format,size,cube,(x+1)*2+y*(size*4)+size*size+size))
 										cubeScore++;
-									if(s3c === CubeData.PullSide(data,format,size,cube,(x+1)*2+y*(size*4)+size*size+size))
+									if(s3c === CubeData.PullSide(data,format,size,cube,(x+1)*2+y*(size*4)+size*size+size+1))
 										cubeScore++;
 									if(s4c === CubeData.PullSide(data,format,size,cube,(x+1)+y*(size*4)+size*size+size*3))
 										cubeScore++;
@@ -3788,7 +3814,7 @@ var Solver = {
 										cubeScore++;
 									if(s2c === CubeData.PullSide(data,format,size,cube,x*2+(y-1)*(size*4)+size*size+size))
 										cubeScore++;
-									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y-1)*(size*4)+size*size+size))
+									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y-1)*(size*4)+size*size+size+1))
 										cubeScore++;
 									if(s4c === CubeData.PullSide(data,format,size,cube,x+(y-1)*(size*4)+size*size+size*3))
 										cubeScore++;
@@ -3802,7 +3828,7 @@ var Solver = {
 										cubeScore++;
 									if(s2c === CubeData.PullSide(data,format,size,cube,x*2+(y+1)*(size*4)+size*size+size))
 										cubeScore++;
-									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y+1)*(size*4)+size*size+size))
+									if(s3c === CubeData.PullSide(data,format,size,cube,x*2+(y+1)*(size*4)+size*size+size+1))
 										cubeScore++;
 									if(s4c === CubeData.PullSide(data,format,size,cube,x+(y+1)*(size*4)+size*size+size*3))
 										cubeScore++;
@@ -4813,44 +4839,67 @@ function DOSTUFFPART2(){
 	}
 }
 
-var All3MoveAlgs = [];
+var AllxMoveAlgs = [];
+var XmoveScores = [];//{CubeSize:0,AlgLength:0,Scores:[[0,0],[1,100]]}
 
-function ScoreAll3MoveCubes(cubeSize = 3){
+function ScoreAllXMoveCubes(cubeSize = 3,xNumber = 3){
 	//Search to see if the Algorithm was cached yet, if not request to start the run for it.
 	var isCreated=false;
 	var indexNumber = 0;
+	var scores = [];
 	for(var i = 0;i<Algorithm.TotalAlgorithms.length;i+=3){
-		if(Algorithm.TotalAlgorithms[i]==cubeSize && Algorithm.TotalAlgorithms[i+1] == 3){
+		if(Algorithm.TotalAlgorithms[i]==cubeSize && Algorithm.TotalAlgorithms[i+1] == xNumber){
 			isCreated=true;
 			indexNumber = i;
 			break;
 		}
 	}
 	if(!isCreated){
-		console.log("3 Move Algorithms for a "+cubeSize+" sized cube have not been created, A request for it was made, please what for it to finish");
-		Algorithm.AlgIndex(cubeSize,3);
+		console.log(xNumber+" Move Algorithms for a "+cubeSize+" sized cube have not been created, A request for it was made, please what for it to finish");
+		Algorithm.AlgIndex(cubeSize,xNumber);
 		return;
 	}
 
-	All3MoveAlgs  = [];
+	AllxMoveAlgs  = [];
+	numberOfAlgs = 0;
 	for(var i=0;i<Algorithm.TotalAlgorithms[indexNumber+2];i++){
-		var newAlg = Algorithm.GetAlgorithm(cubeSize,3,i,false);
+		var newAlg = Algorithm.GetAlgorithm(cubeSize,xNumber,i,false);
 		for(var j = 0;j<newAlg.length;j++){
-			All3MoveAlgs.push(newAlg[j]);
+			AllxMoveAlgs.push(newAlg[j]);
 		}
 	}
 	
-	/*var ftu = -1;//filter to use
+	var ftu = -1;//filter to use
 		for(var i = 0;i<Algorithm.SavedFilters.length;i+=4){//check for the filters we need for the moves we are doing, if they are not already built, build them.
-			if(Algorithm.SavedFilters[i]==cubeSize && Algorithm.SavedFilters[i+1]==CubeDataType.Fast && Algorithm.SavedFilters[i+2]==3){
+			if(Algorithm.SavedFilters[i]==cubeSize && Algorithm.SavedFilters[i+1]==CubeDataType.Surface && Algorithm.SavedFilters[i+2]==xNumber){
 				ftu = i+3;
 				break;
 			}
 		}
 		if(ftu == -1){
-			Algorithm.SavedFilters.push(cubeSize,format,movesPerMove,Algorithm.BuildFilters(cubeSize,format));
+			Algorithm.SavedFilters.push(cubeSize,CubeDataType.Surface,xNumber,Algorithm.BuildFilters(cubeSize,CubeDataType.Surface,Algorithm.CompressMoves(AllxMoveAlgs,cubeSize),Algorithm.TotalAlgorithms[indexNumber+2]*xNumber,xNumber));
 			ftu=Algorithm.SavedFilters.length-1;
-		}*/
+		}
+
+		for(var i = 0;i<Algorithm.TotalAlgorithms[indexNumber+2];i++){
+			myCube = generateSolvedCube(cubeSize,CubeDataType.Surface);
+			Algorithm.TurnCube(myCube,0,CubeDataType.Surface,cubeSize,Algorithm.GetAlgorithm(cubeSize,xNumber,i,true),1,true,true,xNumber);
+			aScore = Solver.ScoreCube(myCube,CubeDataType.Surface,cubeSize);
+			scoreFound = false;
+		//	console.log(aScore[0]+" "+Algorithm.MovesToText(Algorithm.GetAlgorithm(cubeSize,xNumber,i,true),cubeSize,xNumber,true))
+			for(var j = 0;j<scores.length;j++){
+				if(scores[j][0]==aScore[0]){
+					scores[j][1]++;
+					scoreFound =true;
+				}
+			}
+			if(!scoreFound){
+				scores.push([aScore[0],1])
+			}
+		}
+		XmoveScores.push({"CubeSize":cubeSize,"AlgLength":xNumber,"Scores":scores})
+
+
 }
 
 

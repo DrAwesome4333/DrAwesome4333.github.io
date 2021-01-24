@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html>
+    <head>
+       
+        <style>
+            canvas {
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+            }
+
+            input {
+                font-size: 4vh;
+                position: relative;
+                transition: all 0.5s ease-in-out;
+				width:50vw;
+				border:1px solid #444;
+				color:orange;
+				border-radius:5px;
+				background-color:#222;
+				outline:none;
+            }
+			input:hover {
+				background-color:#444;
+			}
+			input:disabled {
+				background-color:#000;
+				color:#888;
+				border:1px solid #222;
+			}
+			page{
+				font-size: 4vh;
+                position: fixed;
+				color:orange;
+                transition: all 1s ease-in-out;
+				width:100vw;
+				height:100vh;
+				left:-100vw;
+				opacity:0;
+				overflow-y:auto;
+			}
+			h1{
+			font-size: 9vh;
+			height:16vh;
+			overflow-y:auto;
+			}
+			h2{
+			font-size: 4vh;
+			}
+			tr{
+				border:2px solid orange;
+				opacity:0;
+				transition:opacity 2s ease-in-out;
+			}
+			.title>td{
+				border:2px solid orange;
+				background-color:#111;
+				opacity:1;
+			}
+			.title{
+				opacity:1;
+			}
+			td{
+				background-color:#222;
+				border:2px solid #555;
+				transition: all 0.5s ease-in-out;
+			}
+			.sel:hover{
+				background-color:#777;
+			}
+			.selected{
+				background-color:#666;
+				border:2px solid #888;
+			}
+			.selected>td{
+				background-color:#666;
+				border:2px solid #888;
+			}
+			hr{
+				color:#777;
+				width:75%;
+				size:1;
+			}
+			.pop{
+				position:relative;
+				width:75vw;
+				height:75vh;
+				top:12.5vh;
+				background-color:#222;
+				border:2px solid #777;
+				border-radius:10px;
+				overflow-y:auto;
+			}
+			.pop>input{
+				width:30%;
+			}
+			.help{
+				 width:10vw;
+				 position:absolute;
+				 right:1vw;
+				 bottom:1vh;
+			}
+			.correct{
+				border:2px solid #090 !important;
+			}
+			.incorrect{
+				border:2px solid #900 !important;
+			}
+			.result{
+				color:orange;
+				transition:all 2s ease-in-out;
+				font-size: 4vh;
+			}
+			.reviewC{
+				width:75%;
+				background-color:#222;
+				border:3px solid #0A0;
+				border-radius:10px;
+				opacity:1;
+				transition:all 2s ease-in-out;
+			}
+			.reviewI{
+				width:75%;
+				background-color:#222;
+				border:3px solid #A00;
+				border-radius:10px;
+				opacity:1;
+				transition:all 2s ease-in-out;
+			}
+			.review_answer{
+			    font-size: 4vh;
+                position: relative;
+                transition: all 0.5s ease-in-out;
+				width:75%;
+				border:1px solid #444;
+				color:orange;
+				border-radius:5px;
+				background-color:#222;
+			}
+        </style>
+        <title>Flash Card v0.0.0.0</title>
+    </head>
+    <body>
+	<page id="start" style="opacity:1;left:0vw;">
+		<center>
+			<br>
+			<h1>Flash Card</h1>
+			<input type="button" value="Start a Quiz" onclick="hidePages(1,['select'],[],setting_animated);setTimeout(updateTable,1000);" title="Click to advance">
+			<br>
+			<br>
+			<input type="button" value="Create a Quiz" title="Currently Under Development">
+		</center>
+	</page>
+	<page id="select">
+		<center>
+			<br>
+			<h1>Select a Deck</h1>
+			<h2 id="sp2">...</h2>
+			<div style="overflow:scroll;width:75vw;height:25vh;">
+				<table id="deck_table" style="width:100%;">
+				<tr class="title"><td>Deck Name:</td><td>Description:</td><td>Author:</td><td>Date:</td></tr>
+				</table>
+			</div>
+			<br>
+			<br>
+			<input type="button" value="Upload a Deck" title="Add a deck of your own" onclick="var evnt=new MouseEvent('click',{'view': window,'bubbles': true,'cancelable': true});document.getElementById('fileUP').dispatchEvent(evnt);">
+			<input type="file" id="fileUP" style="display:none;">
+			<br>
+			<br>
+			<input type="button" value="Back" style="width:25vw" onclick="hidePages(1,['start'],[],setting_animated)" title="Click to go back to the start page">
+			<input type="button" value="Next" id="select_next" style="width:25vw" onclick="hidePages(-1,['start_quiz'],[],setting_animated)" title="Select a deck above first" disabled>
+			<input type="button" value="&#8505;" class="help" onclick="hidePages(1,['select','help_pack'],['select'],false)" title="What's this?">
+		</center>
+	</page>
+	<page id="start_quiz">
+		<center>
+			<br>
+			<h1>Select a Mode to Begin</h1>
+			<h2 id="sp1">Selected Pack's Name</h2>
+			<br>
+			<br>
+			<input type="button" value="Quiz" id="mode_quiz" title="Correct answers are hidden" onclick="hidePages(1,['quiz'],[],setting_animated);setting_show_correct=false;setting_recycle=false;startQuiz();">
+			<br>
+			<br>
+			<input type="button" value="Practice" id="mode_prac"  title="Correct answers shown, incorrect answers are recylced" onclick="hidePages(1,['quiz'],[],setting_animated);setting_show_correct=true;setting_recycle=true;startQuiz();">
+			<br>
+			<br>
+			<input type="button" value="Practice Quiz" id="mode_prac_quiz" title="Correct answers shown, no questions are recycled" onclick="hidePages(1,['quiz'],[],setting_animated);setting_show_correct=true;setting_recycle=false;startQuiz();">
+			<br>
+			<br>
+			<input type="button" value="Back to Selection" onclick="hidePages(-1,['select'],[],setting_animated)" title="Click to go back to selection screen">
+			<input type="button" value="&#8505;" class="help" onclick="hidePages(1,['start_quiz','help_mode'],['start_quiz'],false)" title="What's this?">
+		</center>
+	</page>
+	<page id="quiz">
+	<center>
+			<br>
+			<h1 id="question_title" style="width:80vw;">...</h1>
+			<br>
+			<br>
+			<input type="button" value="Answer 1" id="a1" onclick="answer(1)" title="Answer 1">
+			<br>
+			<br>
+			<input type="button" value="Answer 2" id="a2" onclick="answer(2)" title="Answer 2">
+			<br>
+			<br>
+			<input type="button" value="Answer 3" id="a3" onclick="answer(3)" title="Answer 3">
+			<br>
+			<br>
+			<input type="button" value="Answer 4" id="a4" onclick="answer(4)" title="Answer 4">
+			<br>
+			<br>
+			<input type="button" value="Quit" style="width:25vw;" onclick="if(confirm('Are you sure?\nYou will lose all progress on the current quiz.')){hidePages(1,['start_quiz'],[],setting_animated)}" title="Click to go back to selection screen">
+			<input type="button" value="Next" id="quiz_next" style="width:25vw;" onclick="hidePages(1,['quiz'],[],setting_animated);if(!finished()){if(!setting_animated){askQuestion()}else{setTimeout(function(){askQuestion();},1000)}}else{setTimeout(function(){hidePages(1,['end_results'],[],false)},1015)};" title="Select an answer first" disabled>
+			<div id="questions_left" style="position:absolute;right:0vw;top:0vh;">Questions Left: -- of --</div>
+			<div id="percent_correct" style="position:absolute;left:0vw;top:0vh;"> --%</div>
+			<input type="button" value="&#8505;" class="help" onclick="hidePages(1,['quiz','help_quiz'],['quiz'],false)" title="Need help?">
+			
+		</center>
+	</page>
+	<page id="end_results">
+	<center>
+	<br>
+	<br>
+	<div class="result">You got:</div>
+	<br>
+	<div class="result" id="result_percent">--%</div>
+	<br>
+	<div class="result" id="result_correct" style="color:green;">-- Correct</div>
+	<br>
+	<div class="result" id="result_incorrect" style="color:red;">-- Incorrect</div>
+	<br>
+	<div class="result" id="result_total">Answered -- total</div>
+	<br>
+	<input type="button" value="Done" style="width:25vw;" onclick="hidePages(1,['start_quiz'],[],setting_animated)" title="Click to go back to selection screen">
+	<input type="button" value="Review" style="width:25vw;" onclick="hidePages(1,['quiz_review'],[],setting_animated);generateReview();" title="Review your answers">
+	</center>
+	</page>
+	<page id="help_quiz">
+		<center>
+		<div class="pop">
+			<h1>Quiz help</h1>
+			<hr>
+			<blockquote><h2>Answering a question</h2>
+			<blockquote><p>To answer a question simply click on the button with what you think is the correct answer. Depending on the mode, the button may turn green or red or may just allow you to advance to the next question. After answering just click the next button near the bottom of the page.</p>
+			</blockquote></blockquote>
+			<input type="button" value="Back" onclick="hidePages(1,['quiz'],['quiz'],false)" title="Back to quiz">
+			<br>
+			<br>
+		</div>
+		</center>
+	</page>
+	<page id="help_mode">
+	<center>
+		<div class="pop">
+			<h1>Selecting modes</h1>
+			<hr>
+			<blockquote>
+			<h2>What is a mode?</h2>
+			<blockquote><p>Modes will determine how the quiz will run. Each mode changes what happens when you answer a question. They are described below.</p>
+			</blockquote>
+			</blockquote>
+			<hr>
+			<blockquote>
+			<h2>Quiz mode</h2>
+			<blockquote><p>This mode is used to see how much you know and don't know. After you select an answer in a quiz, you will just need to press 'Next'. It will not ask you that question again weather you got it wrong or not.</p>
+			</blockquote>
+			</blockquote>
+			<hr>
+			<blockquote>
+			<h2>Practice mode</h2>
+			<blockquote><p>This mode is used to learn. After you select an answer in a quiz, the correct answer will now become green, if you got the answer wrong, the answer you selected will turn red as well. If you got the answer wrong, you will have to answer it again later on in the quiz. if you got it right, you don't have to answer it again.</p>
+			</blockquote>
+			</blockquote>
+			<hr>
+			<blockquote>
+			<h2>Practice quiz mode</h2>
+			<blockquote><p>This mode is used to learn and see how much you know. After you select an answer in a quiz, the correct answer will now become green, if you got the answer wrong, the answer you selected will turn red as well. It will not ask you that question again weather you got it wrong or not like in quiz mode.</p>
+			</blockquote>
+			</blockquote>
+			<hr>
+			<input type="button" value="Back" onclick="hidePages(1,['start_quiz'],['start_quiz'],false)" title="Back to mode selection">
+			<br>
+			<br>
+		</div>
+		</center>
+	</page>
+	<page id="help_pack">
+	<center>
+		<div class="pop">
+			<h1>Deck Seletion</h1>
+			<hr>
+			<blockquote><h2>What is a deck?</h2>
+			<blockquote><p>A deck is a set questions and answers that will be used to quiz you. You can create your own by selecting 'Create a Quiz' at the starting page of Flash Card. You select which deck you will use out of the list in the center of the screen, just simply click on the one you wish to use. When selected, it will become highlited and its name will apear above the list as the selected deck.</p>
+			</blockquote></blockquote>
+			<hr>
+			<blockquote><h2>How do I upload a deck?</h2>
+			<blockquote><p>If you are really going to study something, chances are you will want to chose what you are going to study and will want to be able to use your own deck created by you or someone else to use in Flash Card instead of the presets. To upload a deck, simply click on 'Upload a Deck' and wait for your computer's file exporer to open up, this may take a moment depending on your computer. After it opens, locate the file with the deck you want to use in it. The extension should be .gscfc. After you find the file, select it and then hit open and Flash Card will load the deck or decks with in the file and allow you to use them to quiz your self. To create your own deck, click 'Create a Quiz' at the start page of Flash Card to get started.</p>
+			</blockquote></blockquote>
+			
+			<hr>
+			<blockquote><h2>Where do I find more decks?</h2>
+			<blockquote><p>You can create one to quiz yourself by clicking 'Create a Quiz', at the start page of Flash Card, or you can obtain one from a teacher or peer who has created one for you. After you create a deck, be sure to save it. The file extension should read .gscfc.</p>
+			</blockquote></blockquote>
+			<input type="button" value="Back" onclick="hidePages(1,['select'],['select'],false)" title="Back to selection">
+			<br>
+			<br>
+		</div>
+		</center>
+	</page>
+	<page id="create_options">
+	<h1>Not sure how you got here but this is not ready yet. Sorry.</h1>
+	</page>
+	<page id="create_quiz">
+	<h1>Not sure how you got here but this is not ready yet. Sorry.</h1>
+	</page>
+	<page id="quiz_review">
+	    <center>
+	        <h1>Review</h1>
+	        <div id="review_box" style="width:75vw;height:50vh;overflow-y:auto;border:2px solid #777;border-radius:10px;">
+	            
+	        </div>
+	        <br>
+	        <input type="button" value="Done" style="width:50vw;" onclick="hidePages(1,['start_quiz'],[],setting_animated)" title="Click to go back to selection screen">
+	        <br>
+	        <input type="button" value="Show Incorrect" style="width:12vw;" onclick="filterReview(0)" title="Show all answers that were answered Incorrectly">
+	        <input type="button" value="Show Correct" style="width:12vw;" onclick="filterReview(1)" title="Show all answers that were answered Correctly">
+	        <input type="button" value="Show All" style="width:12vw;" onclick="filterReview(2)" title="Show all answers">
+	    </center>
+	</page>
+        <script>
+            var canvas = document.createElement('canvas');
+            var ct = canvas.getContext('2d');
+            var width = 100;
+            var height = 100;
+            var is_mobile = false;
+			var setting_animated=true;
+			var setting_recylce=true;
+			var setting_show_correct=true;
+            document.body.appendChild(canvas);
+            function updateScreen() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                if (height > width) {
+                    is_mobile = true;
+                } else {
+                    is_mobile = false;
+                }
+            }
+            updateScreen();
+//Background Rendering
+            var bgInfo = []
+            //x,y,xs,ys,size,goalSize,r,g,b,gr,gg,gb
+            function drawBG(colors, amount, bgstate, speed) {
+                //states, 0 let all particles stay just change thier colors, 1 dirve all incorrect colors away and bring in new ones,
+                if (bgstate === 0) {
+                    if (bgInfo.length / 12 < amount) {
+                        var randx = Math.round(Math.random() * width);
+                        var randy = Math.round(Math.random() * height);
+                        var rands = Math.round(Math.random() * 100);
+                        var ncolor = colors[Math.round(Math.random() * (colors.length - 1))]
+                        bgInfo.push(randx, randy, Math.random() * 0.2 - 0.1, Math.random() * 0.2 - 0.1, 0, rands, 0, 0, 0, ncolor[0], ncolor[1], ncolor[2])
+                    }
+                    for (var a = 0; a < bgInfo.length; a += 12) {
+                        bgInfo[a] += bgInfo[a + 2];
+                        bgInfo[a + 1] += bgInfo[a + 3];
+                        bgInfo[a + 4] += (bgInfo[a + 5] - bgInfo[a + 4]) * (speed / 500);
+                        bgInfo[a + 6] += (bgInfo[a + 9] - bgInfo[a + 6]) * (speed / 100);
+                        bgInfo[a + 7] += (bgInfo[a + 10] - bgInfo[a + 7]) * (speed / 100);
+                        bgInfo[a + 8] += (bgInfo[a + 11] - bgInfo[a + 8]) * (speed / 100);
+
+                        ct.beginPath();
+                        ct.fillStyle = "rgb(" + Math.round(bgInfo[a + 6]) + "," + Math.round(bgInfo[a + 7]) + "," + Math.round(bgInfo[a + 8]) + ")"
+                        ct.arc(bgInfo[a], bgInfo[a + 1], bgInfo[a + 4], 0, 2 * Math.PI);
+                        ct.globalAlpha = 0.2;
+                        ct.fill();
+                        var is_color = false;
+                        for (var b = 0; b < colors.length; b++) {
+                            if (bgInfo[a + 9] == colors[b][0] && bgInfo[a + 10] == colors[b][1] && bgInfo[a + 11] == colors[b][2]) {
+                                is_color = true;
+                            }
+
+                        }
+                        if (!is_color) {
+                            var ncolor = colors[Math.round(Math.random() * (colors.length - 1))]
+                            bgInfo[a + 9] = ncolor[0];
+                            bgInfo[a + 10] = ncolor[1];
+                            bgInfo[a + 11] = ncolor[2];
+                        }
+                        if (bgInfo[a + 4] < 1 && bgInfo[a + 5] === 0 || bgInfo[a] + bgInfo[a + 4] < 0 && bgInfo[a + 2] < 0 || bgInfo[a] - bgInfo[a + 4] > width && bgInfo[a + 2] > 0 || bgInfo[a + 1] + bgInfo[a + 4] < 0 && bgInfo[a + 3] < 0 || bgInfo[a + 1] - bgInfo[a + 4] > height && bgInfo[a + 3] > 0) {
+                            bgInfo.splice(a, 12);
+                            a -= 12
+
+                        }
+                    }
+                } else if (bgstate === 1) {
+                    for (var a = 0; a < bgInfo.length; a += 12) {
+                        var hh = height / 2;
+                        var hw = width / 2;
+                        if (!(bgInfo[a] === hw && bgInfo[a + 1] === hh)) {
+                            bgInfo[a + 2] = (bgInfo[a] - hw) / hw * 10;
+                            bgInfo[a + 3] = (bgInfo[a + 1] - hh) / hh * 10;
+                        } else {
+                            bgInfo[a + 2] = 20;
+                            bgInfo[a + 3] = 0;
+                        }
+                    }
+                }
+
+            }
+            var state = 0;
+            var mColor = [[100, 100, 100], [200, 100, 10]];
+            //setInterval(function(){mColor=[[250,10,10],[200,100,10]]; drawBG(mColor,100,1,5);},10000)
+			var uploadButton=document.getElementById("fileUP")
+            uploadButton.addEventListener("change",function(){
+    			fileLoc=URL.createObjectURL(uploadButton.files[0])
+    			request = new XMLHttpRequest();
+                request.open('GET', fileLoc, true);
+                request.responseType = 'text';
+                request.onload = function() {
+                    var fc = request.response;
+					URL.revokeObjectURL(fileLoc);
+					var LInfo=JSON.parse(fc);
+					var good=true;
+					for(var d=0;d<LInfo.length;d++){
+						if(!(LInfo[0]["Name"]==="") && typeof(LInfo[0]["Name"])==="string" && !(LInfo[0]["Version"]==="") && LInfo[0]["QuizData"]){   
+							data.push(LInfo[d]);  
+							updateTable();
+						}else{
+							good=false;
+						}		
+					}
+					if(good){
+						if(d>0 && d<2){
+							alert("Deck Loaded!")
+						}else if(d>2){
+							alert("Pack with "+d+" decks loaded!")
+						}
+					}else{
+						alert("Invalid file!")
+					}
+				},
+                   function(e) {  
+						alert("There was an error loading the file, please try again.")
+                    }
+                request.send();
+					})
+					
+    
+
+            function bgupdate() {
+                updateScreen();
+                ct.golbalAlpha = 1;
+                ct.fillStyle = "Black";
+                ct.fillRect(0, 0, width, height);
+                drawBG(mColor, 100, 0, 1);
+                requestAnimationFrame(bgupdate);
+            }
+            bgupdate();
+			
+			var pages=document.getElementsByTagName("page");
+			
+			function hidePages(dir,show,exclude,delay){//dir = direction, should be 1 or -1 for most animations. show is an array of elements to bring to the screen, all others will be hidden. exclude is an array of elements that will be ignored, this is to prevent anoying transitions for popups and others, delay is used to say if an element should wait the second before apearing, turned off to stop blank screens on browsers that do not support the transition property, or for pop ups.
+			for(var a=0;a<pages.length;a++){
+			var hide=true;
+			for(var b=0;b<exclude.length;b++){
+				if(pages[a].id==exclude[b]){
+					hide=false;
+					break;
+				}
+			}
+				if(hide){
+					pages[a].style.left=dir*100+"vw";
+					pages[a].style.opacity=0;
+					}
+				}
+				for(var a=0;a<show.length;a++){
+			var fun=Function("document.getElementById('"+show[a]+"').style.left='0vw';document.getElementById('"+show[a]+"').style.opacity=1;");
+			if(delay){
+				setTimeout(fun,1010);
+				}else{
+					fun();
+				}
+				}
+			}
+			
+			var data=[];
+			var ear=0;//number of elements already added to table of decks
+			var selectedDeck=null;
+			function updateTable(){
+				for(;ear<data.length;ear++){
+					var tr_element=document.createElement("tr");
+					var td_name=document.createElement("td");
+					var td_desc=document.createElement("td");
+					var td_auth=document.createElement("td");
+					var td_date=document.createElement("td");
+					td_name.innerHTML=data[ear]["Name"];
+					td_desc.innerHTML=data[ear]["Description"];
+					td_auth.innerHTML=data[ear]["Author"];
+					td_date.innerHTML=data[ear]["Date"];
+					tr_element.appendChild(td_name);
+					tr_element.appendChild(td_desc);
+					tr_element.appendChild(td_auth);
+					tr_element.appendChild(td_date);
+					tr_element.style.opacity=0;
+					tr_element.id="deck_"+ear;
+					tr_element.style.cursor="pointer";
+					td_name.classList.add("sel");
+					td_desc.classList.add("sel");
+					td_auth.classList.add("sel");
+					td_date.classList.add("sel");
+					document.getElementById("deck_table").appendChild(tr_element);
+					var opFun=Function("document.getElementById('deck_"+ear+"').style.opacity=1;");
+					setTimeout(opFun,500);
+					var clickFun=Function("var dnum="+ear+";selectedDeck=dnum;for(var a=0;a<ear;a++){document.getElementById('deck_'+a).classList.remove('selected')};selectedDeck=dnum;document.getElementById('deck_'+dnum).classList.add('selected');document.getElementById('sp1').innerHTML='Selected Pack: "+data[ear]["Name"]+"';document.getElementById('sp2').innerHTML='Selected Pack: "+data[ear]["Name"]+"';document.getElementById('select_next').disabled=false;document.getElementById('select_next').title='Click to advance';readPerms();");
+					tr_element.addEventListener("click",clickFun);
+				}
+			}
+			
+	function answer(code){
+	if(can_answer){
+	can_answer=false;
+		document.getElementById('quiz_next').disabled=false;
+		document.getElementById('quiz_next').title='Click to advance';
+		if(quizType===0){
+		number_total++;
+		if(code==correct_answer){
+		     reviewData.push({"Type":0,"Question":liveData["Questions"][question_number],"Answers":[]});
+		    for(var a=0;a<answers_for_review.length;a++){
+		        if(a+1==correct_answer){
+		            reviewData[reviewData.length-1]["Answers"].push([answers_for_review[a],1]);
+		        }else{
+		            reviewData[reviewData.length-1]["Answers"].push([answers_for_review[a],0]);
+		        }
+		    }
+		   
+		number_correct++;
+			document.getElementById("a"+correct_answer).classList.add("correct");
+			liveData["Questions"].splice(question_number,1);
+				liveData["Answers"].splice(question_number,1);
+		}else{
+		     reviewData.push({"Type":0,"Question":liveData["Questions"][question_number],"Answers":[]});
+		    for(var a=0;a<answers_for_review.length;a++){
+		        if(a+1==correct_answer){
+		            reviewData[reviewData.length-1]["Answers"].push([answers_for_review[a],1]);
+		        }else if(a+1==code){
+		            reviewData[reviewData.length-1]["Answers"].push([answers_for_review[a],2]);
+		        }else{
+		            reviewData[reviewData.length-1]["Answers"].push([answers_for_review[a],0]);
+		        }
+		    }
+			number_incorrect++;
+			document.getElementById("a"+code).classList.add("incorrect");
+			if(setting_show_correct){
+				document.getElementById("a"+correct_answer).classList.add("correct");
+			}
+			if(!setting_recycle){
+				liveData["Questions"].splice(question_number,1);
+				liveData["Answers"].splice(question_number,1);
+			}
+		}
+		}
+		}
+	}
+	function readPerms(){
+		if(data[selectedDeck]["Perms"][0]===1){
+			document.getElementById('mode_quiz').title="Correct answers are hidden";
+			document.getElementById('mode_quiz').disabled=false;
+		}else{
+			document.getElementById('mode_quiz').title="This mode has been disabled for this deck";
+			document.getElementById('mode_quiz').disabled=true;
+		}
+		if(data[selectedDeck]["Perms"][1]===1){
+			document.getElementById('mode_prac').title="Correct answers shown, incorrect answers are recylced";
+			document.getElementById('mode_prac').disabled=false;
+		}else{
+			document.getElementById('mode_prac').title="This mode has been disabled for this deck";
+			document.getElementById('mode_prac').disabled=true;
+		}
+		if(data[selectedDeck]["Perms"][2]===1){
+			document.getElementById('mode_prac_quiz').title="Correct answers shown, no questions are recylced";
+			document.getElementById('mode_prac_quiz').disabled=false;
+		}else{
+			document.getElementById('mode_prac_quiz').title="This mode has been disabled for this deck";
+			document.getElementById('mode_prac_quiz').disabled=true;
+		}
+	}
+	var can_answer=false;
+	var quizType=0;
+	var liveData;
+	var number_of_questions=0;
+	var number_correct=0;
+	var number_incorrect=0;
+	var number_total=0;
+	var correct_answer=0;
+	var question_number=0;
+	var answers_for_review=[];
+	function startQuiz(){
+		if(selectedDeck!==null){
+			quizType=data[selectedDeck]["Type"];
+			if(quizType===0){
+			    reviewData=[];
+				liveData={"Questions":[],"Answers":[],"AllAnswers":[]};//data[selectedDeck]["QuizData"]
+				for(var a=0;a<data[selectedDeck]["QuizData"]["Questions"].length;a++){
+					liveData["Questions"].push(data[selectedDeck]["QuizData"]["Questions"][a]);
+				}
+				for(var a=0;a<data[selectedDeck]["QuizData"]["Answers"].length;a++){
+					liveData["Answers"].push(data[selectedDeck]["QuizData"]["Answers"][a]);
+					liveData["AllAnswers"].push(data[selectedDeck]["QuizData"]["Answers"][a]);
+				}
+				number_of_questions=liveData["Questions"].length;
+				number_correct=0;
+				number_incorrect=0;
+				number_total=0;
+				askQuestion();
+			}else if(quizType===2){
+			quizType=0;//Quiz types 0 and 2 contain the same information but in a different format. Both can be converted to the type 0 format when loading and act the same after loading. Type 0: listOfQuestions, listOfAnswers, type 1: listOfQuestionAnswerPairs
+				liveData={"Questions":[],"Answers":[],"AllAnswers":[]};//data[selectedDeck]["QuizData"]
+				for(var a=0;a<data[selectedDeck]["QuizData"]["Data"].length;a++){
+					liveData["Questions"].push(data[selectedDeck]["QuizData"]["Data"][a][0]);
+					liveData["Answers"].push(data[selectedDeck]["QuizData"]["Data"][a][1]);
+					liveData["AllAnswers"].push(data[selectedDeck]["QuizData"]["Data"][a][1]);
+				}
+				number_of_questions=liveData["Questions"].length;
+				number_correct=0;
+				number_incorrect=0;
+				number_total=0;
+				askQuestion();
+			}else{
+				alert("Error: invalid quiz type\nThis quiz may be for a higher version of Flash Card.")
+				setTimeout(function(){hidePages(1,["select"],[],setting_animated)},1015);
+			}
+		}
+	}
+	var test_canvas=document.createElement("canvas");
+	var test_ct=test_canvas.getContext("2d");
+	function askQuestion(){
+	//clear formating on buttons
+	for(var a=0;a<4;a++){
+		document.getElementById("a"+(a+1)).classList.remove("correct")
+		document.getElementById("a"+(a+1)).classList.remove("incorrect")
+	}
+
+	document.getElementById('quiz_next').disabled=true;
+		document.getElementById('quiz_next').title='Select and answer first';
+		//update info on screen
+		if(number_total>0){
+			document.getElementById("percent_correct").innerHTML=" "+Math.round(number_correct/number_total*100)+"%";
+		}else{
+		    document.getElementById("percent_correct").innerHTML=" --%";
+		}
+		document.getElementById("questions_left").innerHTML="Questions Left "+liveData["Questions"].length+" of "+number_of_questions;
+		if(quizType===0){
+		    answers_for_review=[];
+			question_number=Math.floor(liveData["Questions"].length*Math.random());//selects a question
+			var correct_answer_text=liveData["Answers"][question_number];//get answer text
+			try{
+			var question_text=liveData["Questions"][question_number];
+				test_ct.font="100px timesNewRoman"
+	var fntS=100;
+	while(test_ct.measureText(question_text).width>width*0.75*1.3 && fntS>10){
+	    fntS--;
+	    test_ct.font=fntS+"px timesNewRoman"
+	}
+	document.getElementById("question_title").style.fontSize=fntS+"px";//try to prevent scrolling from becoming active.
+			}catch(e){
+			    alert(e.stack)
+			}
+			document.getElementById("question_title").innerHTML=liveData["Questions"][question_number];//set text above question
+			var incorrect_answers=[];//set up as an array
+			for(var a=0;a<3;a++){
+				var sIn=incorrect_answers.length;//do this incase one or more of the incorrect answers fail to generate
+				for(var b=0;b<10 && sIn===incorrect_answers.length;b++){//try 10 times to find an incorrect answer
+					var inNum=Math.floor((liveData["AllAnswers"].length)*Math.random());//selects a random answer
+					var good=true;//used to help see if the answer passes all tests.
+					var inText=liveData["AllAnswers"][inNum];
+					if(inText.toLowerCase()===correct_answer_text.toLowerCase()){//avoid duplicates of the correct answer
+						good=false;
+					}
+					for(var c=0;c<sIn;c++){
+						if(incorrect_answers[c].toLowerCase()===inText.toLowerCase()){//avoid duplicates of other incorrect answers
+							good=false;
+							break;
+						}
+					}
+					if(good){
+					incorrect_answers.push(inText);
+					break;	
+					}
+				}
+			}
+			correct_answer=Math.floor((incorrect_answers.length+1)*Math.random())+1;//+1 by length to factor in all answers including the correct one. +1 at end to convert it to the code in the answer function
+			for(var a=0;a<4;a++){//set up the buttons
+				if(a+1===correct_answer){
+					document.getElementById("a"+(a+1)).value=correct_answer_text;
+					document.getElementById("a"+(a+1)).title=correct_answer_text;
+					answers_for_review.push(correct_answer_text);
+					document.getElementById("a"+(a+1)).disabled=false;
+				}else if(a+1<correct_answer && incorrect_answers[a]){
+					document.getElementById("a"+(a+1)).value=incorrect_answers[a];
+					document.getElementById("a"+(a+1)).title=incorrect_answers[a];
+					answers_for_review.push(incorrect_answers[a]);
+					document.getElementById("a"+(a+1)).disabled=false;
+				}else if(a+1>correct_answer && incorrect_answers[a-1]){
+					document.getElementById("a"+(a+1)).value=incorrect_answers[a-1];
+					document.getElementById("a"+(a+1)).title=incorrect_answers[a-1];
+					answers_for_review.push(incorrect_answers[a-1]);
+					document.getElementById("a"+(a+1)).disabled=false;
+				}else{
+					document.getElementById("a"+(a+1)).value="Not an answer";
+					document.getElementById("a"+(a+1)).title="You cannot choose this answer";
+					document.getElementById("a"+(a+1)).disabled=true;
+				}
+			}
+			can_answer=true;
+		}
+	}
+	function finished(){
+		if(quizType===0){
+			if(liveData["Questions"].length===0){
+				var per=Math.round(number_correct/number_total*100)
+			if(per>80){
+				document.getElementById("result_percent").style.color="green"
+			}else if(per>70){
+				document.getElementById("result_percent").style.color="yellow"
+			}else if(per>60){
+				document.getElementById("result_percent").style.color="orange"
+			}else{
+				document.getElementById("result_percent").style.color="red"
+			}
+				document.getElementById("result_percent").innerHTML=per+"%"
+				document.getElementById("result_correct").innerHTML=number_correct+" Correct";
+				document.getElementById("result_incorrect").innerHTML=number_incorrect+" Incorrect";
+				document.getElementById("result_total").innerHTML="Answered "+number_total+" total";
+				return true;
+			}else{
+				return false;
+			}
+		}
+	}
+	function generateReview(){
+	    try{
+	    var etc=document.getElementById("review_box");//clear previous review elements
+	    while(etc.firstChild){
+	        etc.removeChild(etc.firstChild);
+	    }
+	    //alert(Array.prototype.slice.call(document.getElementById("review_box").children).length)
+	    for(var a=0;a<reviewData.length;a++){
+	        var rvw=document.createElement("div");
+	        if(reviewData[a]["Type"]===0){
+	        var qstn=document.createElement("h2");
+	        qstn.innerHTML=reviewData[a]["Question"];
+	        rvw.appendChild(qstn);
+	        var isCorrect=true;
+	        for(var b=0;b<reviewData[a]["Answers"].length;b++){
+	            var answer=document.createElement("div");
+	            answer.classList.add("review_answer");
+	            answer.innerHTML=reviewData[a]["Answers"][b][0];
+	            if(reviewData[a]["Answers"][b][1]==1){
+	                answer.classList.add("correct");
+	            }else if(reviewData[a]["Answers"][b][1]==2){
+	                answer.classList.add("incorrect");
+	                isCorrect=false;
+	            }
+	            rvw.appendChild(answer);
+	            rvw.appendChild(document.createElement("br"));
+	        }
+	        if(isCorrect){
+	            rvw.classList.add("reviewC");
+	        }else{
+	            rvw.classList.add("reviewI")
+	        }
+	        document.getElementById("review_box").appendChild(rvw);
+	        document.getElementById("review_box").appendChild(document.createElement("br"));
+	        }
+	        
+	    }}catch(e){alert(e.stack)}
+	    
+	}
+	function filterReview(filter){
+	    var correct_elements=document.getElementsByClassName("reviewC");
+	    var incorrect_elements=document.getElementsByClassName("reviewI");
+	    for(var a=0;a<correct_elements.length;a++){
+	        if(filter==1 || filter==2){
+	            correct_elements[a].style.opacity=1;
+	            correct_elements[a].style.display='block';
+	            correct_elements[a].nextSibling.style.display="block"
+	        }else{
+	           correct_elements[a].style.opacity=0;
+	            document.getElementsByClassName('reviewC')[a].style.display='none';
+	            correct_elements[a].nextSibling.style.display="none" 
+	        }
+	    }
+	    for(var a=0;a<incorrect_elements.length;a++){
+	        if(filter==0 || filter==2){
+	            incorrect_elements[a].style.opacity=1;
+	            incorrect_elements[a].style.display='block';
+	            incorrect_elements[a].nextSibling.style.display="block"
+	        }else{
+	             
+	           incorrect_elements[a].style.opacity=0;
+	           document.getElementsByClassName('reviewI')[a].style.display='none';
+	            incorrect_elements[a].nextSibling.style.display="none" 
+	        }
+	    }
+	}
+	var reviewData=[];//[{"Type":0,"Question":"Question text","Answers":[["Correct Answer",1],["Chosen Answer",2],["Incorrect Answer",0],["Incorrect Answer",0]]}] if chosen answer was correct, leave value of 2
+        </script>
+        <script>
+            var data = [{
+                "Name": "Pack Name",
+                "Description": "Description of Pack",
+                "Author": "Author name",
+                "Date": "Date of creation",
+                "Type": 0,
+                "Version": [0,0,0,0],
+                "Perms": [1, 1, 1],
+                "Size": 4,
+                "QuizData": {
+                    "Questions": ["Select Answer One", "Select Answer Two", "Select Answer Three"],
+                    "Answers": ["1", "2", "3"]
+                }
+            }, {
+                "Name": "Rhetorical Devices 1-8",
+                "Description": "Practice of Rhetorical Devices",
+                "Author": "David",
+                "Date": "4/9/17",
+                "Type": 0,
+                "Version": [0,0,0,0],
+                "Perms": [1, 1, 1],
+                "QuizData": {
+                    "Questions": ["Similarity of structure in a pair or series of related words, phrases, or clauses.", "Is a scheme of parallel structure that occurs when the parallel elements are similar not only in grammatical structure but also in length.", "The juxtaposition of contrasting ideas, often in parallel structure.", "The inversion of natural word order.","Insertion of some verbal unit in a position that interrupts the normal syntactical flow of the sentence.","Deliberate omission of a word or of words.","Deliberate omission of conjunctions between a series of words, phrases, or clauses.","Deliberate use of many conjunctions."],
+                    "Answers": ["Parallelism", "Isocolon", "Antithesis", "Anastrophe", "Parenthesis", "Ellipsis", "Asyndeton", "Polysyndeton"]
+                }
+            }, {
+                "Name": "Rhetorical Devices 9-18",
+                "Description": "Practice of Rhetorical Devices",
+                "Author": "David",
+                "Date": "4/13/17",
+                "Type": 0,
+                "Version": [0,0,0,0],
+                "Perms": [1, 1, 1],
+                "QuizData": {
+                    "Questions": ["Repetition of initial or medial consonants in two or more adjacent words.", "The repetition of similar vowel sounds, preceded and followed by different consonants, in the stressed syllables of adjacent words.", "Repetition of the same word or groups of words at the beginnings of successive phrases.", "Repetition of the same word or group of words at the ends of successive phrases.","Repetition of the same word or words at both beginning and ending of a phrase, clause, or sentence.","Repetition of the last word of one clause at the beginning of the following clause.","Arrangement of words, phrases, or clauses in an order of increasing importance.","Repetition of words, in successive clauses, in reverse grammatical order.","Reversal of grammatical structures in successive phrases or clauses.","Repetition of words derived from the same root."],
+                    "Answers": ["Alliteration", "Assonance", "Anaphora", "Epistrophe", "Epanalepsis", "Anadiplosis", "Climax", "Antimetabole","Chiasmus","Polyptoton"]
+                }
+            },
+            {
+                "Name": "New Format",
+                "Description": "New Format Test",
+                "Author": "Golden Stache Code",
+                "Date": "4/5/17",
+                "Type": 1,
+                "Version": [0,0,0,0],
+                "Perms": [1, 1, 1],
+                "QuizData": {
+					"Banks":{
+						"Food":["Potato","Fish","Fries"]
+					},
+                    "Questions": [
+						{
+						"Type":"multiple_choice",
+						"Question_text":"Select Answer One",
+						"Correct":["1"],
+						"Incorrect":["gsc_select_from_bank","gsc_select_from_bank","gsc_empty_response"],
+						"Group":"0",
+						"Answer_banks":["0","Food"],
+						"Incorrect_note":["Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals"],
+						"Correct_note":["Good job"]
+						},
+						{
+						"Type":"multiple_choice",
+						"Question_text":"Select Answer Two",
+						"Correct":["2"],
+						"Incorrect":["gsc_select_from_bank","gsc_select_from_bank","gsc_select_from_bank"],
+						"Group":0,
+						"Answer_banks":[0],
+						"Incorrect_note":["Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals"],
+						"Correct_note":["Good job"]
+						},
+						{
+						"Type":"multiple_choice",
+						"Question_text":"Select Answer Three",
+						"Correct":["3"],
+						"Incorrect":["gsc_select_from_bank","gsc_select_from_bank","gsc_select_from_bank"],
+						"Group":0,
+						"Answer_banks":[0],
+						"Incorrect_note":["Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals"],
+						"Correct_note":["Good job"]
+						},
+						{
+						"Type":"multiple_choice",
+						"Question_text":"Select Answer Four",
+						"Correct":["4"],
+						"Incorrect":["gsc_select_from_bank","gsc_select_from_bank","gsc_select_from_bank"],
+						"Group":0,
+						"Answer_banks":[0],
+						"Incorrect_note":["Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals","Remeber: numbers can be expressed as numerals"],
+						"Correct_note":["Good job"]
+						}
+					]
+                }
+            }
+            ];
+        </script>
+    </body>
+</html>
