@@ -1,0 +1,105 @@
+{
+"Decks":[{
+    "Name":"The Deck",
+    "Description":"Some information about the Deck",
+    "Date":1000,
+    "Creator":"Dr.Awesome4333",
+    "Version":[0,0,0,0],
+    "Permisions":{
+        "Practice":true,
+        "Quiz":true,
+        "PracticeQuiz":true,
+        "Review":true
+    },
+    "BankNames":["Numbers","Words","Math"],
+    "ExtraAnswers":[{"Bank":"Numbers","Extras":[1,2,4]},{"Bank":"Words","Extras":["Walrus","Banana","Extra"]},{"Bank":"Math","Extras":["6\u221A(7))","2+3","\u222B a+c dx"]}],
+    "QuestionCount":6,
+    "Questions":[
+        {
+            "Type":"MultipleChoice",
+            "Text":"What is 10 + 6?",
+            "Answers":[16],
+            "Banks":["Numbers"],
+            "AddAnswerToBank":true,
+            "SelectExtrasFromBank":true,
+            "Extras":["17.6"],
+            "NumberOfExtras":3,
+            "HintDelay":10,
+            "AllowedAttempts":2,
+            "Hint":"It is not 17",
+            "TryHint":"Not 5 either"
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"What is 10 - 6?",
+            "Answers":[4],
+            "Banks":["Numbers"],
+            "AddAnswerToBank":true,
+            "SelectExtrasFromBank":true,
+            "Extras":["-6"],
+            "NumberOfExtras":3,
+            "ShowHint":false,
+            "HintDelay":100,
+            "AllowedAttempts":2,
+            "Hint":"It is not 13",
+            "TryHint":"Not 15 either"
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"Click Zombie",
+            "Answers":["Zombie"],
+            "Banks":["Words"],
+            "AddAnswerToBank":true,
+            "SelectExtrasFromBank":true,
+            "Extras":["Taco"],
+            "NumberOfExtras":3,
+            "ShowHint":false,
+            "HintDelay":0,
+            "AllowedAttempts":2,
+            "Hint":"",
+            "TryHint":"Please read the instructions"
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"Click the \u222B",
+            "Answers":["\u222B"],
+            "Banks":["Math"],
+            "AddAnswerToBank":true,
+            "SelectExtrasFromBank":true,
+            "Extras":["He he, Math"],
+            "NumberOfExtras":3,
+            "ShowHint":true,
+            "HintDelay":10,
+            "AllowedAttempts":1,
+            "Hint":"Think super hard",
+            "TryHint":"Not 5 either"
+        },
+        {
+            "Type":"TextEntry",
+            "Text":"Type I love you",
+            "Answers":["I love you","I love you.","<3"],
+            "CaseSenstive":false,
+            "ShowHint":true,
+            "HintDelay":10,
+            "AllowedAttempts":2,
+            "Hint":"Do you though?",
+            "TryHint":"I guess you don't"
+        },
+        {
+            "Type":"SelectAll",
+            "Text":"Select all words that start with z",
+            "Answers":["Zoo","Zang","Zoom"],
+            "Banks":["Words"],
+            "AddAnswerToBank":true,
+            "SelectExtrasFromBank":true,
+            "Extras":["Peanut","Butter","Rocks"],
+            "NumberOfExtras":3,
+            "ShowHint":false,
+            "HintDelay":10,
+            "AllowedAttempts":2,
+            "Hint":"",
+            "TryHint":"Make sure you select ALL the answers!"
+        }
+    ]
+}]
+}

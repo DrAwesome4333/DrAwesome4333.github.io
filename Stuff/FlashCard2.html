@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="icon" 
+        type="image/x-icon" 
+        href="https://drawesome4333.github.io/favicon.ico">
+        <title>Flash Card</title>
+        <style>
+            body{
+                text-align:center;
+            }
+            h1{
+                text-align:center;
+            }
+            .hidden{
+                display:none;
+            }
+            .question_count{
+                position:absolute;
+                left:0px;
+                top:0px;
+            }
+            .quiz_score{
+                position: absolute;
+                right:0px;
+                top:0px;
+            }
+            .card{
+                border:2px black solid;
+            }
+            .correct{
+                border:2px green solid;
+            }
+            .incorrect{
+                border:2px red solid;
+            }
+            .quiz_button{
+                outline:none;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="Home">
+            <!--Home page, the buttons will be create a deck or select a deck-->
+            <h1>Flash Card</h1>
+            <h2>Please select an option</h2>
+            <input type="button" value="Deck Selcetion" onclick="hide(this.parentNode);show(document.getElementById('DeckSelect'));">
+            <input type="button" value="Create a Deck" onclick="hide(this.parentNode);show(document.getElementById('CreateHome'));">
+        </div>
+        <div id="DeckSelect" class = "hidden">
+            <!--This is where you will select a deck to start -->
+            <h1>Flash Card</h1>
+            <h2>Select a Deck</h2>
+            <div id = "DeckSelector">
+                (No Decks Available, try uploading one)
+            </div>
+            <input type="file" id="FileUpload" value="Upload a deck" onchange = "Data.LoadDecks(this.files[0])" class="hidden">
+            <input type="button" id="UploadDeck" value = "Upload a deck" onclick="var eve=new MouseEvent('click');Data.FileElement.dispatchEvent(eve)">
+            <input type="button" id="QuizMode" value="Quiz Mode" onclick="hide(this.parentNode);show(document.getElementById('Quiz'));" >
+            <input type="button" id ="PracticeMode" value="Practice Mode">
+            <input type="button" id="PracticeQuizMode" value="Practice Quiz Mode"><br>
+            <input type="button" value="Back" onclick="hide(this.parentNode);show(document.getElementById('Home'));">
+        </div>
+
+        <div id="Quiz" class = "hidden">
+            <!--Where the quiz will be displayed-->
+            <h1 id="QuizTitle">Quiz Title</h1>
+            <h3 id="QuestionCount" class="question_count">Question -- of --</h3>
+            <h3 id="Score" class="quiz_score">--%</h3>
+            <div id="Card"></div>
+            <input type="button" id = "QuizPrev" value="Previous Question">
+            <input type="button" id= "QuizNext" value="Next">
+            <input type="button" value="Quit" onclick="hide(this.parentNode);show(document.getElementById('DeckSelect'));">
+        </div>
+
+        <div id="Review" class = "hidden">
+
+        </div>
+
+        <div id="CreateHome" class = "hidden">
+            <h1>Create Your Own Deck</h1>
+            <h2>Please select an option</h2>
+            <!--This is where you can select to edit a previously started deck or start from scratch-->
+            <input type="button" value="Create New">
+            <input type="button" value="Continue/Edit">
+            <br>
+            <input type="button" value="Back" onclick="hide(this.parentNode);show(document.getElementById('Home'));">
+        </div>
+        <script>
+            function show(ele){
+                ele.style.display="block";
+            }
+
+            function hide(ele){
+                ele.style.display="none";
+            }
+            
+            function Card(deck = 0, questionId = 0, cardNumber = Quiz.Cards.length){
+                this.card = document.createElement("DIV");
+                this.card.classList.add("card");
+                this.canvas = document.createElement("Canvas");//used for hint timer
+                this.ct = this.canvas.getContext('2d');
+                this.title = document.createElement("DIV");
+                this.title.classList.add("quiz_title");
+                this.hint = document.createElement("DIV");
+                this.hint.classList.add("hint");
+                this.tryHint = document.createElement("DIV");
+                this.tryHint.classList.add("tryHint");
+                this.inputs = [];
+                this.attempt = 0;
+                this.maxAttempts = 1;
+                this.hintText = "";
+                this.tryHintText = "";
+                this.hintTime = 1;
+                this.hintEnd = 0;
+                this.hintBegin = 0;
+                this.updateInterval = 0;
+                this.questionType = "";
+                this.answer =-1;
+
+                this.card.appendChild(this.title);
+                this.show = function(){
+                    Quiz.CardElement.appendChild(this.card);
+                    if(this.hintText != "" ){
+                        this.hintBegin = Date.now();
+                        this.hintEnd = this.hintBegin + this.hintTime * 1000;
+                        this.updateInterval = setInterval(this.hintUpdate,100,this);
+                    }
+                }
+                this.hintUpdate = function(card){
+                    var percent = (card.hintEnd - Date.now())/(card.hintTime*1000);
+                    if(percent<=0){
+                        percent = 0;
+                        clearInterval(card.updateInterval);
+                        show(card.hint);
+                    }
+                   card.ct.clearRect(0,0,30,30);
+                   card.ct.beginPath();
+                   card.ct.arc(15,15,15,0,2 * Math.PI);
+                   card.ct.fillStyle = "#AAAAAA";
+                   card.ct.fill();
+                   card.ct.beginPath();
+                   card.ct.moveTo(15,15);
+                   card.ct.arc(15,15,15,1.5*Math.PI,1.5*Math.PI + (percent * 2*Math.PI))
+                   card.ct.fillStyle="#333333";
+                   card.ct.fill();
+                }
+
+                this.checkAnswer = function(answer){
+                    switch(this.type){
+                        case ("MultipleChoice"):{
+
+                            if(answer == this.answer){
+                                document.getElementById(this.answer).classList.add("correct");
+                                 this.inputs.forEach(input =>{
+                                   input.disabled = true;
+                                 })
+                            //TODO enable next button
+                            }else{
+                                this.attempt++;
+                                document.getElementById(answer).classList.add("incorrect");//disable the incorrect answer
+                                document.getElementById(answer).disabled = true;
+                                this.tryHint.display = "block";
+                                if(this.attempt >= this.maxAttempts){
+                                    this.inputs.forEach(input =>{
+                                        input.disabled = true;
+                                    })
+                                    //TODO enable next button
+                                } 
+                            }
+                            break;
+                        }
+                        default:{
+                            //enable next button
+                        }
+                    }
+                }
+                var question = null;
+                try{
+                    question = Data.Decks[deck].Questions[questionId];
+                }catch(e){
+                    alert("Error:\nQuestion "+questionId+" does not exist.\nPlease contact the creator of the deck.");
+                    return;
+                }
+
+                this.type = question.Type;
+                switch(this.type){
+                    case("MultipleChoice"):{
+                         /*{
+                            "Type":"MultipleChoice",
+                            "Text":"What is 10 + 6?",
+                            "Answer":16,
+                            "Banks":["Numbers"],//if you don't want to use a bank "" is accpeted
+                            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+                            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+                            "Extras":["17.6"],//Extra answers that only apply to this question, they will be used first and then the bank will be used to fill more
+                            "NumberOfExtras":3,//How many extras to show along with the answer
+                            "HintDelay":10,//amount of time in seconds before the hint button becomes available
+                            "AllowedAttempts":2,
+                            "Hint":"It is not 17",// if left empty, no hint will show
+                            "TryHint":"Not 5 either"//after a failed attempt this hint will show up
+                        }*/
+                        var extras = [];
+                        var answer = question.Answers[0]+"";
+                        if(question.Extras.length>0){//load extras from question
+                            for(var i = 0; i<question.Extras.length; i++){
+                                extras.push(question.Extras[i]);
+                            }
+                        }
+                        var needed = 0;
+                        if(extras.length<question.NumberOfExtras){
+                            
+                            var possibleExtras = [];
+                            var banks = question.Banks;
+                            needed = question.NumberOfExtras - extras.length;
+                            for(var i = 0;i<Quiz.Banks.length;i++){
+                                for(var j = 0;j<banks.length;j++){
+                                    if(Quiz.Banks[i].Name == banks[j]){
+                                        for(var k = 0;k<Quiz.Banks[i].Extras.length;k++){
+                                            if(Quiz.Banks[i].Extras[k]+"" != answer)
+                                            possibleExtras.push(Quiz.Banks[i].Extras[k]);
+                                        }
+                                    }
+                                }
+                            }
+                            while(needed>0 && possibleExtras.length>0){
+                                var newExtra = Math.floor(Math.random()*possibleExtras.length);
+                                var isValid = true;
+                                for(var i = 0;i<extras.length && isValid;i++){//check for duplicates
+                                    if(extras[i] == possibleExtras[newExtra]){
+                                        isValid = false;
+                                        break;
+                                    }
+                                }
+                                if(isValid){
+                                    extras.push(possibleExtras[newExtra]);
+                                    needed--;
+                                }
+                                possibleExtras.splice(newExtra,1);
+
+                            }
+                        }
+                        var e2 = [];//shuffle the extras so the default ones don't always appear first
+                        while(extras.length>0){
+                            var n = Math.floor(Math.random()*extras.length);
+                                e2.push(extras[n]);
+                                extras.splice(n,1);
+                            }
+                        extras = e2;
+
+                        var buttonCount = 1 + question.NumberOfExtras - needed;//because extras can fail if there are not enough of them
+                        correctAnswer = Math.floor(Math.random()*buttonCount);//which button is correct
+                        this.answer = "q"+cardNumber+"a"+correctAnswer;//the button will send its id as the answer text
+                        var eC = 0;//extra count
+                        for(var i = 0; i<buttonCount;i++){
+                            var theButton = document.createElement("input");
+                            theButton.classList.add("quiz_button");
+                            if(i==correctAnswer){
+                                theButton.value = question.Answers[0];
+                            }else{
+                                theButton.value = extras[eC];
+                                eC++;
+                            }
+                            theButton.id = "q"+cardNumber+"a"+i;
+                            theButton.type = "button";
+                            theButton.addEventListener("click",function(){Quiz.answer(this.id);})
+                            this.card.appendChild(document.createElement("br"));
+                            this.card.appendChild(theButton);
+                            this.inputs.push(theButton);
+                        }
+                        
+
+
+                        this.title.innerHTML = question.Text;
+                        this.hintText = question.Hint;
+                        this.tryHintText = question.TryHint;
+                        this.maxAttempts = question.AllowedAttempts;
+                        if(this.hintText!=""){
+                            this.hint.innerHTML = this.hintText;
+                            if(question.HintDelay>0){
+                                this.hint.style.display = "none";
+                                this.hintTime = question.HintDelay;
+                                this.canvas.width = 30;
+                                this.canvas.height=  30;
+                                this.card.appendChild(document.createElement("br"));
+                                this.card.appendChild(this.canvas);
+                            }
+                            this.card.appendChild(this.hint);
+                        }
+
+                        if(this.tryHintText!=""){
+                            this.tryHint.innerHTML = this.tryHintText;
+                            this.tryHint.style.display = "none";
+                            this.card.appendChild(this.tryHint);
+                        }
+
+                        break;
+                    }
+                    case("TextEntry"):{
+
+                        break;
+                    }
+                    case("SelectAll"):{
+
+                        break;
+                    }
+                    default:{
+                        alert("Question "+questionId+" has an unrecognized type of "+question.type+".\nPlease contact the creator of the deck.");
+                    }
+                }
+
+            }
+
+            var Data = {
+                Decks:[],
+                FileElement: document.getElementById("FileUpload"),
+                DeckSelector: document.getElementById("DeckSelector"),
+                LoadDecks(file){
+                    var reader = new FileReader();
+                    reader.addEventListener("load",Data.UnpackSet);
+                    reader.readAsBinaryString(file);
+                },
+                UnpackSet(event){
+                    var info;
+                    try{
+                        info = JSON.parse(event.target.result);
+                        console.log("File JSON data:");
+                        console.log(info);
+                        if(info.Decks.length == 0){//See if the json returned an array of decks as it should.[deck1,deck2...]
+                            throw "No decks were found, empty array was found";
+                        }
+                        if(!typeof(info.Decks[0].Questions[0].Type)==="String" ){
+                            throw "Not a valid Flash Card JSON file";
+                        }
+                        Data.Decks = info.Decks;//basic tests were passed, if errors happen, they happen. 
+                        //Will work on verification Later
+                        //TODO
+                       Data.DisplaySet();
+                    }catch(e){
+                        console.log(e);
+                        alert("There was a problem reading the file\nPlease be sure this is a Flash Card JSON file (.json)\nError: "+e);
+                    }
+                },
+                DisplaySet(){//Adds the Decks from the Set to the Deck Selection Screen.
+                    //Remove all Children from DeckSelector
+                    Quiz.SelectedDeck = -1;
+                    while(DeckSelector.firstChild){
+                        DeckSelector.removeChild(DeckSelector.firstChild);
+                    }
+                    if(this.Decks.length==0){
+                        DeckSelector.innerHTML = "(No Decks Available, try uploading one)*";
+                    }
+                    for(var i = 0;i<this.Decks.length;i++){
+                        var id = "deck"+i;
+                        var deckElement = document.createElement("input");
+                        deckElement.type = "button";
+                        deckElement.value = this.Decks[i].Name;//more verification needed to prevent errors
+                        deckElement.title = this.Decks[i].Description;
+                        deckElement.id = id;
+                        deckElement.addEventListener("click",function(e){
+                            Quiz.SelectedDeck = parseInt(this.id.slice(4),10);
+                            console.log("Deck "+Quiz.SelectedDeck+" selected");
+                        });
+
+                        DeckSelector.appendChild(deckElement);
+                    }
+
+                }
+            }
+            var Quiz = {
+                Cards:[],//Holds HTML DIV elements that hold every question in the quiz
+                HintTimer:null,
+                CurrentCard:-1,
+                SelectedDeck:-1,
+                TotalCards:-1,
+                CardElement:document.getElementById("Card"),
+                ScoreElement:document.getElementById("Score"),
+                QuestionCountElement:document.getElementById("QuestionCount"),
+                Mode:-1,
+                Banks:[],//{Bank:"BankName",Extras:[]}
+                LoadBanks(){
+                    
+                    if(this.SelectedDeck == -1){
+                        return;//just don't do it!
+                    }
+                    this.Banks=[];
+                    Data.Decks[this.SelectedDeck].ExtraAnswers.forEach(bank => {
+                        bank.Extras.forEach(extra=>{this.InsertExtraIntoBank(bank.Bank,extra);})
+                    })
+
+                    Data.Decks[this.SelectedDeck].Questions.forEach(question => {
+                        if(question.AddAnswerToBank){
+                             if(question.Type == "MutlipleChoice" || question.Type == "Text" || question.Type == "SelectAll" ){
+                                question.Banks.forEach(bank => {
+                                    this.InsertExtraIntoBank(bank,question.Answers);
+                                });
+                            }
+                        }
+                    });
+                },
+                InsertExtraIntoBank(Bank,Extra){
+                    var bankId = -1;
+                    for(var i = 0;i<this.Banks.length;i++){
+                        if(this.Banks[i].Name == Bank){
+                            bankId = i;
+                            break;
+                        }
+                    }
+                    //if the Bank was not found, create a new one
+                    if(Array.isArray(Extra)){
+                        if(bankId==-1){
+                            var newBank = {Name:Bank,Extras:Extra};
+                            this.Banks.push(newBank);
+                        }else{
+                            Extra.forEach(ex => {
+                                this.Banks[bankId].Extras.push(ex);
+                            });
+                            
+                        }
+                    }else{
+                        if(bankId==-1){
+                            var newBank = {Name:Bank,Extras:[Extra]};
+                            this.Banks.push(newBank);
+                        }else{
+                            this.Banks[bankId].Extras.push(Extra);
+                        }
+                    }
+                },
+                StartQuiz(mode){
+                    this.LoadBanks();
+                    //we are going to fill a list with ids so the cards are randomized.
+                    var CardIds = [];
+                    for(var i = 0; i < Data.Decks[this.SelectedDeck].Questions.length; i++){
+                        CardIds.push(i);
+                    }
+                    while(CardIds.length>0){
+                        var cardNumber = Math.floor(Math.random()*CardIds.length);//select a random index from CardIds
+                        var qId = CardIds[cardNumber];
+                        CardIds.splice(cardNumber,1);//remove the ID from the list
+                        this.Cards.push(new Card(this.SelectedDeck,qId));
+                    }
+                    this.CardElement.appendChild(this.Cards[0].card);
+                },
+                answer(id){//used by the question buttons to redirect the answer to the card's answer function
+                    var n = parseInt(id.slice(1,id.length),10);
+                    if(isFinite(n)){
+                        this.Cards[n].checkAnswer(id);
+                    }else{
+                        console.log("Error: Invalid Id given for answer: "+id);
+                    }
+
+                }
+
+                
+            }
+        </script>
+        <script>
+            var example = {
+    "Name":"The Deck",
+    "Description":"Some information about the Deck",
+    "Id":100,//randomly assigned to each deck.
+    "Date":1000,
+    "Creator":"Dr.Awesome4333",
+    "Version":[0,0,0,0],
+    "Permisions":{
+        "Practice":true,
+        "Quiz":true,
+        "PracticeQuiz":true,
+        "Review":true
+    },
+    "BankNames":["Numbers","Words","Math"],
+    "ExtraAnswers":[{"Bank":"Numbers","Extras":[1,2,4]},{"Bank":"Words","Extras":["Walrus","Banana","Extra"]},{"Bank":"Math","Extras":["6\u221A(7))","2+3","\u222B a+c dx"]}],
+    "QuestionCount":6,
+    "Questions":[
+        {
+            "Type":"MultipleChoice",
+            "Text":"What is 10 + 6?",
+            "Answers":[16],
+            "Banks":["Numbers"],//if you don't want to use a bank "" is accpeted
+            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+            "Extras":["17.6"],//Extra answers that only apply to this question
+            "NumberOfExtras":3,//How many extras to show along with the answer
+            "HintDelay":10,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":2,
+            "Hint":"It is not 17",// if left empty, no hint will show
+            "TryHint":"Not 5 either"//after a failed attempt this hint will show up
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"What is 10 - 6?",
+            "Answers":[4],
+            "Banks":["Numbers"],
+            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+            "Extras":["-6"],//Extra answers that only apply to this question
+            "ShowHint":false,//If true the hint will show by default, if not a button must be clicked to show it after a set amount of time
+            "HintDelay":100,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":2,
+            "Hint":"It is not 13",
+            "TryHint":"Not 15 either"//after a failed attempt this hint will show up
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"Click Zombie",
+            "Answers":["Zombie"],
+            "Banks":["Words"],
+            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+            "Extras":["Taco"],//Extra answers that only apply to this question
+            "NumberOfExtras":3,//How many extras to show along with the answer
+            "HintDelay":0,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":2,
+            "Hint":"",
+            "TryHint":"Please read the instructions"//after a failed attempt this hint will show up
+        },
+        {
+            "Type":"MultipleChoice",
+            "Text":"Click the \u222B",
+            "Answers":["\u222B"],
+            "Banks":["Math"],
+            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+            "Extras":["He he, Math"],//Extra answers that only apply to this question
+            "NumberOfExtras":3,//How many extras to show along with the answer
+            "HintDelay":10,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":1,
+            "Hint":"Think super hard",
+            "TryHint":"Not 5 either"//after a failed attempt this hint will show up
+        },
+        {
+            "Type":"TextEntry",
+            "Text":"Type I love you",
+            "Answers":["I love you","I love you.","<3"],
+            "CaseSenstive":false,
+            "HintDelay":10,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":2,
+            "Hint":"Do you though?",
+            "TryHint":"I guess you don't"//after a failed attempt this hint will show up
+        },
+        {
+            "Type":"SelectAll",
+            "Text":"Select all words that start with z",
+            "Answers":["Zoo","Zang","Zoom"],
+            "Banks":["Words"],
+            "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
+            "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
+            "Extras":["Peanut","Butter","Rocks"],//Extra answers that only apply to this question
+            "NumberOfExtras":3,//How many extras to show along with the answer
+            "HintDelay":10,//amount of time in seconds before the hint button becomes available
+            "AllowedAttempts":2,
+            "Hint":"",
+            "TryHint":"Make sure you select ALL the answers!"//after a failed attempt this hint will show up
+        }
+    ]
+}
+        </script>
+    </body>
+</html>
