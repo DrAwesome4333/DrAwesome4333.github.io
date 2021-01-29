@@ -92,6 +92,36 @@
                 "TryHint":""
             },
             {
+                "Type":"MultipleChoice",
+                "Text":"(1-cos(2\u0398))/2 = ?",
+                "Answers":["sin\u00B2(\u0398)"],
+                "Banks":["TrigIdent"],
+                "PointsPerAnswer":3,
+                "AddAnswerToBank":true,
+                "SelectExtrasFromBank":true,
+                "Extras":[],
+                "NumberOfExtras":3,
+                "HintDelay":30,
+                "AllowedAttempts":1,
+                "Hint":"",
+                "TryHint":""
+            },
+            {
+                "Type":"MultipleChoice",
+                "Text":"(1+cos(2\u0398))/2 = ?",
+                "Answers":["cos\u00B2(\u0398)"],
+                "Banks":["TrigIdent"],
+                "PointsPerAnswer":3,
+                "AddAnswerToBank":true,
+                "SelectExtrasFromBank":true,
+                "Extras":[],
+                "NumberOfExtras":3,
+                "HintDelay":30,
+                "AllowedAttempts":1,
+                "Hint":"",
+                "TryHint":""
+            },
+            {
                 "Type":"TextEntry",
                 "Text":"Type I love you",
                 "PointsPerAnswer":3,
