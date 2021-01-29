@@ -37,6 +37,12 @@
             .quiz_button{
                 outline:none;
             }
+            input{
+                outline:none;
+            }
+            .selected{
+                border:2px blue solid;
+            }
         </style>
     </head>
     <body>
@@ -56,9 +62,11 @@
             </div>
             <input type="file" id="FileUpload" value="Upload a deck" onchange = "Data.LoadDecks(this.files[0])" class="hidden">
             <input type="button" id="UploadDeck" value = "Upload a deck" onclick="var eve=new MouseEvent('click');Data.FileElement.dispatchEvent(eve)">
-            <input type="button" id="QuizMode" value="Quiz Mode" onclick="hide(this.parentNode);show(document.getElementById('Quiz'));" >
-            <input type="button" id ="PracticeMode" value="Practice Mode">
-            <input type="button" id="PracticeQuizMode" value="Practice Quiz Mode"><br>
+            <input type="button" id="QuizMode" value="Quiz Mode" onclick="if(Quiz.SelectedDeck!=-1/*TODO Put permision verification here*/){hide(this.parentNode);show(document.getElementById('Quiz'));Quiz.StartQuiz(0)}else{
+                alert('Please select a deck to use!');
+            }" >
+            <input type="button" id ="PracticeMode" disabled =true value="Practice Mode">
+            <input type="button" id="PracticeQuizMode" disabled=true value="Practice Quiz Mode"><br>
             <input type="button" value="Back" onclick="hide(this.parentNode);show(document.getElementById('Home'));">
         </div>
 
@@ -68,9 +76,9 @@
             <h3 id="QuestionCount" class="question_count">Question -- of --</h3>
             <h3 id="Score" class="quiz_score">--%</h3>
             <div id="Card"></div>
-            <input type="button" id = "QuizPrev" value="Previous Question">
-            <input type="button" id= "QuizNext" value="Next">
-            <input type="button" value="Quit" onclick="hide(this.parentNode);show(document.getElementById('DeckSelect'));">
+            <input type="button" id = "QuizPrev" onclick = "Quiz.PreviousQuestion();" value="Previous Question">
+            <input type="button" id= "QuizNext" onclick = "Quiz.NextQuestion();" value="Next">
+            <input type="button" value="Quit" onclick="var conf = confirm('Are you sure you want to quit?');if(conf){hide(this.parentNode);show(document.getElementById('DeckSelect'));}">
         </div>
 
         <div id="Review" class = "hidden">
@@ -116,15 +124,29 @@
                 this.hintBegin = 0;
                 this.updateInterval = 0;
                 this.questionType = "";
+                this.possiblePoints = 0;
+                this.pointsPerAnswer = 0;
+                this.earnedPoints = 0;
                 this.answer =-1;
+                this.started = false;//to allow for going back without buggy behavior
+                this.valid = true;//used to detect problemsome questions.
+                this.caseSenstive = false;
+                this.acceptPartial = false;//accepting part correct answers for SelectAll Types.
 
                 this.card.appendChild(this.title);
                 this.show = function(){
                     Quiz.CardElement.appendChild(this.card);
-                    if(this.hintText != "" ){
-                        this.hintBegin = Date.now();
-                        this.hintEnd = this.hintBegin + this.hintTime * 1000;
-                        this.updateInterval = setInterval(this.hintUpdate,100,this);
+                    if(!this.started){
+                        if(this.hintText != "" ){
+                            this.hintBegin = Date.now();
+                            this.hintEnd = this.hintBegin + this.hintTime * 1000;
+                            this.updateInterval = setInterval(this.hintUpdate,100,this);
+                        }
+                        Quiz.NextButton.disabled = true;
+                        this.started = true;
+                    }
+                    if(!this.valid){
+                        Quiz.NextButton.disabled = false;//later set for all unidentified questions
                     }
                 }
                 this.hintUpdate = function(card){
@@ -152,26 +174,172 @@
 
                             if(answer == this.answer){
                                 document.getElementById(this.answer).classList.add("correct");
-                                 this.inputs.forEach(input =>{
+                                 this.inputs.forEach(input =>{//disable all answers
                                    input.disabled = true;
                                  })
-                            //TODO enable next button
+                                 Quiz.EarnedPoints+=this.possiblePoints;
+                                 Quiz.TotalPoints+=this.possiblePoints;
+                                 this.earnedPoints = this.possiblePoints;
+                                 Quiz.NextButton.disabled = false;
                             }else{
                                 this.attempt++;
                                 document.getElementById(answer).classList.add("incorrect");//disable the incorrect answer
                                 document.getElementById(answer).disabled = true;
-                                this.tryHint.display = "block";
+                                this.tryHint.style.display = "block";
                                 if(this.attempt >= this.maxAttempts){
-                                    this.inputs.forEach(input =>{
+                                    this.inputs.forEach(input =>{//disable all answers
                                         input.disabled = true;
                                     })
-                                    //TODO enable next button
+                                   
+                                 Quiz.TotalPoints+=this.possiblePoints;
+                                 this.earnedPoints = 0;
+                                    Quiz.NextButton.disabled = false;
+                                } 
+                            }
+                            break;
+                        }
+                        case ("MultipleChoice"):{
+
+                            if(answer == this.answer){
+                                document.getElementById(this.answer).classList.add("correct");
+                                 this.inputs.forEach(input =>{//disable all answers
+                                   input.disabled = true;
+                                 })
+                                 Quiz.EarnedPoints+=this.possiblePoints;
+                                 Quiz.TotalPoints+=this.possiblePoints;
+                                 this.earnedPoints = this.possiblePoints;
+                                 Quiz.NextButton.disabled = false;
+                            }else{
+                                this.attempt++;
+                                document.getElementById(answer).classList.add("incorrect");//disable the incorrect answer
+                                document.getElementById(answer).disabled = true;
+                                this.tryHint.style.display = "block";
+                                if(this.attempt >= this.maxAttempts){
+                                    this.inputs.forEach(input =>{//disable all answers
+                                        input.disabled = true;
+                                    })
+                                   
+                                 Quiz.TotalPoints+=this.possiblePoints;
+                                 this.earnedPoints = 0;
+                                    Quiz.NextButton.disabled = false;
+                                } 
+                            }
+                            break;
+                        }
+                        case ("SelectAll"):{
+                           var finalAttempt = this.attempt+1 >= this.maxAttempts;
+                           var numberCorrect = 0;
+                           var perfect = 0;//the total number that should be checked
+                           this.answer.forEach(ans=> {
+                               if(ans){
+                                   perfect++;
+                               }
+                           });
+                           for(var i = 0;i<this.inputs.length-1;i++){
+                               if(this.answer[i]){
+                                    if(this.inputs[i].checked){
+                                        numberCorrect++;
+                                        if(finalAttempt){
+                                            this.inputs[i].parentNode.classList.add("correct")
+                                        }
+                                    }else{
+                                        if(finalAttempt){
+                                            this.inputs[i].parentNode.classList.add("incorrect")
+                                        }
+                                    }
+                               }else{
+                                     if(this.inputs[i].checked){
+                                        numberCorrect--;
+                                        if(finalAttempt){
+                                            this.inputs[i].parentNode.classList.add("incorrect")
+                                        }
+                                    }
+                               }
+                           }
+                            if(numberCorrect == perfect){
+                                this.inputs[this.answer.length].classList.remove("incorrect");
+                                this.inputs[this.answer.length].classList.add("correct");
+                                for(var i = 0;i<this.inputs.length-1;i++){
+                                     if(this.answer[i]){
+                                        this.inputs[i].parentNode.classList.add("correct")              
+                                    }
+                                }
+                                this.inputs.forEach(input =>{//disable all answers
+                                input.disabled = true;
+                                })
+                                Quiz.EarnedPoints+=this.possiblePoints;
+                                Quiz.TotalPoints+=this.possiblePoints;
+                                this.earnedPoints = this.possiblePoints;
+                                Quiz.NextButton.disabled = false;
+                            }else{
+                                this.attempt++;
+                                this.inputs[this.answer.length].classList.add("incorrect");
+                                this.tryHint.style.display = "block";
+                                if(this.attempt >= this.maxAttempts){
+                                    this.inputs.forEach(input =>{//disable all answers
+                                        input.disabled = true;
+                                    })
+                                
+                                    Quiz.TotalPoints+=this.possiblePoints;
+                                    if(this.acceptPartial){
+                                        this.earnedPoints = this.pointsPerAnswer*numberCorrect;
+                                        Quiz.EarnedPoints += this.earnedPoints;
+                                    }
+                                    Quiz.NextButton.disabled = false;
+                                } 
+                            }
+                            break;
+                        }
+                        case ("TextEntry"):{
+                            var correct = false;
+                            var inputText = this.inputs[0].value.trim();
+                            if(!this.caseSenstive){
+                                inputText = inputText.toLowerCase();
+                            }
+
+                            for(var i = 0;i<this.answer.length;i++){
+                                if(!this.caseSenstive){
+                                    if(inputText === this.answer[i].trim().toLowerCase()){
+                                        correct = true;
+                                        break;
+                                    }
+                                }else{
+                                    if(inputText === this.answer[i].trim()){
+                                        correct = true;
+                                        break;
+                                    } 
+                                }
+                            }
+                            if(correct){
+                                document.getElementById(answer).classList.remove("incorrect");
+                                document.getElementById(answer).classList.add("correct");
+                                this.inputs.forEach(input =>{//disable all answers
+                                    input.disabled = true;
+                                })
+                                Quiz.EarnedPoints+=this.possiblePoints;
+                                Quiz.TotalPoints+=this.possiblePoints;
+                                this.earnedPoints = this.possiblePoints;
+                                Quiz.NextButton.disabled = false;
+                            }else{
+                                this.attempt++;
+                                document.getElementById(answer).classList.add("incorrect");
+                                this.tryHint.style.display = "block";
+                                if(this.attempt >= this.maxAttempts){
+                                    this.inputs.forEach(input =>{//disable all inputs
+                                        input.disabled = true;
+                                    })
+                                
+                                    Quiz.TotalPoints+=this.possiblePoints;
+                                    this.earnedPoints = 0;
+                                    Quiz.NextButton.disabled = false;
                                 } 
                             }
                             break;
                         }
                         default:{
-                            //enable next button
+                            //If the somehow got here, something happened so just enable the next button for 'em
+                            this.title.innerHTML = "An error occurred, so just go ahead and hit next, sorry no points :("
+                            Quiz.NextButton.disabled = false;
                         }
                     }
                 }
@@ -293,19 +461,212 @@
                             this.tryHint.style.display = "none";
                             this.card.appendChild(this.tryHint);
                         }
+                        this.pointsPerAnswer = question.PointsPerAnswer;
+                        this.possiblePoints = this.pointsPerAnswer;//there is only 1 correct answer in multiple choice questions
+                        
 
                         break;
                     }
                     case("TextEntry"):{
+                        this.caseSenstive = question.CaseSenstive;
+
+                        theTextBox = document.createElement("input");
+                        theTextBox.placeholder = "Enter your answer";
+                        theTextBox.type = "text";
+                        this.card.appendChild(theTextBox);
+                        this.inputs.push(theTextBox);
+                        this.answer = [];//the button will send its id as the answer text
+                        question.Answers.forEach(ans=> {
+                            this.answer.push(ans);
+                        });
+                        
+                        theButton = document.createElement("input");
+                        theButton.id = "q"+cardNumber+"a1";
+                        theButton.type = "button";
+                        theButton.value="Check Answer";
+                        theButton.addEventListener("click",function(){Quiz.answer(this.id);})
+                        this.card.appendChild(document.createElement("br"));
+                        this.card.appendChild(theButton);
+                        this.inputs.push(theButton);
+                        
+                        
+
+
+                        this.title.innerHTML = question.Text;
+                        this.hintText = question.Hint;
+                        this.tryHintText = question.TryHint;
+                        this.maxAttempts = question.AllowedAttempts;
+                        if(this.hintText!=""){
+                            this.hint.innerHTML = this.hintText;
+                            if(question.HintDelay>0){
+                                this.hint.style.display = "none";
+                                this.hintTime = question.HintDelay;
+                                this.canvas.width = 30;
+                                this.canvas.height=  30;
+                                this.card.appendChild(document.createElement("br"));
+                                this.card.appendChild(this.canvas);
+                            }
+                            this.card.appendChild(this.hint);
+                        }
+
+                        if(this.tryHintText!=""){
+                            this.tryHint.innerHTML = this.tryHintText;
+                            this.tryHint.style.display = "none";
+                            this.card.appendChild(this.tryHint);
+                        }
+                        this.pointsPerAnswer = question.PointsPerAnswer;
+                        this.possiblePoints = this.pointsPerAnswer;//there is only 1 correct answer at a time in text questions
+                        
 
                         break;
                     }
                     case("SelectAll"):{
 
+                        var extras = [];
+                        var answer = [];
+                        question.Answers.forEach(ans => {
+                            answer.push(ans+"");
+                        });
+                        if(question.Extras.length>0){//load extras from question
+                            for(var i = 0; i<question.Extras.length; i++){
+                                extras.push(question.Extras[i]);
+                            }
+                        }
+                        var needed = 0;
+                        if(extras.length<question.NumberOfExtras){
+                            
+                            var possibleExtras = [];
+                            var banks = question.Banks;
+                            needed = question.NumberOfExtras - extras.length;
+                            for(var i = 0;i<Quiz.Banks.length;i++){
+                                for(var j = 0;j<banks.length;j++){
+                                    if(Quiz.Banks[i].Name == banks[j]){
+                                        for(var k = 0;k<Quiz.Banks[i].Extras.length;k++){
+                                            if(!answer.includes(Quiz.Banks[i].Extras[k]+""))//don't bring in any duplicate answers
+                                            possibleExtras.push(Quiz.Banks[i].Extras[k]);
+                                        }
+                                    }
+                                }
+                            }
+                            while(needed>0 && possibleExtras.length>0){
+                                var newExtra = Math.floor(Math.random()*possibleExtras.length);
+                                var isValid = true;
+                                for(var i = 0;i<extras.length && isValid;i++){//check for duplicates
+                                    if(extras[i] == possibleExtras[newExtra]){
+                                        isValid = false;
+                                        break;
+                                    }
+                                }
+                                if(isValid){
+                                    extras.push(possibleExtras[newExtra]);
+                                    needed--;
+                                }
+                                possibleExtras.splice(newExtra,1);
+
+                            }
+                        }
+                        var e2 = [];//shuffle the extras so the default ones don't always appear first
+                        while(extras.length>0){
+                            var n = Math.floor(Math.random()*extras.length);
+                                e2.push(extras[n]);
+                                extras.splice(n,1);
+                            }
+                        extras = e2;
+
+                        var boxCount = question.Answers.length + question.NumberOfExtras - needed;//because extras can fail if there are not enough of them
+                        correctAnswers = [];//the number of the box that will be correct
+                        var available = [];
+                        for(var i = 0;i<boxCount;i++){
+                            available.push(i);
+                        }
+                        //pull values out of available values
+                        for(var i = 0; i< question.Answers.length; i++){
+                            var n = Math.floor(Math.random()*available.length);
+                            correctAnswers.push(available[n]);
+                            available.splice(n,1);
+                        }
+                        
+                        var ansArr = [];
+                        question.Answers.forEach(ans => {
+                            ansArr.push(ans);
+                        });
+                        var a2 = [];//shuffle the answers so they don't always come in the same order
+                        while(ansArr.length>0){
+                            var n = Math.floor(Math.random()*ansArr.length);
+                                a2.push(ansArr[n]);
+                                ansArr.splice(n,1);
+                            }
+                            ansArr = a2;
+
+                        this.answer = [];
+                        
+                        var eC = 0;//extra count
+                        var aC = 0;//answer count
+                        for(var i = 0; i<boxCount;i++){
+                            var theBox = document.createElement("input");
+                            var theText = document.createElement("span");
+                            var theContainer = document.createElement("div");
+                            theBox.classList.add("quiz_box");
+                            theContainer.classList.add("quiz_box_holder");
+                            if(correctAnswers.includes(i)){
+                                theText.innerHTML = ansArr[aC];
+                                aC++;
+                                this.answer.push(true);
+                            }else{
+                                theText.innerHTML = extras[eC];
+                                eC++;
+                                this.answer.push(false);
+                            }
+                            theBox.id = "q"+cardNumber+"a"+i;
+                            theBox.type = "checkbox";
+                            this.card.appendChild(document.createElement("br"));
+                            theContainer.appendChild(theBox);
+                            theContainer.appendChild(theText);
+                            this.card.appendChild(theContainer);
+                            this.inputs.push(theBox);
+                        }
+                        
+                        theButton = document.createElement("input");
+                        theButton.id = "q"+cardNumber+"a1";
+                        theButton.type = "button";
+                        theButton.value="Check Answer";
+                        theButton.addEventListener("click",function(){Quiz.answer(this.id);})
+                        this.card.appendChild(document.createElement("br"));
+                        this.card.appendChild(theButton);
+                        this.inputs.push(theButton);
+
+                        this.title.innerHTML = question.Text;
+                        this.hintText = question.Hint;
+                        this.tryHintText = question.TryHint;
+                        this.maxAttempts = question.AllowedAttempts;
+                        this.acceptPartial = question.AcceptPartial;
+                        if(this.hintText!=""){
+                            this.hint.innerHTML = this.hintText;
+                            if(question.HintDelay>0){
+                                this.hint.style.display = "none";
+                                this.hintTime = question.HintDelay;
+                                this.canvas.width = 30;
+                                this.canvas.height=  30;
+                                this.card.appendChild(document.createElement("br"));
+                                this.card.appendChild(this.canvas);
+                            }
+                            this.card.appendChild(this.hint);
+                        }
+
+                        if(this.tryHintText!=""){
+                            this.tryHint.innerHTML = this.tryHintText;
+                            this.tryHint.style.display = "none";
+                            this.card.appendChild(this.tryHint);
+                        }
+                        this.pointsPerAnswer = question.PointsPerAnswer;
+                        this.possiblePoints = this.pointsPerAnswer * aC;
+
                         break;
                     }
                     default:{
                         alert("Question "+questionId+" has an unrecognized type of "+question.type+".\nPlease contact the creator of the deck.");
+                        this.title.innerHTML="Please just hit next question";
+                        this.valid = false;
                     }
                 }
 
@@ -358,7 +719,11 @@
                         deckElement.title = this.Decks[i].Description;
                         deckElement.id = id;
                         deckElement.addEventListener("click",function(e){
+                            if(Quiz.SelectedDeck!=-1){
+                                document.getElementById("deck"+Quiz.SelectedDeck).classList.remove("selected");
+                            }
                             Quiz.SelectedDeck = parseInt(this.id.slice(4),10);
+                            this.classList.add("selected");
                             console.log("Deck "+Quiz.SelectedDeck+" selected");
                         });
 
@@ -375,7 +740,12 @@
                 TotalCards:-1,
                 CardElement:document.getElementById("Card"),
                 ScoreElement:document.getElementById("Score"),
+                Title:document.getElementById("QuizTitle"),
                 QuestionCountElement:document.getElementById("QuestionCount"),
+                NextButton:document.getElementById("QuizNext"),
+                BackButton:document.getElementById("QuizPrev"),
+                EarnedPoints: 0,
+                TotalPoints:0,
                 Mode:-1,
                 Banks:[],//{Bank:"BankName",Extras:[]}
                 LoadBanks(){
@@ -428,7 +798,14 @@
                 },
                 StartQuiz(mode){
                     this.LoadBanks();
+                    this.Title.innerHTML=Data.Decks[this.SelectedDeck].Name;
                     //we are going to fill a list with ids so the cards are randomized.
+                    while(this.CardElement.firstChild){//so the previous quiz data is cleared out
+                        this.CardElement.removeChild(this.CardElement.firstChild);
+                    }
+                    this.EarnedPoints = 0;
+                    this.TotalPoints = 0;
+                    this.Cards = [];
                     var CardIds = [];
                     for(var i = 0; i < Data.Decks[this.SelectedDeck].Questions.length; i++){
                         CardIds.push(i);
@@ -439,7 +816,9 @@
                         CardIds.splice(cardNumber,1);//remove the ID from the list
                         this.Cards.push(new Card(this.SelectedDeck,qId));
                     }
-                    this.CardElement.appendChild(this.Cards[0].card);
+                    Quiz.CurrentCard = 0;
+                    this.Cards[0].show();
+                    Quiz.UpdateHud();
                 },
                 answer(id){//used by the question buttons to redirect the answer to the card's answer function
                     var n = parseInt(id.slice(1,id.length),10);
@@ -448,7 +827,39 @@
                     }else{
                         console.log("Error: Invalid Id given for answer: "+id);
                     }
+                    Quiz.UpdateHud();
 
+                },
+                UpdateHud(){
+                    Quiz.QuestionCountElement.innerHTML="Question "+ (Quiz.CurrentCard+1)+" of "+Quiz.Cards.length;
+                    var percent = "--";
+                    if(Quiz.TotalPoints!=0){
+                        percent = Math.floor((Quiz.EarnedPoints / Quiz.TotalPoints) * 100);
+                    }
+                    Quiz.ScoreElement.innerHTML=percent+"%";
+                },
+                NextQuestion(){
+                    if(Quiz.CurrentCard<Quiz.Cards.length-1){
+                        //remove the current card and put up the next one
+                        Quiz.CardElement.removeChild(Quiz.Cards[Quiz.CurrentCard].card);
+                        Quiz.CurrentCard++;
+                        Quiz.Cards[Quiz.CurrentCard].show();
+                        Quiz.UpdateHud();
+                    }else{
+                        alert("Finished");
+                        //TODO Go to review screen
+                    }
+                },
+                PreviousQuestion(){
+                    if(Quiz.CurrentCard>0){
+                        Quiz.CardElement.removeChild(Quiz.Cards[Quiz.CurrentCard].card);
+                        Quiz.CurrentCard--;
+                        Quiz.Cards[Quiz.CurrentCard].show();
+                        Quiz.UpdateHud();
+                    }else{
+                        alert("How far do you plan to go back?");
+                        //TODO 
+                    }
                 }
 
                 
@@ -458,7 +869,7 @@
             var example = {
     "Name":"The Deck",
     "Description":"Some information about the Deck",
-    "Id":100,//randomly assigned to each deck.
+    "ID":100,//randomly assigned to each deck.
     "Date":1000,
     "Creator":"Dr.Awesome4333",
     "Version":[0,0,0,0],
@@ -476,6 +887,7 @@
             "Type":"MultipleChoice",
             "Text":"What is 10 + 6?",
             "Answers":[16],
+            "PointsPerAnswer":3,
             "Banks":["Numbers"],//if you don't want to use a bank "" is accpeted
             "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
             "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
@@ -490,6 +902,7 @@
             "Type":"MultipleChoice",
             "Text":"What is 10 - 6?",
             "Answers":[4],
+            "PointsPerAnswer":3,
             "Banks":["Numbers"],
             "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
             "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
@@ -504,6 +917,7 @@
             "Type":"MultipleChoice",
             "Text":"Click Zombie",
             "Answers":["Zombie"],
+            "PointsPerAnswer":3,
             "Banks":["Words"],
             "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
             "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
@@ -518,6 +932,7 @@
             "Type":"MultipleChoice",
             "Text":"Click the \u222B",
             "Answers":["\u222B"],
+            "PointsPerAnswer":3,
             "Banks":["Math"],
             "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
             "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
@@ -532,6 +947,7 @@
             "Type":"TextEntry",
             "Text":"Type I love you",
             "Answers":["I love you","I love you.","<3"],
+            "PointsPerAnswer":3,
             "CaseSenstive":false,
             "HintDelay":10,//amount of time in seconds before the hint button becomes available
             "AllowedAttempts":2,
@@ -542,12 +958,14 @@
             "Type":"SelectAll",
             "Text":"Select all words that start with z",
             "Answers":["Zoo","Zang","Zoom"],
+            "PointsPerAnswer":1,
             "Banks":["Words"],
             "AddAnswerToBank":true,//Should this answer automatically be added to the bank of extra answers
             "SelectExtrasFromBank":true,//Should the selected bank be used to select extras in addtion to question extras?
             "Extras":["Peanut","Butter","Rocks"],//Extra answers that only apply to this question
             "NumberOfExtras":3,//How many extras to show along with the answer
             "HintDelay":10,//amount of time in seconds before the hint button becomes available
+            "AcceptPartial":false,
             "AllowedAttempts":2,
             "Hint":"",
             "TryHint":"Make sure you select ALL the answers!"//after a failed attempt this hint will show up
