@@ -753,16 +753,20 @@
                     if(this.SelectedDeck == -1){
                         return;//just don't do it!
                     }
+                    
                     this.Banks=[];
                     Data.Decks[this.SelectedDeck].ExtraAnswers.forEach(bank => {
                         bank.Extras.forEach(extra=>{this.InsertExtraIntoBank(bank.Bank,extra);})
                     })
 
                     Data.Decks[this.SelectedDeck].Questions.forEach(question => {
+                      
                         if(question.AddAnswerToBank){
-                             if(question.Type == "MutlipleChoice" || question.Type == "Text" || question.Type == "SelectAll" ){
+                             if((question.Type == "MultipleChoice") || (question.Type == "TextEntry") || (question.Type == "SelectAll" )){
+                                
                                 question.Banks.forEach(bank => {
                                     this.InsertExtraIntoBank(bank,question.Answers);
+                                   
                                 });
                             }
                         }
