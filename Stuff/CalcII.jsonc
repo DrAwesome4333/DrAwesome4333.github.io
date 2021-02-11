@@ -130,6 +130,8 @@
                 "ShowHint":true,
                 "HintDelay":10,
                 "AllowedAttempts":2,
+                "BeforeBoxText":">>",
+                "AfterBoxText":".",
                 "Hint":"Do you though?",
                 "TryHint":"I guess you don't"
             },

@@ -264,6 +264,7 @@ function Cube(x,y,z,size,color,light){
 this.x = x;
 this.y = y;
 this.z = z;
+this.yOffset = 0;
 this.ox = 0;//orbit point
 this.oy = 0;
 this.oz = -650;
@@ -280,6 +281,7 @@ this.orbitDistance = 300;
 this.musicSection = Math.floor(Math.random()*1024);
 this.size = size;//the size of the model
 this.scale = 1;//how the model is scaled
+
 this.color = color;
 this.bufferLength = 36;
 this.rotation = [0,0,0];//in degs.
@@ -353,6 +355,7 @@ this.update=function(){
 	this.scale = this.power*5;
 	this.orbit += this.power * 0.5  *(this.maxDistance/this.orbitDistance);
 	this.orbit %= 360;
+	this.yOffset += this.power/50;
 	this.orbitDistance += (this.power*this.power-0.25)*10*(this.maxDistance/this.orbitDistance);
 	this.rotation[0]+=this.power*2;
 	this.rotation[1]+=this.power*2+0.1;
@@ -363,6 +366,7 @@ this.update=function(){
 	}
 	var orbit = this.orbit/180*Math.PI;
 	var tilt = this.tilt/180*Math.PI;
+	this.oy = Math.sin(this.yOffset)*1000 / (this.orbitDistance/100);
 	var oldX = 0;
 	var oldY = 0;
 	var oldZ = 0;
@@ -1169,6 +1173,7 @@ function start(){
 	Audio.music.source.connect(Audio.analyser);
 	Audio.analyser.connect(Audio.gainNode);
 	Audio.gainNode.connect(Audio.ctx.destination);
+	//Audio.analyser.smoothingTimeConstant = 0;
 	Audio.gainNode.gain.setValueAtTime(0, Audio.ctx.currentTime);//Mute audio so it doesn't create feedback
 	Audio.analyser.fftSize=1024;
 	fEle.addEventListener("change",function(){
@@ -1251,8 +1256,8 @@ function update(){
 	}
 	ct.lineTo(width,height);
 	ct.lineTo(0,height);
-//	ct.fill();
-//	ct.stroke();
+	//ct.fill();
+	//ct.stroke();
 
 	ct.beginPath();
 	ct.moveTo(0,-dataArray[0]+height/2);
@@ -1261,7 +1266,7 @@ function update(){
 	}
 	ct.lineTo(width,height);
 	ct.lineTo(0,height);
-ct.strokeStyle="rgba(255,0,0,0.5)"
+ct.strokeStyle="rgba(255,255,0,0.5)"
 					
 //ct.stroke();
 Graphics.render();
