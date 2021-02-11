@@ -260,7 +260,7 @@ specialEle.addEventListener("dragover",function(e){
 		}
 		}
 	})
-function Cube(x,y,z,size,color,light){
+function Cube(x,y,z,size,color,light, musicSection = Math.floor(Math.random()*Audio.analyser.frequencyBinCount)){
 this.x = x;
 this.y = y;
 this.z = z;
@@ -278,7 +278,7 @@ this.tiltOffset =  Math.random()*360/180*Math.PI;//so all the cubes don't make a
 this.maxDistance = 3000;
 this.minDistance = 100;
 this.orbitDistance = 300;
-this.musicSection = Math.floor(Math.random()*1024);
+this.musicSection = musicSection;
 this.size = size;//the size of the model
 this.scale = 1;//how the model is scaled
 
@@ -338,6 +338,7 @@ this.buildVBO = function(){//used to update the VBO on a size or color (not scal
 	Graphics.gl.bufferData(Graphics.gl.ARRAY_BUFFER,new Float32Array(anotherArray),Graphics.gl.STATIC_DRAW);
 }
 this.update=function(){
+	
 	this.OldPower = this.power;
 	if(this.OldPower!=0){
 		this.dp = this.power/this.OldPower/1.5;
@@ -386,8 +387,8 @@ this.update=function(){
 		Graphics.lightPos[this.light*3]=this.x;
 		Graphics.lightPos[this.light*3+1]=this.y;
 		Graphics.lightPos[this.light*3+2]=this.z;
-		Graphics.lightColor[this.light*3]=this.color[2]*this.power+0.1;
-		Graphics.lightColor[this.light*3+1]=this.color[2]*this.power+0.1;
+		Graphics.lightColor[this.light*3]=this.color[0]*this.power+0.1;
+		Graphics.lightColor[this.light*3+1]=this.color[1]*this.power+0.1;
 		Graphics.lightColor[this.light*3+2]=this.color[2]*this.power+0.1;
 	}
 }
@@ -529,9 +530,10 @@ var Graphics = {
 		fadeFragmentShader:"\n\
 		precision mediump float;\n\
 		uniform float opacity;\n\
+		uniform vec3 color;\n\
 		void main(void){\n\
 			\n\
-			gl_FragColor = vec4(0.0,0.0,0.0,opacity);\n\
+			gl_FragColor = vec4(color.rgb,opacity);\n\
 			\n\
 		}"
 	},
@@ -549,7 +551,8 @@ var Graphics = {
 
 		},
 		fade:{
-			opacity:null
+			opacity:null,
+			color:null
 		}
 	},
 	attributes:{
@@ -659,7 +662,8 @@ var Graphics = {
 		this.attributes.fade.pos = this.gl.getAttribLocation(this.programs.fade,"pos");
 
 		this.uniforms.fade.opacity = this.gl.getUniformLocation(this.programs.fade,"opacity");
-		this.gl.uniform1f(this.uniforms.fade.opacity,0.05);
+		this.uniforms.fade.color = this.gl.getUniformLocation(this.programs.fade,"color");
+		this.gl.uniform1f(this.uniforms.fade.opacity,0.1);
 		this.gl.enableVertexAttribArray(this.attributes.fade.pos);
 
 		this.buffers.fadeCoverPoints = this.gl.createBuffer();
@@ -737,22 +741,30 @@ var Graphics = {
 		for(var i=0;i<numberOfCubes;i++){
 			possibleList.push(i);
 		}
-		for(var i=0;i<8;i++){
-			var random = Math.floor(Math.random()*possibleList.length);
+		for(var i=0;i < 8;i++){
+			var random = Math.floor(i / 8 * (numberOfCubes - 1));//Math.floor(Math.random()*possibleList.length);
 			chosenLights.push(possibleList[random]);
 			possibleList.splice(random,1);
 		}
 		for(var i = 0; i<numberOfCubes;i++){
+			//Music slection, selects a value in the frquency array for this cube to read
+			var ms = Math.floor(i / numberOfCubes * Audio.analyser.frequencyBinCount);
 			var x = Math.random()*150-75;
 			var y = Math.random()*150-75;
 			var z = -Math.random()*150-75;
+			var color = [Math.random(),Math.random(),Math.random()];
 			var l = -1;
 			for(var j = 0;j<8;j++){
 				if(chosenLights[j]==i){
 					l = j;
+					var c = j%3
+					color = [0.0,0.0,0.0]
+					color[c]=j/8*0.5+0.5;
+				
+					break;
 				}
 			}
-			this.cubes.push(new Cube(x,y,z,Math.random()*5+5,[Math.random(),Math.random(),Math.random()],l));
+			this.cubes.push(new Cube(x,y,z,Math.random()*3+3,color,l,ms));
 
 		}
 
@@ -777,7 +789,18 @@ var Graphics = {
 		}
 	},
 	render:function(){
+
+		var totals = [0,0,0];
+		for(var i = 0;i<this.lightColor.length;i+=3){
+			totals[0]+=this.lightColor[i]*4;
+			totals[1]+=this.lightColor[i+1]*4;
+			totals[2]+=this.lightColor[i+2]*4;
+		}
+		lAvg = [totals[0]/8,totals[1]/8,totals[2]/8]
+		//lAvg = [0,0,0]
+
 		this.gl.useProgram(this.programs.fade)
+		this.gl.uniform3fv(this.uniforms.fade.color,lAvg)
 
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,this.buffers.fadeCoverPoints);
 		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER,this.buffers.fadeCoverTriangles);
@@ -808,19 +831,14 @@ var Graphics = {
 											0,camera.height,0,1],camMatrix);
 		this.gl.uniformMatrix4fv(this.uniforms.main.world,false, camMatrix);
 		
-		var totals = [0,0,0];
-		for(var i = 0;i<this.lightColor.length;i+=3){
-			totals[0]+=this.lightColor[i];
-			totals[1]+=this.lightColor[i+1];
-			totals[2]+=this.lightColor[i+2];
-		}
-		lAvg = [totals[0]/8,totals[1]/8,totals[2]/8]
+	
 		
 		this.gl.clearColor(lAvg[0],lAvg[1],lAvg[2],1.0);
 	    this.gl.clear( this.gl.DEPTH_BUFFER_BIT);
 		
 		this.gl.uniform3fv(this.uniforms.main.light_color,this.lightColor);
 		this.gl.uniform3fv(this.uniforms.main.light_pos,this.lightPos)
+		this.gl.uniform3fv(this.uniforms.main.ambient_color,[lAvg[0]/8,lAvg[1]/8,lAvg[2]/8]);
 		for(var i = 0;i<this.cubes.length;i++){
 			var cc = this.cubes[i];
 			cc.update();
