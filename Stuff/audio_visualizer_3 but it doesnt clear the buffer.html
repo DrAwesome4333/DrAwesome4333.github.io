@@ -792,11 +792,12 @@ var Graphics = {
 
 		var totals = [0,0,0];
 		for(var i = 0;i<this.lightColor.length;i+=3){
-			totals[0]+=this.lightColor[i]*4;
-			totals[1]+=this.lightColor[i+1]*4;
-			totals[2]+=this.lightColor[i+2]*4;
+			totals[0] += this.lightColor[i];
+			totals[1] += this.lightColor[i + 1];
+			totals[2] += this.lightColor[i + 2];
 		}
-		lAvg = [totals[0]/8,totals[1]/8,totals[2]/8]
+		var spike = 2;
+		lAvg = [Math.pow(totals[0] / 2, spike), Math.pow(totals[1] / 2, spike), Math.pow(totals[2] / 2, spike)]
 		//lAvg = [0,0,0]
 
 		this.gl.useProgram(this.programs.fade)
