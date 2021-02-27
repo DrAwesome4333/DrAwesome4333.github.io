@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="icon" 
+        type="image/x-icon" 
+        href="https://drawesome4333.github.io/favicon.ico">
+        <title>Web RTC over LAN Test</title>
+        <style>
+        </style>
+    </head>
+    <body>
+      <span>Enter your name: <input type="text" id="user_name"></span>
+      <br>
+      <input type = "button" value = "Create Game" id = "create_game" onclick = "create_game()"><span id="create_game_id"></span><br>
+      <input type = "button" value = "Join Game" id = "join_game" onclick = "join_game()"><input type = "text" id="join_game_id">
+
+        <!-- The core Firebase JS SDK is always required and must be listed first -->
+        <script src="https://www.gstatic.com/firebasejs/8.2.3/firebase-app.js"></script>
+
+        <!-- TODO: Add SDKs for Firebase products that you want to use
+            https://firebase.google.com/docs/web/setup#available-libraries -->
+        <script src="https://www.gstatic.com/firebasejs/8.2.3/firebase-analytics.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.2.3/firebase-database.js"></script>
+
+        <script>
+          // Your web app's Firebase configuration
+          // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+          var firebaseConfig = {
+            apiKey: "AIzaSyAndfjPoKkn11MqCkdE2Lo6vFpyTqwbU7k",
+            authDomain: "just-a-test-8c59d.firebaseapp.com",
+            projectId: "just-a-test-8c59d",
+            storageBucket: "just-a-test-8c59d.appspot.com",
+            messagingSenderId: "688630560151",
+            appId: "1:688630560151:web:2994e1655b052b4dc540d2",
+            measurementId: "G-M6YLKQRHRM"
+          };
+          // Initialize Firebase
+          firebase.initializeApp(firebaseConfig);
+          firebase.analytics();
+        </script>
+
+        <script>
+            var peerConnection = new RTCPeerConnection({});
+
+            var dataChannel = peerConnection.createDataChannel("number");
+                dataChannel.onopen = function(e){
+                  console.log("Channel opened");
+                }
+                dataChannel.onmessage = function(e){console.log(e)}
+                peerConnection.onnegotiationneeded = async function(e){
+                  console.log("Negotiation needed");
+              }
+            var rChannel;
+            var myName = ""
+            var remoteName = ""
+            var remoteName = ""
+            var hasCreatedGame = false;
+            var cState = 0;
+            var isHost = false;
+            /*
+            * 0 = not started
+            * 1 = waiting for an opponent to join (host)
+            * 2 = waiting for host to accept (client)
+            * 3 = starting peer connection (host)
+            * 4 = waiting for answer (host)
+            * 5 = waiting for offer (client)
+            * 6 = waiting for tracks 
+            * 7 = connected
+            */
+            var gameId = ""
+            var offer;
+            var answer;
+            var messageId = 0;
+            var localMessageId = 0;
+            var remoteMessageId = 0;
+            var messageQue = [];
+            var gameDataRef;
+            var waitingMessageConf = false;
+
+            function create_game(){
+              if(hasCreatedGame){
+                alert("You have already created a game")
+                return false;
+              }
+              if(document.getElementById("user_name").value === ""){
+                alert("Please enter a name first")
+                return false;
+              }
+              myName = document.getElementById("user_name").value
+              document.getElementById("user_name").disabled = true;
+              document.getElementById("create_game").disabled = true;
+              document.getElementById("join_game").disabled = true;
+              document.getElementById("join_game_id").disabled = true;
+              
+              //TODO Make random Id generator
+              gameId = 123654
+              document.getElementById("create_game_id").innerHTML = "Your game's id is: " + gameId;
+              gameData = {
+                state:0,
+                userA:{
+                    message:{type:'name',name: myName},
+                    time: Date.now(),
+                    read: false,
+                    messageId: 0
+                },
+                userB:{
+                    message:"",
+                    time: 0,
+                    read: false,
+                    messageId: 0
+                }
+              }
+              firebase.database().ref("/games/" + gameId).set(gameData);
+              waitingMessageConf = true;
+              hasCreatedGame = true;
+              cState = 1;
+              isHost = true;
+
+              gameDataRef = firebase.database().ref('games/' + gameId);
+              gameDataRef.on('value', checkMessages);
+              peerConnection.addEventListener("track", alert("Something came through"));
+              peerConnection.ondatachannel = function(e){
+                  rChannel = e.channel;
+                  rChannel.onmessage = function(){console.log("Data message")}
+                  rChannel.onopen = function(){console.log("open r")}
+                  rChannel.onclose = function(){console.log("close r")}
+                }
+            }
+
+            async function join_game(){
+              if(hasCreatedGame){
+                alert("You have already joined a game")
+                return false;
+              }
+              if(document.getElementById("user_name").value === ""){
+                alert("Please enter a name first")
+                return false;
+              }
+              myName = document.getElementById("user_name").value
+              document.getElementById("user_name").disabled = true;
+              document.getElementById("create_game").disabled = true;
+              document.getElementById("join_game").disabled = true;
+              document.getElementById("join_game_id").disabled = true;
+              //TODO make this in input from join_game_id
+              gameId = "123654"
+
+              hasCreatedGame = true;
+
+              var gameInfo = await firebase.database().ref("/games/" + gameId).get();
+              if(gameInfo.val() == null){
+                hasCreatedGame = false;
+                alert("The game does not exist or you are not connected to the internet");
+              }
+              gameInfo = gameInfo.val();
+              var msg = gameInfo.userA.message
+              if (msg.type != "name"){
+                alert("This game has already started");
+                hasCreatedGame = false;
+                return false;
+              }
+              
+              var wantToJoin = confirm("A game with " + msg.name + " was found, do you want to connect?")
+              remotename = msg.name;
+
+              if(!wantToJoin){
+                hasCreatedGame = false;
+                return false;
+              }
+              gameDataRef = firebase.database().ref('games/' + gameId);
+              gameDataRef.on('value', checkMessages);
+              
+              cState = 2;
+              sendReadConf();
+              sendMessage({type:'name',name: myName});
+              peerConnection.addEventListener("track", alert("Something came through"))
+              peerConnection.ondatachannel = function(e){
+                  rChannel = e.channel;
+                  rChannel.onmessage = function(){console.log("Data message")}
+                  rChannel.onopen = function(){console.log("open r")}
+                  rChannel.onclose = function(){console.log("close r")}
+                }
+
+            }
+
+            async function checkMessages(data){
+              var messages = data.val();
+              if(isHost){
+                if(messages.userB.messageId > remoteMessageId){
+                  remoteMessageId = messages.userB.messageId;
+                  console.log("Recieved message type:" + messages.userB.message.type)
+                  processMessage(messages.userB.message)
+                  
+                }else if(messages.userA.read){
+                  waitingMessageConf = false;
+                }
+              }else{
+                if(messages.userA.messageId > remoteMessageId){
+                  remoteMessageId = messages.userA.messageId;
+                  console.log("Recieved message type:" + messages.userA.message.type)
+                  processMessage(messages.userA.message)
+                  
+                }else if(messages.userB.read){
+                  waitingMessageConf = false;
+                }
+              }
+            }
+
+            async function sendNext(){
+              if(!waitingMessageConf && messageQue.length > 0){
+                localMessageId ++;
+                var updateData = {}
+              if(isHost){
+                updateData["/games/" + gameId + "/userA/read"] = false;
+                updateData["/games/" + gameId + "/userA/message"] = messageQue[0]
+                updateData["/games/" + gameId + "/userA/messageId"] = localMessageId;
+              }else{
+                updateData["/games/" + gameId + "/userB/read"] = false;
+                updateData["/games/" + gameId + "/userB/message"] = messageQue[0];
+                updateData["/games/" + gameId + "/userB/messageId"] = localMessageId;
+              }
+              firebase.database().ref().update(updateData);
+              messageQue.splice(0,1);
+              waitingMessageConf = true;
+              }else if (messageQue.length > 0){
+                setTimeout(sendNext,500);
+              }
+            }
+
+            async function sendReadConf(){
+              var updateData = {}
+              if(isHost){
+                updateData["/games/" + gameId + "/userB/read"] = true;
+              }else{
+                updateData["/games/" + gameId + "/userA/read"] = true;
+              }
+              firebase.database().ref().update(updateData);
+            }
+
+            async function sendMessage(message){
+                messageQue.push(message);
+                  sendNext()
+            }
+
+            /*
+            * 0 = not started
+            * 1 = waiting for an opponent to join (host)
+            * 2 = waiting for host to accept (client)
+            * 3 = starting peer connection (host)
+            * 4 = waiting for answer (host)
+            * 5 = waiting for offer (client)
+            * 6 = waiting for tracks 
+            * 7 = connected
+            */
+            async function processMessage(msg){
+              if(msg.type == "candidate" && msg.candidate){
+                console.log("Remote Candidate recieved: " + msg.candidate);
+                try{
+                  await peerConnection.addIceCandidate(msg.candidate);
+                  console.log("Succesfully added candidate")
+                  sendReadConf();
+                }catch(e){
+                  console.log(e.name)
+                }
+                return;
+              }
+              switch(cState){
+                case 0:{
+                  break;
+                }
+                case 1:{
+                  if(msg.type == "name"){
+                    remoteName = msg.name;
+                  }else{
+                    return;
+                  }
+                  accept = confirm(remoteName + " has requested to join the game, do you accept?")
+                  if(accept){
+                    offer = await peerConnection.createOffer({});
+                    await peerConnection.setLocalDescription(offer);
+                    console.log("Offer placed")
+                    sendMessage({type:'offer',offer:peerConnection.localDescription});
+                    peerConnection.addEventListener("icecandidate", sendCandidate)
+                    cState = 4;
+                 }else{
+                    sendMessage({type:'denied'})
+                    sendMessage({type:'name',name:myName})
+                 }
+                 sendReadConf();
+                  break;
+                }
+                case 2:{
+                  if(msg.type == "denied"){
+                    alert(remoteName + " denied the request")
+                    hasCreatedGame = false;
+                    cState = 0;
+                    document.getElementById("user_name").disabled = false;
+                    document.getElementById("create_game").disabled = false;
+                    document.getElementById("join_game").disabled = false;
+                    document.getElementById("join_game_id").disabled = false;
+                    return;
+                  }
+                  if(msg.type == "offer"){
+                      await peerConnection.setRemoteDescription(msg.offer);
+                      var theAnswer = await peerConnection.createAnswer({});
+                      await peerConnection.setLocalDescription(theAnswer);
+                      peerConnection.addEventListener("icecandidate", sendCandidate)
+                      console.log("Offer Recieved: " + msg.offer)
+                      sendMessage({type:'answer',answer:theAnswer})
+                      cState = 6;
+                  }
+                  sendReadConf();
+                  break;
+                }
+                case 4:{
+                  if(msg.type == "answer"){
+                      await peerConnection.setRemoteDescription(msg.answer);
+                      cState = 6;
+                  }
+                  sendReadConf();
+                  break;
+                }
+              }
+            }
+
+            function sendCandidate(event){
+                console.log("ice candidate event")
+                console.log(event)
+                sendMessage({type:'candidate',candidate:event.candidate})
+                
+            }
+            
+        </script>
+
+    </body>
+</html>

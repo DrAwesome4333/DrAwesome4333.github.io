@@ -1,0 +1,75 @@
+Specification:
+    Have userA type in name
+    Allow them to start a game
+    User is given a game code
+
+    UserB types in their name
+    They click join game and input the game's code
+
+    userA confirms that they want to play with UserB
+    
+    A connection is establitshed, they now can play pong together
+
+Analysis:
+    Firebase will be used for signaling between players
+    RTC connection will be used for playing pong
+
+    userA creates a message with their user name
+    userB finds this message and responds with their user name
+    after userA accepts, user A starts a peer connection, and starts listening for ice events
+    userA then creates an offer and sets the offer as its local description
+    userA sends offer to userB
+    userB sets their remote description to the offer given by userA
+    userB then creates an answer
+    userB sets the answer to their local description
+    userB sends answer to userA
+    userA sets their remote description to the answer given by userB
+
+    when candidates become available, send them to the other user to add them.
+
+System Design:
+    A session/user ID will be generated randomly and saved as a cookie if one does not exist already
+    Users will input their names into a text box.
+    They can click either create game or join game.
+    When they create a game
+
+        Generate a random 6 digit code
+
+        Create game object like this:
+            gameData = {
+                state: 0,
+                userA:{
+                    message:{},
+                    time: Date.now(),
+                    read: false,
+                    messageId: 0
+                },
+                userB:{
+                    message:{},
+                    time: 0,
+                    read: false,
+                    messageId: 0
+                }
+            }
+
+        Send 6 digit code to firebase to add it to the games tree
+        
+        now set up a wait event so see if the message changes
+        When
+        if user say no we set userB back to ""
+        if user says yes we set accepted to true and add our offer to userAOffer as well as userA cannidate
+        We wait for userB to do the same, when that happens we attempt to connect
+
+    When they join a game:
+        Look up the gameID to see if it there is a game created.
+        If not, prompt the user to try again
+        If there is an ID, ask the user to confirm they want to connect and display the other's user name
+        If they confirm, we set userB to the users name
+        now set up a wait event to see if userB changes or accepted changes.
+        If userB changes to "", tell the user thier request was rejected
+        If accepted changes to true, load userAOffer to create an answer and post it as userBAnswer
+        Then post our cannidate and load theirs
+        We then attempt to connect
+    
+    After connection is created we will create a data channel.
+    
