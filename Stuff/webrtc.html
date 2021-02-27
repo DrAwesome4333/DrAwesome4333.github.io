@@ -118,10 +118,10 @@
 
               gameDataRef = firebase.database().ref('games/' + gameId);
               gameDataRef.on('value', checkMessages);
-              peerConnection.addEventListener("track", alert("Something came through"));
+              peerConnection.addEventListener("track", function(){});
               peerConnection.ondatachannel = function(e){
                   rChannel = e.channel;
-                  rChannel.onmessage = function(){console.log("Data message")}
+                  rChannel.onmessage = function(e){console.log("Data message: " + e.data)}
                   rChannel.onopen = function(){console.log("open r")}
                   rChannel.onclose = function(){console.log("close r")}
                 }
@@ -172,10 +172,10 @@
               cState = 2;
               sendReadConf();
               sendMessage({type:'name',name: myName});
-              peerConnection.addEventListener("track", alert("Something came through"))
+              peerConnection.addEventListener("track", function(){});
               peerConnection.ondatachannel = function(e){
                   rChannel = e.channel;
-                  rChannel.onmessage = function(){console.log("Data message")}
+                  rChannel.onmessage = function(e){console.log("Data message: " + e.data)}
                   rChannel.onopen = function(){console.log("open r")}
                   rChannel.onclose = function(){console.log("close r")}
                 }
