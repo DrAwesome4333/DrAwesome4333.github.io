@@ -97,7 +97,7 @@
         </script>
 
         <script>
-            var peerConnection = new RTCPeerConnection({iceServers: [{urls: 'stuns:stun.l.google.com'}]});
+            var peerConnection = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com'}]});
 
             var dataChannel = peerConnection.createDataChannel("number");
                 dataChannel.onopen = function(e){
