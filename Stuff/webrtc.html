@@ -15,6 +15,19 @@
           .error{
             color:red;
           }
+          input{
+            border: 2px solid black;
+            border-radius: 5px;
+            color:black;
+          }
+          input:disabled{
+            border: 2px dashed grey;
+          }
+          input.error{
+            border: 3px solid red;
+            border-radius: 5px;
+            color:black;
+          }
           .divider{
             width:20vw;
           }
@@ -35,31 +48,33 @@
             position:fixed;
             z-index: 2;
             top:33vh;
-            font-size:xx-large;
             background-color: #333e;
             text-align: center;
             color: white;
           }
+          body{
+            font-size:xx-large;
+            text-align: center;
+          }
         </style>
+        <meta name="viewport" content="width=device-width,initial-scale=1"/>
     </head>
-    <body onunload = "clear_game_data()">
+    <body onunload = "clearGameData()">
       <div id="main" class = "center">
         <br>
-        <span>Enter your name: <input type="text" id="user_name"></span><br><span id="status_text"></span>
+        <span>Enter your name: <br></span>
+        <input type="text" id="user_name"><br>
+        <span id="status_text"></span>
         <br>
-        <br>
-        <input type = "button" value = "Create Game" id = "create_game" onclick = "create_game()">
+        <input type = "button" value = "Create Game" id = "create_game" onclick = "createGame()">
         <br>
         <span id="create_game_id"></span>
         <br>
-        <br>
         <span>or</span>
         <br>
+        <input type = "button" value = "Join Game" id = "join_game" onclick = "joinGame()">
         <br>
-        <input type = "button" value = "Join Game" id = "join_game" onclick = "join_game()">
-        <br>
-        <br>
-        <span>Enter game code:</span><input type = "text" id="join_game_id">
+        <span>Enter game code:<br></span><input type = "text" id="join_game_id">
       </div>
       <div id = "confirm_box">
         <div id="confirm_bar">
@@ -98,15 +113,7 @@
 
         <script>
             var peerConnection = new RTCPeerConnection({});
-
             var dataChannel = peerConnection.createDataChannel("number");
-                dataChannel.onopen = function(e){
-                  console.log("Channel opened");
-                }
-                dataChannel.onmessage = function(e){console.log(e)}
-                peerConnection.onnegotiationneeded = async function(e){
-                  console.log("Negotiation needed");
-              }
             var rChannel;
             var myName = ""
             var remoteName = ""
@@ -115,6 +122,8 @@
             var isHost = false;
             var channelOpen = false;
             var connectionChecked = false;
+
+
             /*
             * 0 = not started
             * 1 = waiting for an opponent to join (host)
@@ -136,30 +145,35 @@
             var waitingMessageConf = false;
 
             
-            function clear_game_data(){
+            function clearGameData(){
               if(isHost)
                 gameDataRef.remove();
             }
 
-            function create_game(){
+            function createGame(){
               if(hasCreatedGame){
                 document.getElementById("status_text").innerHTML = "You have already created a game";
-                document.getElementById("status_text").classList.add("error")
+                document.getElementById("status_text").classList.add("error");
                 return false;
               }
               if(document.getElementById("user_name").value === ""){
                 document.getElementById("status_text").innerHTML = "Please enter a name first";
-                document.getElementById("status_text").classList.add("error")
+                document.getElementById("status_text").classList.add("error");
+                document.getElementById("user_name").classList.add("error");
                 return false;
+              }else{
+                document.getElementById("user_name").classList.remove("error");
               }
               myName = document.getElementById("user_name").value
-              document.getElementById("user_name").disabled = true;
-              document.getElementById("create_game").disabled = true;
-              document.getElementById("join_game").disabled = true;
-              document.getElementById("join_game_id").disabled = true;
+              disableGUI();
               
               gameId = generateCode(6);
               document.getElementById("create_game_id").innerHTML = "Your game's id is: " + gameId;
+
+              document.getElementById("status_text").innerHTML = "Wating for opponent to join...";
+              document.getElementById("status_text").classList.remove("error");
+              document.getElementById("status_text").classList.add("info");
+
               gameData = {
                 state:0,
                 userA:{
@@ -187,24 +201,36 @@
               peerConnection.ondatachannel = startListeningOnChannel;
             }
 
-            async function join_game(){
+            async function joinGame(){
               if(hasCreatedGame){
                 document.getElementById("status_text").innerHTML = "You have already joined a game";
-                document.getElementById("status_text").classList.add("error")
+                document.getElementById("status_text").classList.add("error");
                 return false;
               }
               if(document.getElementById("user_name").value === ""){
                 document.getElementById("status_text").innerHTML = "Please enter a name first";
-                document.getElementById("status_text").classList.add("error")
+                document.getElementById("status_text").classList.add("error");
+                document.getElementById("user_name").classList.add("error");
                 return false;
+              }else{
+                document.getElementById("user_name").classList.remove("error");
+              }
+              if(document.getElementById("join_game_id").value === ""){
+                document.getElementById("status_text").innerHTML = "Please enter a game Id to join";
+                document.getElementById("status_text").classList.add("error");
+                document.getElementById("join_game_id").classList.add("error");
+                return false;
+              }else{
+                document.getElementById("join_game_id").classList.remove("error");
               }
               myName = document.getElementById("user_name").value
-              document.getElementById("user_name").disabled = true;
-              document.getElementById("create_game").disabled = true;
-              document.getElementById("join_game").disabled = true;
-              document.getElementById("join_game_id").disabled = true;
-              //TODO make this in input from join_game_id
+              disableGUI();
+              
               gameId = document.getElementById("join_game_id").value;
+
+              document.getElementById("status_text").innerHTML = "Checking for game...";
+              document.getElementById("status_text").classList.remove("error");
+              document.getElementById("status_text").classList.add("info");
 
               hasCreatedGame = true;
               var gameInfo;
@@ -213,28 +239,28 @@
                 if(gameInfo.val() == null){
                   hasCreatedGame = false;
                   document.getElementById("status_text").innerHTML = "The game does not exist or you are not connected to the internet";
-                  document.getElementById("status_text").classList.add("error")
-                  document.getElementById("user_name").disabled = false;
-                  document.getElementById("create_game").disabled = false;
-                  document.getElementById("join_game").disabled = false;
-                  document.getElementById("join_game_id").disabled = false;
+                  document.getElementById("status_text").classList.remove("info");
+                  document.getElementById("status_text").classList.add("error");
+                  enableGUI();
                   return false;
                }
               }catch(e){
                 hasCreatedGame = false;
                 document.getElementById("status_text").innerHTML = "The game does not exist or you are not connected to the internet";
-                document.getElementById("status_text").classList.add("error")
-                document.getElementById("user_name").disabled = false;
-                document.getElementById("create_game").disabled = false;
-                document.getElementById("join_game").disabled = false;
-                document.getElementById("join_game_id").disabled = false;
+                document.getElementById("status_text").classList.add("error");
+                document.getElementById("status_text").classList.remove("info");
+                enableGUI();
                 return false;
               }
               
               gameInfo = gameInfo.val();
               var msg = gameInfo.userA.message
+
               if (msg.type != "name"){
-                alert("This game has already started");
+                document.getElementById("status_text").innerHTML = "This game has already started";
+                document.getElementById("status_text").classList.add("error");
+                document.getElementById("status_text").classList.remove("info");
+                enableGUI();
                 hasCreatedGame = false;
                 return false;
               }
@@ -243,9 +269,14 @@
               remoteName = msg.name;
 
               if(!wantToJoin){
+                document.getElementById("status_text").innerHTML = "Game not joined";
                 hasCreatedGame = false;
+                enableGUI();
                 return false;
               }
+
+
+
               gameDataRef = firebase.database().ref('games/' + gameId);
               localMessageId = gameInfo.userB.messageId;
               gameDataRef.on('value', checkMessages);
@@ -256,13 +287,41 @@
               peerConnection.addEventListener("track", function(){});
               peerConnection.ondatachannel = startListeningOnChannel;
 
+              document.getElementById("status_text").innerHTML = "Wating for response from host...";
+              document.getElementById("status_text").classList.add("info");
+
             }
             
+            function disableGUI(){
+              document.getElementById("user_name").disabled = true;
+              document.getElementById("create_game").disabled = true;
+              document.getElementById("join_game").disabled = true;
+              document.getElementById("join_game_id").disabled = true;
+            }
+
+            function enableGUI(){
+              document.getElementById("user_name").disabled = false;
+              document.getElementById("create_game").disabled = false;
+              document.getElementById("join_game").disabled = false;
+              document.getElementById("join_game_id").disabled = false;
+            }
 
             async function checkMessages(data){
               var messages = data.val();
               if(!messages){
-                console.log("Game has been erased form database.")
+                console.log("Game has been erased from database.")
+                document.getElementById("status_text").innerHTML = "Game data has been erased from database.";
+                document.getElementById("status_text").classList.remove("error");
+                document.getElementById("status_text").classList.add("info");
+                peerConnection.close();
+                peerConnection = new RTCPeerConnection();
+                dataChannel = peerConnection.createDataChannel("number");
+                rChannel = null;
+                enableGUI();
+                cState = 0;
+                hasCreatedGame = false;
+                remoteMessageId = 0;
+                gameDataRef.off();
                 return;
               }
 
@@ -374,9 +433,15 @@
                     sendMessage({type:'offer',offer:peerConnection.localDescription});
                     peerConnection.addEventListener("icecandidate", sendCandidate)
                     cState = 4;
+                    document.getElementById("status_text").innerHTML = "Attempting to connect...";
+                    document.getElementById("status_text").classList.remove("error");
+                    document.getElementById("status_text").classList.add("info");
                  }else{
-                    sendMessage({type:'denied'})
-                    sendMessage({type:'name',name:myName})
+                  document.getElementById("status_text").innerHTML = "You denied the request, waiting for opponent...";
+                  document.getElementById("status_text").classList.remove("error");
+                  document.getElementById("status_text").classList.add("info");
+                  sendMessage({type:'denied'})
+                  sendMessage({type:'name',name:myName})
                  }
                  sendReadConf();
                   break;
@@ -384,13 +449,11 @@
                 case 2:{
                   if(msg.type == "denied"){
                     document.getElementById("status_text").innerHTML = remoteName + " denied the request";
-                    document.getElementById("status_text").classList.add("error")
+                    document.getElementById("status_text").classList.add("error");
+                    document.getElementById("status_text").classList.remove("info");
                     hasCreatedGame = false;
                     cState = 0;
-                    document.getElementById("user_name").disabled = false;
-                    document.getElementById("create_game").disabled = false;
-                    document.getElementById("join_game").disabled = false;
-                    document.getElementById("join_game_id").disabled = false;
+                    enableGUI();
                     gameDataRef.off();
                     sendReadConf();
                     //Stop waiting for a confirmation message as we are no longer listening 
@@ -406,12 +469,18 @@
                       console.log("Offer Recieved: " + msg.offer)
                       sendMessage({type:'answer',answer:theAnswer})
                       cState = 6;
+                      document.getElementById("status_text").innerHTML = "Attempting to connect...";
+                      document.getElementById("status_text").classList.remove("error");
+                      document.getElementById("status_text").classList.add("info");
                   }
                   sendReadConf();
                   break;
                 }
                 case 4:{
                   if(msg.type == "answer"){
+                      document.getElementById("status_text").innerHTML = "Connecting...";
+                      document.getElementById("status_text").classList.remove("error");
+                      document.getElementById("status_text").classList.add("info");
                       await peerConnection.setRemoteDescription(msg.answer);
                       cState = 6;
                   }
@@ -439,8 +508,29 @@
             function startListeningOnChannel(e){
               rChannel = e.channel;
                   rChannel.onmessage = readRemoteMessage;
-                  rChannel.onopen = function(){channelOpen = true;console.log("Recieve Channel Opened");}
-                  rChannel.onclose = function(){channelOpen = false;console.log("Recieve Channel Closed");}
+                  rChannel.onopen = function(){
+                    channelOpen = true;
+                    console.log("Recieve Channel Opened");
+                    document.getElementById("status_text").innerHTML = "Receiving Data...";
+                    document.getElementById("status_text").classList.remove("error");
+                    document.getElementById("status_text").classList.add("info");
+                  }
+                  rChannel.onclose = function(){
+                    channelOpen = false;
+                    console.log("Recieve Channel Closed");
+                    document.getElementById("status_text").innerHTML = "Communication with " + remoteName + " was closed.";
+                    document.getElementById("status_text").classList.remove("error");
+                    document.getElementById("status_text").classList.add("info");
+
+                    peerConnection.close();
+                    peerConnection = new RTCPeerConnection();
+                    dataChannel = peerConnection.createDataChannel("number");
+                    rChannel = null;
+                    enableGUI();
+                    cState = 0;
+                    hasCreatedGame = false;
+                    clearGameData();
+                  }
             }
             
             var player1;
@@ -467,7 +557,9 @@
                 dataChannel.send('{"type":"ping"}')
               }
             }
+
             setInterval(pingThem,1000)
+
             function Player(pos,control){
               this.x = 100;
               this.y = 0;
@@ -500,7 +592,11 @@
 
             function updatePositionTouch(e){
               e.preventDefault();
+              if(!channelOpen)
+                return;
               var x = e.changedTouches[0].pageX - player1.w/2
+              var canvasX = canvas.getBoundingClientRect().left;
+              x -= canvasX;
               if(!player1.remoteControl){
                 player1.x = x
               }
@@ -513,7 +609,11 @@
             function updatePosition(e){
               
               e.preventDefault();
+              if(!channelOpen)
+                return;
               var x = e.clientX - player1.w/2
+              var canvasX = canvas.getBoundingClientRect().left;
+              x -= canvasX;
               if(!player1.remoteControl){
                 player1.x = x
               }
@@ -583,8 +683,6 @@
                 ct.fill();
                 oldTime = newTime;
                 requestAnimationFrame(updateGame);
-              }else{
-                alert("Connection lost");
               }
             }
 
@@ -621,6 +719,9 @@
                 case "pong":{
                   connectionChecked = true;
                   dataChannel.send('{"type":"start"}')
+                  document.getElementById("status_text").innerHTML = "Connected!";
+                  document.getElementById("status_text").classList.remove("error");
+                  document.getElementById("status_text").classList.add("info");
                   break;
                 }
               }
