@@ -9,7 +9,7 @@
 			--true-height: 100vh;
 		}
 
-		Body {
+		body {
 			background-color: #fff;
 			color: white;
 		}
@@ -77,7 +77,7 @@
 			background-image: linear-gradient(to right, rgba(94, 94, 94, 1), rgba(94, 94, 94, 0.7), rgba(0, 0, 0, 0));
 		}
 
-		#Playlist {
+		#playlist {
 			width: 34vw;
 			height: calc(var(--true-height)*0.75);
 			overflow-y: scroll;
@@ -87,14 +87,14 @@
 			direction: rtl;
 		}
 
-		#Player {
+		#player {
 			width: 34vw;
 			height: calc(var(--true-height)*0.25);
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			border-bottom: 2pt black solid;
 		}
 
-		#AddSongs {
+		#addSongs {
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			height: 90px;
 			width: 34vw;
@@ -108,12 +108,12 @@
 
 		}
 
-		#AddSongs:hover {
+		#addSongs:hover {
 			/*background-color:rgb(40, 40, 40);*/
 			background-image: linear-gradient(to right, rgba(50, 50, 50, 1), rgba(0, 0, 0, 0));
 		}
 
-		#SidePanel {
+		#sidePanel {
 			position: fixed;
 			top: 0px;
 			left: 0px;
@@ -123,11 +123,11 @@
 			transition: all 0.5s ease-in-out;
 		}
 
-		#SidePanel.hideToLeft {
+		#sidePanel.hideToLeft {
 			left: -34vw !important;
 		}
 
-		#SidePanelArrow {
+		#sidePanelArrow {
 			width: 100vw;
 			height: calc(var(--true-height));
 			float: right;
@@ -139,15 +139,15 @@
 			line-height: calc(var(--true-height));
 		}
 
-		#SidePanelArrow.hideToLeft {
+		#sidePanelArrow.hideToLeft {
 			width: 100vw;
 		}
 
-		#SidePanelArrow.hideToLeft:after {
+		#sidePanelArrow.hideToLeft:after {
 			content: '\25B6' !important;
 		}
 
-		#SidePanelArrow:after {
+		#sidePanelArrow:after {
 			content: '\25C0';
 		}
 
@@ -160,7 +160,7 @@
 			height: 100%;
 		}
 
-		#PlaceHolder {
+		#placeHolder {
 			border: none;
 		}
 
@@ -183,29 +183,27 @@
 	</style>
 </head>
 
-<body onload="document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');"
-	onresize="document.documentElement.style.setProperty('--true-height',window.innerHeight+'px');if(Graphics.gl){Graphics.resize();}">
-	<div id="SidePanel">
-		<div id="SidePanelArrow"
-			onclick="this.parentElement.classList.toggle('hideToLeft');this.classList.toggle('hideToLeft')"
-			onmousemove="ArrowTimer=3;this.style.opacity=1;"></div>
-		<div id="Player">
+<body onload="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px');"
+	onresize="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px'); if(Graphics.gl){Graphics.resize();}">
+	<div id="sidePanel">
+		<div id="sidePanelArrow"
+			onclick="this.parentElement.classList.toggle('hideToLeft'); this.classList.toggle('hideToLeft')"
+			onmousemove="ArrowTimer = 3; this.style.opacity = 1;"></div>
+		<div id="player">
 			<audio id="audio" controls>
 				<source id="src" type="audio/mp3">
 				HTML5 Audio element is not supported on your browser.
 			</audio>
 			<br>
-			<input type="button" value="Start Listening" onclick="start();requestMic();"><select id="input_select"
-				onchange="tryMic(parseInt(this.value));"></select>
+			<input type="button" value="Start Listening" onclick="start(); requestMic();">
+			<select id="inputSelect" onchange="tryMic(parseInt(this.value));"></select>
 		</div>
-		<div id="Playlist">
-			<div id="AddSongs" onclick="var eve=new MouseEvent('click');start();fileEle.dispatchEvent(eve);">
+		<div id="playlist">
+			<div id="addSongs" onclick="var eve=new MouseEvent('click'); start(); fileEle.dispatchEvent(eve);">
 				<b>&#x2b</b><br>
 				Add songs
 			</div>
 		</div>
-
-
 
 		<input type="file" id="files" accept="audio/*;" multiple style="display: none;">
 		<p id="op"></p>
@@ -215,17 +213,16 @@
 		var audioSrc = document.getElementById("src");
 		var audioEle = document.getElementById("audio");
 		var fileEle = document.getElementById("files");
-		var playlistEle = document.getElementById("Playlist");
+		var playlistEle = document.getElementById("playlist");
 		var placeHolder = document.createElement("Div");
-		var addSongEle = document.getElementById("AddSongs");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
-		var inputSelectEle = document.getElementById("input_select");
+		var addSongEle = document.getElementById("addSongs");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
+		var inputSelectEle = document.getElementById("inputSelect");
+		var sidePanelArrow = document.getElementById("sidePanelArrow");
 		var op = document.getElementById("op");
 		var hasStarted = false;
 		var audioDevices = [];
 		var ct = document.getElementById("can").getContext("2d");
 		var canvas = document.getElementById("can");
-		var arr;
-		var dataArray;
 		var movingSongId = -1;
 		var ArrowTimer = 3;
 
@@ -234,7 +231,7 @@
 				if (ArrowTimer > 0) {
 					ArrowTimer--;
 					if (ArrowTimer === 0) {
-						document.getElementById("SidePanelArrow").style.opacity = "0";
+						sidePanelArrow.style.opacity = "0";
 					}
 				}
 			}, 1000);
@@ -259,7 +256,7 @@
 
 		placeHolder.classList.add("playlistItem");
 		placeHolder.style.height = "0px";
-		placeHolder.id = "PlaceHolder";
+		placeHolder.id = "placeHolder";
 
 		addSongEle.addEventListener("dragover", function (e) {
 			e.preventDefault();
@@ -351,7 +348,7 @@
 
 			Graphics.gl.bindBuffer(Graphics.gl.ELEMENT_ARRAY_BUFFER, this.IBO);
 			Graphics.gl.bufferData(Graphics.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lazyArray), Graphics.gl.STATIC_DRAW);
-			//[x, y, x, r, g, b, nx, ny, nz, tx, ty]
+			//[x, y, z, r, g, b, nx, ny, nz, tx, ty]
 			//used to update the VBO on a size or color (not scale) change
 			this.buildVBO = function () {
 				//half size
@@ -401,8 +398,8 @@
 				if (this.OldPower != 0) {
 					this.dp = this.power / this.OldPower / 1.5;
 				}
-				if (this.power < arr[this.musicSection] / 255) {
-					this.power = arr[this.musicSection] / 255;
+				if (this.power < Sound.data.frequency[musicSection] / 255) {
+					this.power = Sound.data.frequency[musicSection] / 255;
 				} else {
 					if (this.power > 0)
 						this.power -= 0.1;
@@ -502,11 +499,16 @@
 				fullScreen: false,//if true the canvas will attempt to take up the whole screen
 				shouldShow: true
 			},
+			settings: {
+				backgroundColorSmoothing: 0.7 // to reduce strobe
+			},
 			particles: {
 
 			},
 			lightPos: [0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0],
 			lightColor: [0.25, 0.25, 0.25,  0.5, 0.0, 0.0,  0.0, 0.5, 0.0,  0.5, 0.5, 0.0,  0.0, 0.0, 0.5,  0.5, 0.0, 0.5,  0.0, 0.5, 0.5,  0.0, 0.0, 0.5],
+			backgroundColor: [0, 0, 0],
+			backgroundColorGoal: [0, 0, 0],
 			cubes: [],
 			state: {
 				mode: -1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
@@ -585,16 +587,34 @@
 					}",
 				fadeVertexShader: "\n\
 					attribute vec2 pos;\n\
+					varying vec2 _pos;\n\
 					void main(void){\n\
+						_pos = pos;\n\
 						gl_Position=vec4(pos, 1.0, 1.0);\n\
 					}",
 				fadeFragmentShader: "\n\
 					precision mediump float;\n\
+					uniform int freq[64];\n\
 					uniform float opacity;\n\
 					uniform vec3 color;\n\
+					varying vec2 _pos;\n\
+					vec4 fin;\n\
+					int x;\n\
+					float y;\n\
 					void main(void){\n\
 						\n\
-						gl_FragColor = vec4(color.rgb, opacity);\n\
+						x = int(abs(_pos.x) * 64.0);\n\
+						fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);\n\
+						for(int i = 0; i < 64; i++) {\n\
+							if(i == x) {\n\
+								y = float(freq[i]) / 255.0;\n\
+								if (abs(_pos.y) < y){\n\
+									fin = vec4(color.rgb, opacity);\n\
+								}\n\
+								break;\n\
+							}\n\
+						}\n\
+						gl_FragColor = fin;\n\
 						\n\
 					}"
 			},
@@ -613,7 +633,8 @@
 				},
 				fade: {
 					opacity: null,
-					color: null
+					color: null,
+					freq: null
 				}
 			},
 			attributes: {
@@ -743,7 +764,8 @@
 
 				this.uniforms.fade.opacity = this.gl.getUniformLocation(this.programs.fade, "opacity");
 				this.uniforms.fade.color = this.gl.getUniformLocation(this.programs.fade, "color");
-				this.gl.uniform1f(this.uniforms.fade.opacity, 0.1);
+				this.uniforms.fade.freq = this.gl.getUniformLocation(this.programs.fade, "freq");
+				this.gl.uniform1f(this.uniforms.fade.opacity, 1);
 				this.gl.enableVertexAttribArray(this.attributes.fade.pos);
 
 				this.buffers.fadeCoverPoints = this.gl.createBuffer();
@@ -881,10 +903,16 @@
 				}
 				var spike = 2;
 				lAvg = [Math.pow(totals[0] / 2, spike), Math.pow(totals[1] / 2, spike), Math.pow(totals[2] / 2, spike)]
-				//lAvg = [0,0,0]
+				this.backgroundColorGoal = lAvg;
+
+				for(var i = 0; i < 3; i++){
+					var colorDif = this.backgroundColorGoal[i] - this.backgroundColor[i];
+					this.backgroundColor[i] += colorDif * (1 - this.settings.backgroundColorSmoothing);
+				}
 
 				this.gl.useProgram(this.programs.fade)
-				this.gl.uniform3fv(this.uniforms.fade.color, lAvg)
+				this.gl.uniform3fv(this.uniforms.fade.color, this.backgroundColor);
+				this.gl.uniform1iv(this.uniforms.fade.freq, Sound.data.frequency);
 
 				this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers.fadeCoverPoints);
 				this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.buffers.fadeCoverTriangles);
@@ -1137,6 +1165,10 @@
 			music: {
 				source: null//the html element that will play the music is linked here
 				//playing is not needed as this will not be controlled by the Sound object but the player object
+			},
+			data: {
+				frequency: new Uint8Array(1),
+				waveform: new Uint8Array(1)
 			}
 
 		}
@@ -1272,7 +1304,7 @@
 			Sound.gainNode.connect(Sound.ctx.destination);
 			//Sound.analyser.smoothingTimeConstant = 0;
 			Sound.gainNode.gain.setValueAtTime(0, Sound.ctx.currentTime);//Mute audio so it doesn't create feedback
-			Sound.analyser.fftSize = 1024;
+			Sound.analyser.fftSize = 128;
 			fileEle.addEventListener("change", function () {
 				Sound.gainNode.gain.setValueAtTime(1, Sound.ctx.currentTime);
 				if (Sound.mic.playing) {
@@ -1282,8 +1314,8 @@
 				Player.loadSongs(fileEle.files);
 			})
 			//fEle.addEventListener("change",function(){audioSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Sound.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-			arr = new Uint8Array(Sound.analyser.frequencyBinCount);
-			dataArray = new Uint8Array(Sound.analyser.frequencyBinCount);
+			Sound.data.frequency = new Uint8Array(Sound.analyser.frequencyBinCount);
+			Sound.data.waveform = new Uint8Array(Sound.analyser.frequencyBinCount);
 			Player.loadResources();
 			Graphics.start();
 			update();
@@ -1335,8 +1367,8 @@
 		}
 		function update() {
 			requestAnimationFrame(update);
-			Sound.analyser.getByteFrequencyData(arr);
-			Sound.analyser.getByteTimeDomainData(dataArray);
+			Sound.analyser.getByteFrequencyData(Sound.data.frequency);
+			Sound.analyser.getByteTimeDomainData(Sound.data.waveform);
 
 			var width = window.innerWidth;
 			var height = window.innerHeight;
@@ -1346,9 +1378,9 @@
 			ct.strokeStyle = "White";
 			ct.fillStyle = "rgba(0, 255, 0, 0.5)";
 			ct.beginPath();
-			ct.moveTo(0, -arr[0] + (height / 2));
-			for (var i = 1; i < arr.length; i++) {
-				ct.lineTo(width / arr.length * i, -(arr[i] / 255 * height) + height);
+			ct.moveTo(0, -Sound.data.frequency[0] + (height / 2));
+			for (var i = 1; i < Sound.data.frequency.length; i++) {
+				ct.lineTo(width / Sound.data.frequency.length * i, -(Sound.data.frequency[i] / 255 * height) + height);
 			}
 			ct.lineTo(width, height);
 			ct.lineTo(0, height);
@@ -1356,9 +1388,9 @@
 			//ct.stroke();
 
 			ct.beginPath();
-			ct.moveTo(0, -dataArray[0] + height / 2);
-			for (var i = 1; i < dataArray.length; i++) {
-				ct.lineTo(width / dataArray.length * i, -(dataArray[i] / 255 * height) + height);
+			ct.moveTo(0, -Sound.data.waveform[0] + height / 2);
+			for (var i = 1; i < Sound.data.waveform.length; i++) {
+				ct.lineTo(width / Sound.data.waveform.length * i, -(Sound.data.waveform[i] / 255 * height) + height);
 			}
 			ct.lineTo(width, height);
 			ct.lineTo(0, height);
