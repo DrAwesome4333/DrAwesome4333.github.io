@@ -500,7 +500,9 @@
 				shouldShow: true
 			},
 			settings: {
-				backgroundColorSmoothing: 0.7 // to reduce strobe
+				backgroundColorSmoothing: 0.7, // to reduce strobe
+				backgroundOpacity: 1.0,
+				doBackgroundAnimation: true
 			},
 			particles: {
 
@@ -526,97 +528,94 @@
 				direction: 1
 			},
 			textures: {
-				plainWhite: null,
-				transparentBlack: null
+				plainWhite: null, // texture 0
+				transparentBlack: null, // texture 0
+				frequencyData: null // texture 1
 			},
 			shaderSources: {
-				mainVertexShader: "\n\
-					attribute vec3 pos;\n\
-					attribute vec3 color;\n\
-					attribute vec2 tex;\n\
-					attribute vec3 normal;\n\
-					varying vec3 f_pos;\n\
-					varying vec3 f_color;\n\
-					varying vec3 f_normal;\n\
-					varying vec2 f_tex;\n\
-					uniform mat4 world;\n\
-					uniform mat4 model;\n\
-					uniform mat4 perspective;\n\
-					uniform mat3 normal_matrix;\n\
-					void main(void){\n\
-						f_color = color;\n\
-						f_normal = normal_matrix * normal;\n\
-						f_tex = tex;\n\
-						f_pos = (world*model * vec4(pos, 1.0)).xyz;\n\
-						gl_Position=(perspective * world * model * vec4(pos, 1.0));\n\
-					}",
-				mainFragmentShader: "\n\
-					precision mediump float;\n\
-					varying vec3 f_pos;\n\
-					varying vec3 f_color;\n\
-					varying vec3 f_normal;\n\
-					varying vec2 f_tex;\n\
-					uniform vec3 light_pos[8];\n\
-					uniform vec3 light_color[8];\n\
-					uniform sampler2D texture;\n\
-					uniform vec3 fog_color;\n\
-					uniform vec3 ambient_color;\n\
-					void main(void){\n\
-						\n\
-						vec3 normal = normalize(f_normal);\n\
-						vec3 total_light = vec3(0.0, 0.0, 0.0);\n\
-						float light_strength = 0.0;\n\
-						float spec_strength = 0.0;\n\
-						vec3 surface_to_light = vec3(0.0, 0.0, 0.0);\n\
-						vec3 surface_to_camera = normalize(-f_pos);\n\
-						vec3 half_vector = vec3(0.0, 0.0, 0.0);\n\
-						vec3 base = f_color * texture2D(texture, f_tex).rgb;\n\
-						\n\
-						for(int i = 0; i < 8; i++){\n\
-							surface_to_light = normalize(light_pos[i] - f_pos);\n\
-							light_strength = max(dot(normal, surface_to_light), 0.0);\n\
-							half_vector = normalize(surface_to_light + surface_to_camera);\n\
-							spec_strength = pow(max(dot(half_vector, normal), 0.0), 100.0);\n\
-							total_light += base * (light_strength * light_color[i]);\n\
-							total_light += base * (spec_strength * light_color[i]);\n\
-						}\n\
-						total_light += ambient_color * base;\n\
-						float amount = smoothstep(900.0, 1000.0, gl_FragCoord.z);\n\
-						gl_FragColor = vec4(mix(total_light,fog_color,amount),texture2D(texture,f_tex).a);\n\
-						\n\
-					}",
-				fadeVertexShader: "\n\
-					attribute vec2 pos;\n\
-					varying vec2 _pos;\n\
-					void main(void){\n\
-						_pos = pos;\n\
-						gl_Position=vec4(pos, 1.0, 1.0);\n\
-					}",
-				fadeFragmentShader: "\n\
-					precision mediump float;\n\
-					uniform int freq[64];\n\
-					uniform float opacity;\n\
-					uniform vec3 color;\n\
-					varying vec2 _pos;\n\
-					vec4 fin;\n\
-					int x;\n\
-					float y;\n\
-					void main(void){\n\
-						\n\
-						x = int(abs(_pos.x) * 64.0);\n\
-						fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);\n\
-						for(int i = 0; i < 64; i++) {\n\
-							if(i == x) {\n\
-								y = float(freq[i]) / 255.0;\n\
-								if (abs(_pos.y) < y){\n\
-									fin = vec4(color.rgb, opacity);\n\
-								}\n\
-								break;\n\
-							}\n\
-						}\n\
-						gl_FragColor = fin;\n\
-						\n\
-					}"
+				mainVertexShader: `
+					attribute vec3 pos;
+					attribute vec3 color;
+					attribute vec2 tex;
+					attribute vec3 normal;
+					varying vec3 f_pos;
+					varying vec3 f_color;
+					varying vec3 f_normal;
+					varying vec2 f_tex;
+					uniform mat4 world;
+					uniform mat4 model;
+					uniform mat4 perspective;
+					uniform mat3 normal_matrix;
+					void main(void){
+						f_color = color;
+						f_normal = normal_matrix * normal;
+						f_tex = tex;
+						f_pos = (world*model * vec4(pos, 1.0)).xyz;
+						gl_Position=(perspective * world * model * vec4(pos, 1.0));
+					}`,
+				mainFragmentShader: `
+					precision mediump float;
+					varying vec3 f_pos;
+					varying vec3 f_color;
+					varying vec3 f_normal;
+					varying vec2 f_tex;
+					uniform vec3 light_pos[8];
+					uniform vec3 light_color[8];
+					uniform sampler2D texture;
+					uniform vec3 fog_color;
+					uniform vec3 ambient_color;
+					void main(void){
+						
+						vec3 normal = normalize(f_normal);
+						vec3 total_light = vec3(0.0, 0.0, 0.0);
+						float light_strength = 0.0;
+						float spec_strength = 0.0;
+						vec3 surface_to_light = vec3(0.0, 0.0, 0.0);
+						vec3 surface_to_camera = normalize(-f_pos);
+						vec3 half_vector = vec3(0.0, 0.0, 0.0);
+						vec3 base = f_color * texture2D(texture, f_tex).rgb;
+						
+						for(int i = 0; i < 8; i++){
+							surface_to_light = normalize(light_pos[i] - f_pos);
+							light_strength = max(dot(normal, surface_to_light), 0.0);
+							half_vector = normalize(surface_to_light + surface_to_camera);
+							spec_strength = pow(max(dot(half_vector, normal), 0.0), 100.0);
+							total_light += base * (light_strength * light_color[i]);
+							total_light += base * (spec_strength * light_color[i]);
+						}
+						total_light += ambient_color * base;
+						float amount = smoothstep(900.0, 1000.0, gl_FragCoord.z);
+						gl_FragColor = vec4(mix(total_light,fog_color,amount),texture2D(texture,f_tex).a);
+					}`,
+				fadeVertexShader: `
+					attribute vec2 pos;
+					varying vec2 _pos;
+					void main(void){
+						_pos = pos;
+						gl_Position=vec4(pos, 1.0, 1.0);
+					}`,
+				fadeFragmentShader: `
+					precision mediump float;
+					uniform sampler2D freqData;
+					uniform float opacity;
+					uniform vec3 color;
+					varying vec2 _pos;
+					vec4 fin;
+					float index;
+					vec2 textPos;
+					float level;
+					void main(void){
+						index = abs(_pos.x) * 512.0;
+						textPos.y = floor(index / 32.0);
+						textPos.x = index - textPos.y * 32.0;
+						textPos.xy /= 32.0;
+						level = texture2D(freqData, textPos).r;
+						fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);
+						if (abs(_pos.y) < level){
+							fin = vec4(color.rgb, opacity);
+						}
+						gl_FragColor = fin;
+					}`
 			},
 			uniforms: {
 				main: {
@@ -634,6 +633,7 @@
 				fade: {
 					opacity: null,
 					color: null,
+					freqData: null,
 					freq: null
 				}
 			},
@@ -764,7 +764,7 @@
 
 				this.uniforms.fade.opacity = this.gl.getUniformLocation(this.programs.fade, "opacity");
 				this.uniforms.fade.color = this.gl.getUniformLocation(this.programs.fade, "color");
-				this.uniforms.fade.freq = this.gl.getUniformLocation(this.programs.fade, "freq");
+				this.uniforms.fade.freqData = this.gl.getUniformLocation(this.programs.fade, "freqData");
 				this.gl.uniform1f(this.uniforms.fade.opacity, 1);
 				this.gl.enableVertexAttribArray(this.attributes.fade.pos);
 
@@ -802,13 +802,13 @@
 				this.gl.enableVertexAttribArray(this.attributes.main.tex);
 
 
+
 				this.gl.enable(this.gl.BLEND);
 				this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
 				this.gl.activeTexture(this.gl.TEXTURE0);
 				this.textures.transparentBlack = this.gl.createTexture();
 				this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.transparentBlack);
-
-
 				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 25]));
 
 				this.textures.plainWhite = this.gl.createTexture();
@@ -816,7 +816,27 @@
 
 				// Fill the texture with a 1x1 white pixel.
 				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
-				//no need to set up the uniform as it defaults to 0 and there is only one texture
+				this.gl.uniform1i(this.uniforms.main.texture, 0);
+
+				this.gl.activeTexture(this.gl.TEXTURE1);
+				this.textures.frequencyData = this.gl.createTexture();
+				this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.frequencyData);
+				var myArray = new Uint8Array(32 * 32);
+				for(var i = 0; i < 32 * 32; i++){
+					myArray[i] =  i % 255;
+				}
+				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, myArray);
+				
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+
+				this.gl.useProgram(this.programs.fade);
+				this.gl.uniform1i(this.uniforms.fade.freqData, 1);
+
+				this.gl.useProgram(this.programs.main);
+
 				let r = -30 * Math.PI / 180;
 				this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
 				this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix, false, this.matrix.identity(3));
@@ -912,7 +932,14 @@
 
 				this.gl.useProgram(this.programs.fade)
 				this.gl.uniform3fv(this.uniforms.fade.color, this.backgroundColor);
-				this.gl.uniform1iv(this.uniforms.fade.freq, Sound.data.frequency);
+
+				var myArray = new Uint8Array(32 * 32);
+				
+
+				this.gl.activeTexture(this.gl.TEXTURE1)
+				this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.frequencyData);
+				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, Sound.data.frequency);
+				//this.gl.uniform1iv(this.uniforms.fade.freq, Sound.data.frequency);
 
 				this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers.fadeCoverPoints);
 				this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.buffers.fadeCoverTriangles);
@@ -1304,7 +1331,7 @@
 			Sound.gainNode.connect(Sound.ctx.destination);
 			//Sound.analyser.smoothingTimeConstant = 0;
 			Sound.gainNode.gain.setValueAtTime(0, Sound.ctx.currentTime);//Mute audio so it doesn't create feedback
-			Sound.analyser.fftSize = 128;
+			Sound.analyser.fftSize = 1024;
 			fileEle.addEventListener("change", function () {
 				Sound.gainNode.gain.setValueAtTime(1, Sound.ctx.currentTime);
 				if (Sound.mic.playing) {
@@ -1314,7 +1341,7 @@
 				Player.loadSongs(fileEle.files);
 			})
 			//fEle.addEventListener("change",function(){audioSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Sound.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-			Sound.data.frequency = new Uint8Array(Sound.analyser.frequencyBinCount);
+			Sound.data.frequency = new Uint8Array(Sound.analyser.frequencyBinCount * 2);
 			Sound.data.waveform = new Uint8Array(Sound.analyser.frequencyBinCount);
 			Player.loadResources();
 			Graphics.start();

@@ -1,0 +1,62 @@
+<html>
+	<head>
+        <link rel="icon" 
+        type="image/x-icon" 
+        href="https://drawesome4333.github.io/favicon.ico">
+		<title>
+			Massage
+			</title>
+			<style>
+				canvas{
+				    position:absolute;
+				    top:0px;
+				    left:0px;
+					z-index:-1;
+
+                    }
+                body{
+                    text-align:center;
+                    line-height:100vh;
+                }
+                input{
+                    z-index:2;
+                }
+				</style>
+		</head>
+<body>
+	<input type="button" value="Start" onclick = "setInterval(function (){navigator.vibrate(2000);rumble=true;setTimeout(function(){rumble=false},2000)},4000);">
+<script>
+	var canvas=document.createElement("canvas");
+	var width=window.innerWidth;
+	var height=window.innerHeight;
+	canvas.width=width;
+	canvas.height=height;
+	document.body.appendChild(canvas);
+	var ct=canvas.getContext("2d")
+	var rumble=false
+	
+function update(){
+   width=window.innerWidth;
+	height=window.innerHeight;
+	canvas.width=width;
+	canvas.height=height;
+    requestAnimationFrame(update);
+    ct.fillStyle="red"
+    ct.fillRect(0,0,width,height)
+    ct.font="75px cursive"
+    ct.textAlign="center"
+    if(!rumble){
+    ct.fillStyle="Grey"
+    ct.fillText("Massage",width/2+5,height/2+5)
+        
+    }else{
+      ct.fillStyle="Grey"
+    ct.fillText("Massage",width/2+Math.random()*10-5,height/2+Math.random()*10-5)  
+    }
+    ct.fillStyle="Black"
+    ct.fillText("Massage",width/2,height/2)
+}
+update();
+</script>
+</body>
+</html>
