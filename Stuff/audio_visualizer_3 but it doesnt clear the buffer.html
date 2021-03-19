@@ -1249,11 +1249,16 @@
 				fastforwardDisabled: new Image(256, 256),
 				defaultCover: new Image(256, 256),
 				errorCover: new Image(256, 256),
+				options: new Image(256, 256)
 
 			},
 			loadResources: function () {
 				this.resources.defaultCover.src = "Audio_Resources/Disc.png";
 				this.resources.errorCover.src = "Audio_Resources/DiscBroken.png";
+				this.resources.repeatAll.src = "Audio_Resources/RepeatAll.png";
+				this.resources.repeatOne.src = "Audio_Resources/RepeatOne.png";
+				this.resources.repeatNone.src = "Audio_Resources/RepeatNone.png";
+				this.resources.options.src = "Audio_Resources/Options.png";
 			},
 			loadSongs: function (fileList) {
 				var fLength = fileList.length
