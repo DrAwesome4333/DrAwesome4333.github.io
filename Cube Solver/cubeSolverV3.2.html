@@ -2,7 +2,7 @@
 <html>
 
 <head>
-	<title>Cube Solver version 3.1</title>
+	<title>Cube Solver version 3.2</title>
 	<style>
 		.page {
 			position: fixed;
@@ -408,6 +408,20 @@
 		var debugFragmentShader = null;
 	</script>
 	<script>
+		/*
+		* Plan for refactoring:
+		* Turn CubeData into a class
+		* Create a BinaryData class to handle compressed arrays, in a way that can be used in a cleaner way
+		* Create a Algorithm class to create a consitent way to interact with algorithms
+		* Create a Cube class (we kind of already have it)
+		* Create a CubieData class for piece data
+		* Re - Design the Cubie class to have methods only it uses with it.
+		* Create a Model class so models can be independent of the Render Object
+		* Re work tasks that may take a while to web workers and promises
+		* Clean up the code a ton
+		* Create a start webGl function that will only do the things required to start webGl and can be recalled in case of context loss
+		*/
+
 		var gl = null;//A global refrence to Renderer.gl so that I don't have to keep typing Renderer.gl or this.gl, just gl.			
 		const PR = Math.PI / 180;//(Pi ratio, use this to convert degrees to Radians)
 
@@ -473,42 +487,83 @@
 		var solved = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 3, 2, 3, 2, 3, 4, 4, 4, 1, 1, 1, 2, 3, 2, 3, 2, 3, 4, 4, 4, 1, 1, 1, 2, 3, 2, 3, 2, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5];
 
 		function generateSolvedCube(size = 3, type = 0) {
-			aCube = CubeData.Create(CubeDataType.Surface, size, 1);
+			aCube = _CubeData.Create(CubeDataType.Surface, size, 1);
 			var index = 0;
 			for (var i = 0; i < size * size; i++) {//left side
-				CubeData.Change(aCube, CubeDataType.Surface, 0, i, size, 0);
+				_CubeData.Change(aCube, CubeDataType.Surface, 0, i, size, 0);
 			}
 			index += size * size;
 
 			for (var i = 0; i < size; i++) {//middle sides
 				for (var j = 0; j < size; j++) {//bottom side
-					CubeData.Change(aCube, CubeDataType.Surface, 0, index + j, size, 1);
+					_CubeData.Change(aCube, CubeDataType.Surface, 0, index + j, size, 1);
 				}
 				index += size;
 				for (var j = 0; j < size; j++) {//back side
-					CubeData.Change(aCube, CubeDataType.Surface, 0, index + j * 2, size, 2);
+					_CubeData.Change(aCube, CubeDataType.Surface, 0, index + j * 2, size, 2);
 				}
 				for (var j = 0; j < size; j++) {//front side
-					CubeData.Change(aCube, CubeDataType.Surface, 0, index + j * 2 + 1, size, 3);
+					_CubeData.Change(aCube, CubeDataType.Surface, 0, index + j * 2 + 1, size, 3);
 				}
 				index += 2 * size;
 				for (var j = 0; j < size; j++) {//top side
-					CubeData.Change(aCube, CubeDataType.Surface, 0, index + j, size, 4);
+					_CubeData.Change(aCube, CubeDataType.Surface, 0, index + j, size, 4);
 				}
 				index += size;
 			}
 
 
 			for (var i = 0; i < size * size; i++) {//right side
-				CubeData.Change(aCube, CubeDataType.Surface, 0, i + index, size, 5);
+				_CubeData.Change(aCube, CubeDataType.Surface, 0, i + index, size, 5);
 			}
 			var bCube = aCube;
 			if (type != CubeDataType.Surface) {
-				bCube = CubeData.Convert(aCube, CubeDataType.Surface, type, size, true);
+				bCube = _CubeData.Convert(aCube, CubeDataType.Surface, type, size, true);
 			}
 			return bCube;
 		}
-		var CubeData = {
+
+		/*
+		class BinaryData
+		---------------------
+		- data:Uint8Array
+		- elementBitLength:int
+		- elementCount:int
+		----------------------
+		BinaryData(maxElementSize:int, data:array, elementCount:int):BinaryData
+		getData(element:int):int
+		setData(element:int):bool
+		getMaxElementSize():int
+		getArray(startElement:int, endElement:int):array
+		setArray(startElement:int, endElement:int):bool
+		
+		*/
+
+
+		/*
+		class CubeData
+		---------------
+		- data : BinaryData
+		- cubeCount : int  does not change after creation
+		- cubeSize : int   does not change after creation
+		- storageFormat : CubeDataType
+
+		----------------
+		CubeData(cubeSize:int, cubeCount:int, storageFormat:CubeDataType, data:BinaryData):CubeData
+		getCubeCount():int
+		getCubeSize():int
+		getCubeData(startCube:int, endCube:int):BinaryData
+		getStorageFormat():CubeDataType
+		convertStorageFormat(format:CubeDataType):Boolean
+		applyAlgorithm(algorithm:Algorithm, cube:int):None
+		getCubie(x:int, y:int, z:int):CubieData
+		setCubie(x:int, y:int, z:int, cubie:CubieData):None
+		getSticker(side:int, x:int, y:int):int
+		setSticker(side:int, x:int, y:int, sticker:int):none
+		
+		*/
+
+		var _CubeData = {
 			Create: function (format = 0, size = 3, count = 1) {
 				/*
 				This method wil return a empty Uint8 Array that can hold the specified format of cube for a particular size. Count is how many cubes should be in this array		
@@ -549,7 +604,7 @@
 					case CubeDataType.Surface: {
 						switch (format2) {
 							case CubeDataType.Surface: {
-								return CubeData.Copy(data);
+								return _CubeData.Copy(data);
 								break;
 							}
 							case CubeDataType.Piece: {
@@ -557,13 +612,13 @@
 								//what surfaces or stickers are in contact with that location. This list is then read as a piece by matching it up with the piece codes and home orientation
 								//
 								var count = Math.floor(data.length / ((size * size * 18) / 8));
-								var newData = CubeData.Create(CubeDataType.Piece, size, count);
-								var PS = CubeData.GetPartString(size);
+								var newData = _CubeData.Create(CubeDataType.Piece, size, count);
+								var PS = _CubeData.GetPartString(size);
 								var CenterCount = 0;
 								var EdgeCount = 0;
 								var CornerCount = 0;
 								var pieceCount = 0;
-								var sides = CubeData.GetSides(0, 0, 0, size);
+								var sides = _CubeData.GetSides(0, 0, 0, size);
 								var colors = [0, 0, 0];
 								var x = 0, y = 0, z = 0;
 								var max = size - 1;
@@ -582,7 +637,7 @@
 											}
 										}
 									}
-									sides = CubeData.GetSides(x, y, z, size);
+									sides = _CubeData.GetSides(x, y, z, size);
 								}
 								for (var i = 0; i < PS.length; i++) {
 									while (sides.length == 0 && !hitEnd) {
@@ -590,13 +645,13 @@
 									}
 
 									if (sides.length == 1) {
-										colors[0] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
-										CubeData.Change(newData, CubeDataType.Piece, 0, i, size, colors[0]);
+										colors[0] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
+										_CubeData.Change(newData, CubeDataType.Piece, 0, i, size, colors[0]);
 									}
 									if (sides.length == 2) {
-										colors[0] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
-										colors[1] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
-										var code = CubeData.ColorsToPiece([colors[0], colors[1]], x, y, z);
+										colors[0] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
+										colors[1] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
+										var code = _CubeData.ColorsToPiece([colors[0], colors[1]], x, y, z);
 										if (code == 255) {
 											if (canError) {
 												errors.push("This edge can't exist", i, 4);
@@ -604,13 +659,13 @@
 												throw "Error converting cube from surface to piece: Non existant edge";
 											}
 										}
-										CubeData.Change(newData, CubeDataType.Piece, 0, i, size, code);
+										_CubeData.Change(newData, CubeDataType.Piece, 0, i, size, code);
 									}
 									if (sides.length == 3) {
-										colors[0] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
-										colors[1] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
-										colors[2] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[2]);
-										var code = CubeData.ColorsToPiece(colors, x, y, z);
+										colors[0] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
+										colors[1] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
+										colors[2] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[2]);
+										var code = _CubeData.ColorsToPiece(colors, x, y, z);
 										if (code == 255) {
 											if (canError) {
 												errors.push("This corner can't exist", i, 4);
@@ -618,7 +673,7 @@
 												throw "Error converting cube from surface to piece: Non existant corner";
 											}
 										}
-										CubeData.Change(newData, CubeDataType.Piece, 0, i, size, code);
+										_CubeData.Change(newData, CubeDataType.Piece, 0, i, size, code);
 									}
 									advance();
 
@@ -634,7 +689,7 @@
 							case CubeDataType.Compact: {
 								var count = Math.floor(data.length / ((size * size * 18) / 8));
 								var newData = new Uint8Array(3 * count);
-								var sides = CubeData.GetSides(0, 0, 0, size);
+								var sides = _CubeData.GetSides(0, 0, 0, size);
 								var colors = [0, 0, 0];
 								var x = 0, y = 0, z = 0;
 								var max = size - 1;
@@ -653,15 +708,15 @@
 											}
 										}
 									}
-									sides = CubeData.GetSides(x, y, z, size);
+									sides = _CubeData.GetSides(x, y, z, size);
 								}
 								for (var i = 0; i < 8 && !hitEnd; i++) {
 
 									if (sides.length == 3) {
-										colors[0] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
-										colors[1] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
-										colors[2] = CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[2]);
-										var code = CubeData.ColorsToPiece(colors, x, y, z);
+										colors[0] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[0]);
+										colors[1] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[1]);
+										colors[2] = _CubeData.PullSide(data, CubeDataType.Surface, size, 0, sides[2]);
+										var code = _CubeData.ColorsToPiece(colors, x, y, z);
 										if (code == 255) {
 											if (canError) {
 												errors.push("This corner can't exist", i, 4);
@@ -669,7 +724,7 @@
 												throw "Error converting cube from surface to piece: Non existant corner";
 											}
 										}
-										CubeData.Change(newData, CubeDataType.Compact, 0, i, size, code % 8);
+										_CubeData.Change(newData, CubeDataType.Compact, 0, i, size, code % 8);
 									}
 									advance();
 
@@ -683,9 +738,9 @@
 								return newData;
 							}
 							case (CubeDataType.Fast): {
-								var newData = CubeData.Create(CubeDataType.Fast, size);
+								var newData = _CubeData.Create(CubeDataType.Fast, size);
 								for (var i = 0; i < newData.length; i++) {
-									newData[i] = CubeData.PullSide(data, format1, size, cube, i);
+									newData[i] = _CubeData.PullSide(data, format1, size, cube, i);
 								}
 								return newData;
 							}
@@ -695,36 +750,36 @@
 						switch (format2) {
 							case CubeDataType.Surface: {
 								var count = Math.floor((data.length * 8) / (((size * size * size) - ((size - 2) * (size - 2) * (size - 2))) * 5));
-								var newData = CubeData.Create(CubeDataType.Surface, size, count);
+								var newData = _CubeData.Create(CubeDataType.Surface, size, count);
 								for (var i = 0; i < count * size * size * 6; i++) {
-									CubeData.Change(newData, CubeDataType.Surface, Math.floor(i / (size * size * 6)), i % (size * size * 6), size, CubeData.PullSide(data, CubeDataType.Piece, size, Math.floor(i / (size * size * 6)), i % (size * size * 6)));
+									_CubeData.Change(newData, CubeDataType.Surface, Math.floor(i / (size * size * 6)), i % (size * size * 6), size, _CubeData.PullSide(data, CubeDataType.Piece, size, Math.floor(i / (size * size * 6)), i % (size * size * 6)));
 								}
 								return newData;
 								break;
 							}
 							case CubeDataType.Piece: {
-								return CubeData.Copy(data);
+								return _CubeData.Copy(data);
 							}
 							case CubeDataType.Compact: {
 								var count = Math.floor(data.length / (((size * size * size) - ((size - 2) * (size - 2) * (size - 2))) * 5));
 								var newData = new Uint8Array(3 * count);
 								for (var cube = 0; cube < count; cube++) {
-									CubeData.Change(newData, CubeDataType.Compact, cube, 0, size, CubeData.PullInfo(data, 0, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 1, size, CubeData.PullInfo(data, 2, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 2, size, CubeData.PullInfo(data, 6, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 3, size, CubeData.PullInfo(data, 8, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 4, size, CubeData.PullInfo(data, 17, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 5, size, CubeData.PullInfo(data, 19, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 6, size, CubeData.PullInfo(data, 24, 5) % 8);
-									CubeData.Change(newData, CubeDataType.Compact, cube, 7, size, CubeData.PullInfo(data, 26, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 0, size, _CubeData.PullInfo(data, 0, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 1, size, _CubeData.PullInfo(data, 2, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 2, size, _CubeData.PullInfo(data, 6, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 3, size, _CubeData.PullInfo(data, 8, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 4, size, _CubeData.PullInfo(data, 17, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 5, size, _CubeData.PullInfo(data, 19, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 6, size, _CubeData.PullInfo(data, 24, 5) % 8);
+									_CubeData.Change(newData, CubeDataType.Compact, cube, 7, size, _CubeData.PullInfo(data, 26, 5) % 8);
 
 								}
 								return newData;
 							}
 							case (CubeDataType.Fast): {
-								var newData = CubeData.Create(CubeDataType.Fast, size);
+								var newData = _CubeData.Create(CubeDataType.Fast, size);
 								for (var i = 0; i < newData.length; i++) {
-									newData[i] = CubeData.PullSide(data, format1, size, cube, i);
+									newData[i] = _CubeData.PullSide(data, format1, size, cube, i);
 								}
 								return newData;
 							}
@@ -736,15 +791,15 @@
 					case CubeDataType.Fast: {
 						switch (format2) {
 							case (CubeDataType.Surface): {
-								var newData = CubeData.Create(CubeDataType.Surface, size);
+								var newData = _CubeData.Create(CubeDataType.Surface, size);
 								for (var i = 0; i < data.length; i++) {
-									CubeData.Change(newData, CubeDataType.Surface, 0, i, size, data[i]);
+									_CubeData.Change(newData, CubeDataType.Surface, 0, i, size, data[i]);
 								}
 								return newData;
 							}
 							case (CubeDataType.Piece): {
-								var newData = CubeData.Convert(data, CubeDataType.Fast, CubeDataType.Surface, size);//So we convert it to a surface type cube, which is simple enough for this.
-								var nData = CubeData.Convert(newData, CubeDataType.Surface, format2, size, canError);//Why rewrite what has been written?
+								var newData = _CubeData.Convert(data, CubeDataType.Fast, CubeDataType.Surface, size);//So we convert it to a surface type cube, which is simple enough for this.
+								var nData = _CubeData.Convert(newData, CubeDataType.Surface, format2, size, canError);//Why rewrite what has been written?
 								return nData;
 
 							}
@@ -753,7 +808,7 @@
 				}
 			},
 			ColorsToPiece: function (colors = [0, 1, 2], x = 0, y = 0, z = 0) {
-				//this will take a list of colors and the location of a piece to determin what piece code this should be. If it is invalid, value 255 is returned
+				//this will take a list of colors and the location of a piece to determine what piece code this should be. If it is invalid, value 255 is returned
 				//This is accomplished by first testing if the given location is in Clockwise or Counter Clockwise order when given in LDB order. Once that is done
 				//a comparison is done with cube piece codes to see if it matches any of the codes. Different home values are tested to find the right number.
 				if (colors.length == 1) {
@@ -763,7 +818,7 @@
 					var home = 0;
 					for (; home < 2; home++) {
 						for (var i = 8; i < 20; i++) {// 8 in pieceCodes is where the edge codes start
-							if (colors[home].toString() == CubeData.PieceCodes[i][0] && colors[(home + 1) % 2].toString() == CubeData.PieceCodes[i][1]) {
+							if (colors[home].toString() == _CubeData.PieceCodes[i][0] && colors[(home + 1) % 2].toString() == _CubeData.PieceCodes[i][1]) {
 								return (i - 8) + (home * 12);
 							}
 						}
@@ -779,11 +834,11 @@
 					for (; home < 3; home++) {
 						for (var i = 0; i < 8; i++) {
 							if (cw) {
-								if (colors[home].toString() == CubeData.PieceCodes[i][0] && colors[(home + 1) % 3].toString() == CubeData.PieceCodes[i][1] && colors[(home + 2) % 3].toString() == CubeData.PieceCodes[i][2]) {
+								if (colors[home].toString() == _CubeData.PieceCodes[i][0] && colors[(home + 1) % 3].toString() == _CubeData.PieceCodes[i][1] && colors[(home + 2) % 3].toString() == _CubeData.PieceCodes[i][2]) {
 									return i + (home * 8);
 								}
 							} else {
-								if (colors[home].toString() == CubeData.PieceCodes[i][0] && colors[(home + 2) % 3].toString() == CubeData.PieceCodes[i][1] && colors[(home + 1) % 3].toString() == CubeData.PieceCodes[i][2]) {
+								if (colors[home].toString() == _CubeData.PieceCodes[i][0] && colors[(home + 2) % 3].toString() == _CubeData.PieceCodes[i][1] && colors[(home + 1) % 3].toString() == _CubeData.PieceCodes[i][2]) {
 									return i + (home * 8);
 								}
 							}
@@ -808,19 +863,19 @@
 					case CubeDataType.Surface: {
 						var cubeOffset = cube * (size * size * 6 * 3); //measured in bits (3 bits per sticker to identify color)
 						var dataOffset = cubeOffset + index * 3;
-						CubeData.ChangeBinaryData(data, dataOffset, information, 3);
+						_CubeData.ChangeBinaryData(data, dataOffset, information, 3);
 						break;
 					}
 					case CubeDataType.Piece: {
 						var cubeOffset = cube * ((size * size * size - (size - 2) * (size - 2) * (size - 2)) * 5); //measured in bits (5 bits per bit)
 						var dataOffset = cubeOffset + index * 5;
-						CubeData.ChangeBinaryData(data, dataOffset, information, 5);
+						_CubeData.ChangeBinaryData(data, dataOffset, information, 5);
 						break;
 					}
 					case CubeDataType.Compact: {
 						var cubeOffset = cube * 24; //measured in bits
 						var dataOffset = cubeOffset + index * 3;
-						CubeData.ChangeBinaryData(data, dataOffset, information, 3);
+						_CubeData.ChangeBinaryData(data, dataOffset, information, 3);
 						break;
 					}
 					case CubeDataType.Fast: {
@@ -848,10 +903,10 @@
 				*/
 				switch (format) {
 					case CubeDataType.Surface: {
-						var newData = CubeData.Create(CubeDataType.Surface, size, 1);
+						var newData = _CubeData.Create(CubeDataType.Surface, size, 1);
 						var cubeSize = size * size * 6;
 						for (var i = 0; i < cubeSize; i++) {
-							CubeData.Change(newData, CubeDataType.Surface, 0, i, size, CubeData.PullInfo(data, cube * cubeSize + i, 3));
+							_CubeData.Change(newData, CubeDataType.Surface, 0, i, size, _CubeData.PullInfo(data, cube * cubeSize + i, 3));
 						}
 						/*var segments = 1;
 						while(cubeSize*3/segments>32){
@@ -864,25 +919,25 @@
 						return newData;
 					}
 					case CubeDataType.Piece: {
-						var newData = CubeData.Create(CubeDataType.Piece, size, 1);
+						var newData = _CubeData.Create(CubeDataType.Piece, size, 1);
 						var cubeSize = (size * size * size - (size - 2) * (size - 2) * (size - 2))
 						for (var i = 0; i < cubeSize; i++) {
-							CubeData.Change(newData, CubeDataType.Piece, 0, i, size, CubeData.PullInfo(data, cube * cubeSize * 5 + i, 5));
+							_CubeData.Change(newData, CubeDataType.Piece, 0, i, size, _CubeData.PullInfo(data, cube * cubeSize * 5 + i, 5));
 						}
 
 						return newData;
 					}
 					case CubeDataType.Compact: {
-						var newData = CubeData.Create(CubeDataType.Compact, size, 1);
+						var newData = _CubeData.Create(CubeDataType.Compact, size, 1);
 						for (var i = 0; i < 8; i++) {
-							CubeData.Change(newData, CubeDataType.Compact, 0, i, size, CubeData.PullInfo(data, cube * 24 + i, 3));
+							_CubeData.Change(newData, CubeDataType.Compact, 0, i, size, _CubeData.PullInfo(data, cube * 24 + i, 3));
 						}
 
 						return newData;
 					}
 					case CubeDataType.Fast: {
 						var cubeSize = size * size * 6;
-						var newData = CubeData.Create(CubeDataType.Fast, size, 1);
+						var newData = _CubeData.Create(CubeDataType.Fast, size, 1);
 						for (var i = 0; i < cubeSize; i++) {
 							newData[i] = data[i + cubeSize * cube];
 						}
@@ -905,7 +960,7 @@
 					case CubeDataType.Surface: {
 						var cubeSize = size * size * 6;
 						for (var i = 0; i < cubeSize; i++) {
-							CubeData.Change(data, CubeDataType.Surface, cubeIndex, i, size, CubeData.PullInfo(cubeData, i, 3));
+							_CubeData.Change(data, CubeDataType.Surface, cubeIndex, i, size, _CubeData.PullInfo(cubeData, i, 3));
 						}
 
 						return data;
@@ -913,14 +968,14 @@
 					case CubeDataType.Piece: {
 						var cubeSize = (size * size * size - (size - 2) * (size - 2) * (size - 2));
 						for (var i = 0; i < cubeSize; i++) {
-							CubeData.Change(data, CubeDataType.Piece, cubeIndex, i, size, CubeData.PullInfo(cubeData, i, 5));
+							_CubeData.Change(data, CubeDataType.Piece, cubeIndex, i, size, _CubeData.PullInfo(cubeData, i, 5));
 						}
 
 						return data;
 					}
 					case CubeDataType.Surface: {
 						for (var i = 0; i < 8; i++) {
-							CubeData.Change(data, CubeDataType.Compact, cubeIndex, i, size, CubeData.PullInfo(cubeData, i, 3));
+							_CubeData.Change(data, CubeDataType.Compact, cubeIndex, i, size, _CubeData.PullInfo(cubeData, i, 3));
 						}
 
 						return data;
@@ -949,7 +1004,7 @@
 			PullSide: function (data, format = 0, size = 3, cube = 0, number = 0) {
 				var rInfo = 0;
 				if (format == CubeDataType.Surface) {
-					rInfo = CubeData.PullInfo(data, cube * (size * size * 6) + number, 3);//Stickers / sides are already in a format that can easily be pulled
+					rInfo = _CubeData.PullInfo(data, cube * (size * size * 6) + number, 3);//Stickers / sides are already in a format that can easily be pulled
 				} else if (format == CubeDataType.Fast) {
 					rInfo = data[cube * (size * size * 6) + number];//Stickers / sides are already in a format that can easily be pulled
 				} else if (format == CubeDataType.Piece) {
@@ -1018,12 +1073,12 @@
 						pieceNumber = offSet + y * size + z;
 					}
 
-					var pieceId = CubeData.PullInfo(data, pieceNumber + (cube * ((size * size * size) - ((size - 2) * (size - 2) * (size - 2)))), 5);
-					var sides = CubeData.CountSides(x, y, z, size);
+					var pieceId = _CubeData.PullInfo(data, pieceNumber + (cube * ((size * size * size) - ((size - 2) * (size - 2) * (size - 2)))), 5);
+					var sides = _CubeData.CountSides(x, y, z, size);
 					if (sides == 1) {
 						rInfo = pieceId;//see if it is a center
 					} else if (sides == 2) {
-						var locationFaces = CubeData.GetFaces(x, y, z, size);
+						var locationFaces = _CubeData.GetFaces(x, y, z, size);
 
 						var surfaceIndex = 0;
 
@@ -1034,9 +1089,9 @@
 						}
 						var pieceHome = Math.floor(pieceId / 12);
 
-						rInfo = parseInt(CubeData.PieceCodes[pieceId % 12 + 8][(pieceHome + surfaceIndex) % 2]);
+						rInfo = parseInt(_CubeData.PieceCodes[pieceId % 12 + 8][(pieceHome + surfaceIndex) % 2]);
 					} else if (sides == 3) {
-						var locationFaces = CubeData.GetFaces(x, y, z, size);
+						var locationFaces = _CubeData.GetFaces(x, y, z, size);
 						var cw = true;
 						if ((x == 0 && y == 0 && z != 0) || (x == 0 && y != 0 && z != 0) || (x != 0 && y != 0 && z == 0) || (x != 0 && y == 0 && z == 0)) {//finds the pieces where the data is not already clockwise when given through color[]
 							cw = false;
@@ -1059,7 +1114,7 @@
 						}
 						var pieceHome = Math.floor(pieceId / 8);
 
-						rInfo = parseInt(CubeData.PieceCodes[pieceId % 8][(pieceHome + surfaceIndex) % 3]);
+						rInfo = parseInt(_CubeData.PieceCodes[pieceId % 8][(pieceHome + surfaceIndex) % 3]);
 					}
 
 
@@ -1192,10 +1247,10 @@
 				//gets the part string to help convert the cube from surface to piece and piece to surface
 				partLength = size * size * size - (size - 2) * (size - 2) * (size - 2);
 				if (partLength > 0) {
-					if (partLength == CubeData.PartString.length) {
-						return CubeData.PartString;
+					if (partLength == _CubeData.PartString.length) {
+						return _CubeData.PartString;
 					} else {
-						CubeData.PartString = "";
+						_CubeData.PartString = "";
 						var x = 0;
 						var y = 0;
 						var z = 0;
@@ -1215,19 +1270,19 @@
 
 							switch (surfaces) {
 								case 1:
-									CubeData.PartString += "N";//N is used for center as c is already used for corner
+									_CubeData.PartString += "N";//N is used for center as c is already used for corner
 									break;
 								case 2:
-									CubeData.PartString += "E";
+									_CubeData.PartString += "E";
 									break;
 								case 3:
-									CubeData.PartString += "C";
+									_CubeData.PartString += "C";
 									break;
 								default:
 									break;
 							}
 						}
-						return CubeData.PartString;
+						return _CubeData.PartString;
 					}
 				} else {
 					return "";
@@ -1314,7 +1369,7 @@
 				var groupLocation, numberInGroup;
 				var x, y, z;
 				if (arguments.length == 2) {//support both index and coordinates being entered for argument
-					var coords = CubeData.GetPieceCoords(number, size);
+					var coords = _CubeData.GetPieceCoords(number, size);
 					x = coords[0];
 					y = coords[1];
 					z = coords[2];
@@ -1451,7 +1506,7 @@
 				//Faces 1 and 4 will use a z rotation
 				//also returns a rotation code face wise (to rotate corners and edges to the correct orientation)
 				var x, y, z;
-				var coords = CubeData.GetPieceCoords(number, size);
+				var coords = _CubeData.GetPieceCoords(number, size);
 				x = coords[0];
 				y = coords[1];
 				z = coords[2];
@@ -1483,7 +1538,7 @@
 					faceCoords.y = y;
 				}
 
-				var type = CubeData.GetLocationType(size, 0, faceCoords.y, faceCoords.x)[0];
+				var type = _CubeData.GetLocationType(size, 0, faceCoords.y, faceCoords.x)[0];
 				var rotation = 0;
 				if ([2, 5].includes(type)) {
 					rotation = 1;
@@ -2539,11 +2594,11 @@
 
 				var layerCount = Algorithm.CountLayers(this.cubeSize);
 				var maxValue = layerCount * 3;
-				var POT = CubeData.CalculateBitLength(maxValue);
+				var POT = _CubeData.CalculateBitLength(maxValue);
 				var MovesArray = new Uint8Array(Math.ceil((POT * Algorithm.UncompressedAlgorithms.length * Algorithm.Que[1]) / 8));
 				for (var i = 0; i < Algorithm.UncompressedAlgorithms.length; i++) {
 					for (var j = 0; j < Algorithm.Que[1]; j++) {
-						CubeData.ChangeBinaryData(MovesArray, j * POT + i * POT * Algorithm.Que[1], Algorithm.UncompressedAlgorithms[i][j * 2] + Algorithm.UncompressedAlgorithms[i][j * 2 + 1] * layerCount, POT);
+						_CubeData.ChangeBinaryData(MovesArray, j * POT + i * POT * Algorithm.Que[1], Algorithm.UncompressedAlgorithms[i][j * 2] + Algorithm.UncompressedAlgorithms[i][j * 2 + 1] * layerCount, POT);
 					}
 				}
 
@@ -2585,7 +2640,7 @@
 			},
 			MovesToText(moves, cubeSize, moveCount, compressed = true) {
 				//TODO
-				var POT = CubeData.CalculateBitLength(Algorithm.CountLayers(cubeSize) * 3);
+				var POT = _CubeData.CalculateBitLength(Algorithm.CountLayers(cubeSize) * 3);
 				var key = [];
 				var base = ['L', 'R', 'D', 'U', 'B', 'F', '', "'", '2', ", "];
 				var result = "";
@@ -2627,7 +2682,7 @@
 
 
 					if (compressed)
-						move = CubeData.PullInfo(moves, i, POT);
+						move = _CubeData.PullInfo(moves, i, POT);
 					else
 						move = moves[i];
 
@@ -2816,7 +2871,7 @@
 						Algorithm.gMoves = [];
 						Algorithm.gCount = Math.floor(AlgNumber / Algorithm.CacheResolution) * Algorithm.CacheResolution;
 						for (var i = 0; i < AlgLength; i++) {
-							var num = CubeData.PullInfo(Algorithm.Cache[cacheIndex * 4 + 2], algIndex * AlgLength + i, Algorithm.Cache[cacheIndex * 4 + 3]);
+							var num = _CubeData.PullInfo(Algorithm.Cache[cacheIndex * 4 + 2], algIndex * AlgLength + i, Algorithm.Cache[cacheIndex * 4 + 3]);
 							var layer = num % layerCount;
 							var direction = Math.floor(num / layerCount);
 							Algorithm.gMoves.push(layer, direction);
@@ -2832,7 +2887,7 @@
 
 						for (var i = 0; i < AlgLength; i++) {
 
-							CubeData.ChangeBinaryData(alg, i * Algorithm.Cache[cacheIndex * 4 + 3], Algorithm.gMoves[i * 2] + Algorithm.gMoves[i * 2 + 1] * Algorithm.CountLayers(Algorithm.gCubeSize), Algorithm.Cache[cacheIndex * 4 + 3])
+							_CubeData.ChangeBinaryData(alg, i * Algorithm.Cache[cacheIndex * 4 + 3], Algorithm.gMoves[i * 2] + Algorithm.gMoves[i * 2 + 1] * Algorithm.CountLayers(Algorithm.gCubeSize), Algorithm.Cache[cacheIndex * 4 + 3])
 						}
 						return alg;
 					} else {
@@ -2934,21 +2989,21 @@
 				if (moves.length > 0) {
 					var move;
 
-					var POT = CubeData.CalculateBitLength(Algorithm.CountLayers(cubeSize) * 3);
-					originCube = CubeData.PullCube(data, format, cube, cubeSize);
-					destinationCube = CubeData.Copy(originCube);
+					var POT = _CubeData.CalculateBitLength(Algorithm.CountLayers(cubeSize) * 3);
+					originCube = _CubeData.PullCube(data, format, cube, cubeSize);
+					destinationCube = _CubeData.Copy(originCube);
 					for (var i = 0; i < moveCount; i++) {
 						if (compressed)
-							move = CubeData.PullInfo(moves, i, POT);
+							move = _CubeData.PullInfo(moves, i, POT);
 						else
 							move = moves[i];
 						var filterLength = Algorithm.SavedFilters[ftu][move].length;
 						switch (format) {
 							case (CubeDataType.Surface): {
 								for (var j = 0; j < filterLength; j++) {
-									CubeData.Change(destinationCube, format, 0, j, cubeSize, CubeData.PullInfo(originCube, Algorithm.SavedFilters[ftu][move][j], 3))
+									_CubeData.Change(destinationCube, format, 0, j, cubeSize, _CubeData.PullInfo(originCube, Algorithm.SavedFilters[ftu][move][j], 3))
 								}
-								originCube = CubeData.Copy(destinationCube);
+								originCube = _CubeData.Copy(destinationCube);
 								break;
 							}
 							case (CubeDataType.Piece): {
@@ -2957,43 +3012,43 @@
 									var originLocation = Algorithm.SavedFilters[ftu][move][j];
 									var homeChange = Math.floor(originLocation / LocationCount);
 									originLocation %= LocationCount;
-									var xyz = CubeData.GetPieceCoords(j, cubeSize);
-									var PieceCodeCount = CubeData.CountSides(xyz[0], xyz[1], xyz[2], cubeSize) == 3 ? 8 : 12;//helps get the home range correct
+									var xyz = _CubeData.GetPieceCoords(j, cubeSize);
+									var PieceCodeCount = _CubeData.CountSides(xyz[0], xyz[1], xyz[2], cubeSize) == 3 ? 8 : 12;//helps get the home range correct
 									// it doesn't care for center pieces as their home should be 0 anyways
-									var dataEntry = ((CubeData.PullInfo(originCube, originLocation, 5) + homeChange * PieceCodeCount) % 24)
-									CubeData.Change(destinationCube, format, 0, j, cubeSize, dataEntry);
+									var dataEntry = ((_CubeData.PullInfo(originCube, originLocation, 5) + homeChange * PieceCodeCount) % 24)
+									_CubeData.Change(destinationCube, format, 0, j, cubeSize, dataEntry);
 								}
-								originCube = CubeData.Copy(destinationCube);
+								originCube = _CubeData.Copy(destinationCube);
 								break;
 							}
 							case (CubeDataType.Compact): {
 								for (var j = 0; j < filterLength; j++) {
-									CubeData.Change(destinationCube, format, 0, j, cubeSize, CubeData.PullInfo(originCube, Algorithm.SavedFilters[ftu][move][j], 3))
+									_CubeData.Change(destinationCube, format, 0, j, cubeSize, _CubeData.PullInfo(originCube, Algorithm.SavedFilters[ftu][move][j], 3))
 								}
-								originCube = CubeData.Copy(destinationCube);
+								originCube = _CubeData.Copy(destinationCube);
 								break;
 							}
 							case (CubeDataType.Fast): {
 								for (var j = 0; j < filterLength; j++) {
 									destinationCube[j] = originCube[Algorithm.SavedFilters[ftu][move][j]];
 								}
-								originCube = CubeData.Copy(destinationCube);
+								originCube = _CubeData.Copy(destinationCube);
 								break;
 							}
 						}
 					}
 					if (shouldEdit) {
-						CubeData.PasteCube(data, format, originCube, cube, cubeSize);
+						_CubeData.PasteCube(data, format, originCube, cube, cubeSize);
 					}
 					return originCube;//it doesn't mater if we use origin or destination as at this point they should be the same
 				}
 			},
 			GetAllMoves(size) {
 				var numberOfMoves = Algorithm.CountLayers(size) * 3;
-				var POT = CubeData.CalculateBitLength(numberOfMoves);
+				var POT = _CubeData.CalculateBitLength(numberOfMoves);
 				var MovesArray = new Uint8Array(Math.ceil((POT * numberOfMoves) / 8));
 				for (var i = 0; i < numberOfMoves; i++) {
-					CubeData.ChangeBinaryData(MovesArray, i * POT, i, POT);
+					_CubeData.ChangeBinaryData(MovesArray, i * POT, i, POT);
 				}
 				return MovesArray;
 			},
@@ -3029,9 +3084,9 @@
 				//debugger;
 				var builtFilters = [];
 				var pMoves = Algorithm.CountLayers(size) * 3;
-				var POT = CubeData.CalculateBitLength(pMoves);
+				var POT = _CubeData.CalculateBitLength(pMoves);
 				//var numberOfMoves = Math.floor((moves.length * 8)/(POT));
-				var numberOfLocations = CubeData.GetAmountOfData(size, format);
+				var numberOfLocations = _CubeData.GetAmountOfData(size, format);
 				var originFilter;
 				var destinationFilter;
 				var layer;
@@ -3058,7 +3113,7 @@
 					resetFilters();
 					var j = 0;
 					do {
-						layer = CubeData.PullInfo(moves, i + j, POT);
+						layer = _CubeData.PullInfo(moves, i + j, POT);
 						direction = Math.floor(layer / Algorithm.CountLayers(size));//add one to this to see how many times a rotation should be done
 						layer %= Algorithm.CountLayers(size);
 
@@ -3363,10 +3418,10 @@
 			CompressMoves(moves, cubeSize) {
 				var layerCount = Algorithm.CountLayers(cubeSize);
 				var maxValue = layerCount * 3;
-				var POT = CubeData.CalculateBitLength(maxValue);
+				var POT = _CubeData.CalculateBitLength(maxValue);
 				var MovesArray = new Uint8Array(Math.ceil((POT * moves.length) / 8));
 				for (var i = 0; i < moves.length / 2; i++) {
-					CubeData.ChangeBinaryData(MovesArray, i * POT, moves[i * 2] + moves[i * 2 + 1] * layerCount, POT);
+					_CubeData.ChangeBinaryData(MovesArray, i * POT, moves[i * 2] + moves[i * 2 + 1] * layerCount, POT);
 
 				}
 				return MovesArray;
@@ -3377,10 +3432,10 @@
 		var A2 = {//this is just here so that VS Code will show me suggestions for the Algorithm Object
 			GetAllMoves(size) {
 				var numberOfMoves = ((size % 2 === 1) ? (size - 1) * 3 : (size * 3)) * 3;
-				var POT = CubeData.CalculateBitLength(numberOfMoves);
+				var POT = _CubeData.CalculateBitLength(numberOfMoves);
 				var MovesArray = new Uint8Array(Math.ceil((POT * numberOfMoves) / 8));
 				for (var i = 0; i < numberOfMoves; i++) {
-					CubeData.ChangeBinaryData(MovesArray, i * POT, i, POT);
+					_CubeData.ChangeBinaryData(MovesArray, i * POT, i, POT);
 				}
 				return MovesArray;
 			},
@@ -3663,7 +3718,7 @@
 				}
 				var possible = this.CheckIfPossible(data, format, size);
 				if (possible && !this.Running) {
-					var fastData = CubeData.Convert(data, format, CubeDataType.Fast, size, false);
+					var fastData = _CubeData.Convert(data, format, CubeDataType.Fast, size, false);
 					this.CubeNodes = [];
 					this.ScoreMax = (size - 2) * (size - 2) * 24 + (size - 2) * 24 * 3 + 48;
 
@@ -3811,68 +3866,68 @@
 							for (var j = 0; j < size * size; j++) {
 								var x = j % size;
 								var y = Math.floor(j / size);//note: orientation varies from side to side, which ever one makes the math easiest to calculate.
-								var s0c = CubeData.PullSide(data, format, size, cube, x + y * size);//side 0 color, all sides are done at once
-								var s1c = CubeData.PullSide(data, format, size, cube, x + y * (size * 4) + size * size);
-								var s2c = CubeData.PullSide(data, format, size, cube, x * 2 + y * (size * 4) + size * size + size);
-								var s3c = CubeData.PullSide(data, format, size, cube, x * 2 + y * (size * 4) + size * size + size + 1);
-								var s4c = CubeData.PullSide(data, format, size, cube, x + y * (size * 4) + size * size + size * 3);
-								var s5c = CubeData.PullSide(data, format, size, cube, x + y * size + size * size + size * (size * 4));
+								var s0c = _CubeData.PullSide(data, format, size, cube, x + y * size);//side 0 color, all sides are done at once
+								var s1c = _CubeData.PullSide(data, format, size, cube, x + y * (size * 4) + size * size);
+								var s2c = _CubeData.PullSide(data, format, size, cube, x * 2 + y * (size * 4) + size * size + size);
+								var s3c = _CubeData.PullSide(data, format, size, cube, x * 2 + y * (size * 4) + size * size + size + 1);
+								var s4c = _CubeData.PullSide(data, format, size, cube, x + y * (size * 4) + size * size + size * 3);
+								var s5c = _CubeData.PullSide(data, format, size, cube, x + y * size + size * size + size * (size * 4));
 								if (x > 0) {
-									if (s0c === CubeData.PullSide(data, format, size, cube, (x - 1) + y * size))
+									if (s0c === _CubeData.PullSide(data, format, size, cube, (x - 1) + y * size))
 										cubeScore++;
-									if (s1c === CubeData.PullSide(data, format, size, cube, (x - 1) + y * (size * 4) + size * size))
+									if (s1c === _CubeData.PullSide(data, format, size, cube, (x - 1) + y * (size * 4) + size * size))
 										cubeScore++;
-									if (s2c === CubeData.PullSide(data, format, size, cube, (x - 1) * 2 + y * (size * 4) + size * size + size))
+									if (s2c === _CubeData.PullSide(data, format, size, cube, (x - 1) * 2 + y * (size * 4) + size * size + size))
 										cubeScore++;
-									if (s3c === CubeData.PullSide(data, format, size, cube, (x - 1) * 2 + y * (size * 4) + size * size + size + 1))
+									if (s3c === _CubeData.PullSide(data, format, size, cube, (x - 1) * 2 + y * (size * 4) + size * size + size + 1))
 										cubeScore++;
-									if (s4c === CubeData.PullSide(data, format, size, cube, (x - 1) + y * (size * 4) + size * size + size * 3))
+									if (s4c === _CubeData.PullSide(data, format, size, cube, (x - 1) + y * (size * 4) + size * size + size * 3))
 										cubeScore++;
-									if (s5c === CubeData.PullSide(data, format, size, cube, (x - 1) + y * size + size * size + size * (size * 4)))
+									if (s5c === _CubeData.PullSide(data, format, size, cube, (x - 1) + y * size + size * size + size * (size * 4)))
 										cubeScore++;
 								}
 
 								if (x < size - 1) {
-									if (s0c === CubeData.PullSide(data, format, size, cube, (x + 1) + y * size))
+									if (s0c === _CubeData.PullSide(data, format, size, cube, (x + 1) + y * size))
 										cubeScore++;
-									if (s1c === CubeData.PullSide(data, format, size, cube, (x + 1) + y * (size * 4) + size * size))
+									if (s1c === _CubeData.PullSide(data, format, size, cube, (x + 1) + y * (size * 4) + size * size))
 										cubeScore++;
-									if (s2c === CubeData.PullSide(data, format, size, cube, (x + 1) * 2 + y * (size * 4) + size * size + size))
+									if (s2c === _CubeData.PullSide(data, format, size, cube, (x + 1) * 2 + y * (size * 4) + size * size + size))
 										cubeScore++;
-									if (s3c === CubeData.PullSide(data, format, size, cube, (x + 1) * 2 + y * (size * 4) + size * size + size + 1))
+									if (s3c === _CubeData.PullSide(data, format, size, cube, (x + 1) * 2 + y * (size * 4) + size * size + size + 1))
 										cubeScore++;
-									if (s4c === CubeData.PullSide(data, format, size, cube, (x + 1) + y * (size * 4) + size * size + size * 3))
+									if (s4c === _CubeData.PullSide(data, format, size, cube, (x + 1) + y * (size * 4) + size * size + size * 3))
 										cubeScore++;
-									if (s5c === CubeData.PullSide(data, format, size, cube, (x + 1) + y * size + size * size + size * (size * 4)))
+									if (s5c === _CubeData.PullSide(data, format, size, cube, (x + 1) + y * size + size * size + size * (size * 4)))
 										cubeScore++;
 								}
 
 								if (y > 0) {
-									if (s0c === CubeData.PullSide(data, format, size, cube, x + (y - 1) * size))
+									if (s0c === _CubeData.PullSide(data, format, size, cube, x + (y - 1) * size))
 										cubeScore++;
-									if (s1c === CubeData.PullSide(data, format, size, cube, x + (y - 1) * (size * 4) + size * size))
+									if (s1c === _CubeData.PullSide(data, format, size, cube, x + (y - 1) * (size * 4) + size * size))
 										cubeScore++;
-									if (s2c === CubeData.PullSide(data, format, size, cube, x * 2 + (y - 1) * (size * 4) + size * size + size))
+									if (s2c === _CubeData.PullSide(data, format, size, cube, x * 2 + (y - 1) * (size * 4) + size * size + size))
 										cubeScore++;
-									if (s3c === CubeData.PullSide(data, format, size, cube, x * 2 + (y - 1) * (size * 4) + size * size + size + 1))
+									if (s3c === _CubeData.PullSide(data, format, size, cube, x * 2 + (y - 1) * (size * 4) + size * size + size + 1))
 										cubeScore++;
-									if (s4c === CubeData.PullSide(data, format, size, cube, x + (y - 1) * (size * 4) + size * size + size * 3))
+									if (s4c === _CubeData.PullSide(data, format, size, cube, x + (y - 1) * (size * 4) + size * size + size * 3))
 										cubeScore++;
-									if (s5c === CubeData.PullSide(data, format, size, cube, x + (y - 1) * size + size * size + size * (size * 4)))
+									if (s5c === _CubeData.PullSide(data, format, size, cube, x + (y - 1) * size + size * size + size * (size * 4)))
 										cubeScore++;
 								}
 								if (y < size - 1) {
-									if (s0c === CubeData.PullSide(data, format, size, cube, x + (y + 1) * size))
+									if (s0c === _CubeData.PullSide(data, format, size, cube, x + (y + 1) * size))
 										cubeScore++;
-									if (s1c === CubeData.PullSide(data, format, size, cube, x + (y + 1) * (size * 4) + size * size))
+									if (s1c === _CubeData.PullSide(data, format, size, cube, x + (y + 1) * (size * 4) + size * size))
 										cubeScore++;
-									if (s2c === CubeData.PullSide(data, format, size, cube, x * 2 + (y + 1) * (size * 4) + size * size + size))
+									if (s2c === _CubeData.PullSide(data, format, size, cube, x * 2 + (y + 1) * (size * 4) + size * size + size))
 										cubeScore++;
-									if (s3c === CubeData.PullSide(data, format, size, cube, x * 2 + (y + 1) * (size * 4) + size * size + size + 1))
+									if (s3c === _CubeData.PullSide(data, format, size, cube, x * 2 + (y + 1) * (size * 4) + size * size + size + 1))
 										cubeScore++;
-									if (s4c === CubeData.PullSide(data, format, size, cube, x + (y + 1) * (size * 4) + size * size + size * 3))
+									if (s4c === _CubeData.PullSide(data, format, size, cube, x + (y + 1) * (size * 4) + size * size + size * 3))
 										cubeScore++;
-									if (s5c === CubeData.PullSide(data, format, size, cube, x + (y + 1) * size + size * size + size * (size * 4)))
+									if (s5c === _CubeData.PullSide(data, format, size, cube, x + (y + 1) * size + size * size + size * (size * 4)))
 										cubeScore++;
 								}
 
@@ -3920,7 +3975,7 @@
 			CheckCube: function (data, format, size) {
 				//Checks to see if a cube is valid, has the right number of pieces and all valid pieces
 				//if cube is good, returns [true], else it returns [false,errorCode,errorData]
-				var testData = CubeData.Convert(data, format, CubeDataType.Piece, size, true);
+				var testData = _CubeData.Convert(data, format, CubeDataType.Piece, size, true);
 				if (testData[1].length > 0) {
 					// failure(0,testData[1],data,vcube);//Check for valid pieces
 					return [false, 0, testData[1]];
@@ -3936,9 +3991,9 @@
 				var goalC = [(size - 2) * (size - 2), (size - 2) * (size - 2), (size - 2) * (size - 2), (size - 2) * (size - 2), (size - 2) * (size - 2), (size - 2) * (size - 2)];
 				var goalN = [1, 1, 1, 1, 1, 1, 1, 1];
 				for (var i = 0; i < size * size * 2 + (size - 2) * ((size + size - 2) * 2); i++) {
-					var xyz = CubeData.GetPieceCoords(i, size);
-					var sideCount = CubeData.CountSides(xyz[0], xyz[1], xyz[2], size);
-					var pieceID = CubeData.PullInfo(testData, i, 5);
+					var xyz = _CubeData.GetPieceCoords(i, size);
+					var sideCount = _CubeData.CountSides(xyz[0], xyz[1], xyz[2], size);
+					var pieceID = _CubeData.PullInfo(testData, i, 5);
 
 					if (sideCount == 1) {
 						centers[pieceID % 6]++;
@@ -3984,7 +4039,7 @@
 				//TODO
 				//Swap test, must be an even number of swaps
 				var swaps = 0;
-				var testData = CubeData.Convert(data, format, CubeDataType.Piece, size, false);
+				var testData = _CubeData.Convert(data, format, CubeDataType.Piece, size, false);
 				var checkList = [];//Tells us what pieces we have visited so far.
 				for (var i = 0; i < (size * size * size) - (size - 2) * (size - 2) * (size - 2); i++)
 					checkList.push(false);
@@ -4277,10 +4332,10 @@
 				//override allows the function to automatically change the format of the cube to surface type if possible to change a single sticker
 				//returns true or false to tell if it was a success or not
 				if (this.format == CubeDataType.Surface && !this.recording && this.edit) {
-					CubeData.Change(this.data, CubeDataType.Surface, 0, sticker, this.size, id);
+					_CubeData.Change(this.data, CubeDataType.Surface, 0, sticker, this.size, id);
 					this.updateColors();
 				} else if (this.format == CubeDataType.Piece && override && !this.recording && this.edit) {
-					this.data = CubeData.Convert(this.data, CubeDataType.Piece, CubeDataType.Surface, this.size, false);
+					this.data = _CubeData.Convert(this.data, CubeDataType.Piece, CubeDataType.Surface, this.size, false);
 					this.format = CubeDataType.Surface;
 					return this.changeSticker(sticker, id);
 				} else {
@@ -4301,7 +4356,7 @@
 					var c = this.cubies[i];
 					var newColors = [0, 0, 0];
 					for (var j = 0; j < c.type + 1; j++) {
-						newColors[j] = CubeData.PullSide(this.data, this.format, this.size, 0, c.dataLink[j]);
+						newColors[j] = _CubeData.PullSide(this.data, this.format, this.size, 0, c.dataLink[j]);
 					}
 					c.home = 0;
 					Renderer.UpdateModel(c, 0, newColors);
@@ -4372,7 +4427,7 @@
 					0, 0, 1, 0,
 					0, 0, 0, 1];
 				for (var i = 0; i < this.cubies.length; i++) {
-					var info = CubeData.GetRenderCoords(this.size, i);
+					var info = _CubeData.GetRenderCoords(this.size, i);
 					var modMat = [
 						1, 0, 0, 0,
 						0, 1, 0, 0,
@@ -4414,9 +4469,9 @@
 			};
 			this.rotate = function (move) {//only used to actualy rotate the data by the vCube itself, not meant to be accessed else where.
 				var totalMoves = Algorithm.CountLayers(this.size);
-				var POT = CubeData.CalculateBitLength(totalMoves * 3);
+				var POT = _CubeData.CalculateBitLength(totalMoves * 3);
 				var savedArray = new Uint8Array(Math.ceil(POT / 8));
-				CubeData.ChangeBinaryData(savedArray, 0, move, POT);
+				_CubeData.ChangeBinaryData(savedArray, 0, move, POT);
 				Algorithm.TurnCube(this.data, 0, this.format, this.size, savedArray);
 
 				//console.log(Solver.ScoreCube(this.data,this.format,this.size));//STUDY DEBUG
@@ -4447,11 +4502,11 @@
 					var originLocation = Algorithm.SavedFilters[ftu][move][j];
 					originLocation %= LocationCount;
 					destinationList[j] = this.cubies[originLocation];
-					var xyz = CubeData.GetPieceCoords(j, this.size);
+					var xyz = _CubeData.GetPieceCoords(j, this.size);
 					var x = xyz[0];
 					var y = xyz[1];
 					var z = xyz[2];
-					var dl = CubeData.GetSides(x, y, z, this.size);
+					var dl = _CubeData.GetSides(x, y, z, this.size);
 					var cubieIdData = [[this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0]];
 					for (var i = 0; i < dl.length; i++) {
 						cubieIdData[i][1] = Math.floor(dl[i] / 256) / 255;
@@ -4462,7 +4517,7 @@
 						cw = false;
 					}
 					destinationList[j].dataLink = dl;
-					if (!cw && CubeData.CountSides(x, y, z, this.size) > 2) {
+					if (!cw && _CubeData.CountSides(x, y, z, this.size) > 2) {
 						destinationList[j].dataLink = [dl[0], dl[2], dl[1]];
 						Renderer.UpdateModel(destinationList[j], 1, [cubieIdData[0], cubieIdData[2], cubieIdData[1]]);
 					}
@@ -4540,7 +4595,7 @@
 								}
 								var cl = this.cubies.length;
 								for (var i = 0; i < cl; i++) {
-									var location = CubeData.GetPieceCoords(i, this.size);//BUG FIX this will not work after the first rotaion right now
+									var location = _CubeData.GetPieceCoords(i, this.size);//BUG FIX this will not work after the first rotaion right now
 									if (location[plane] == planeLocation) {
 										this.rotatingCubies.push(i);
 									}
@@ -4590,7 +4645,7 @@
 								}
 								var cl = this.cubies.length;
 								for (var i = 0; i < cl; i++) {
-									var location = CubeData.GetPieceCoords(i, this.size);//BUG FIX NOW
+									var location = _CubeData.GetPieceCoords(i, this.size);//BUG FIX NOW
 									if (location[plane] == planeLocation) {
 										this.rotatingCubies.push(i);
 									}
@@ -4660,7 +4715,7 @@
 						var cl = this.cubies.length;
 						this.rotatingCubies = [];
 						for (var i = 0; i < cl; i++) {
-							var location = CubeData.GetPieceCoords(i, this.size);//BUG FIX this will not work after the first rotaion right now
+							var location = _CubeData.GetPieceCoords(i, this.size);//BUG FIX this will not work after the first rotaion right now
 							if (location[plane] == planeLocation) {
 								this.rotatingCubies.push(i);
 							}
@@ -4693,9 +4748,9 @@
 			for (var x = 0; x < this.size; x++) {
 				for (var y = 0; y < this.size; y++) {
 					for (var z = 0; z < this.size; z++) {
-						var count = CubeData.CountSides(x, y, z, this.size);
+						var count = _CubeData.CountSides(x, y, z, this.size);
 						if (count > 0) {
-							var sides = CubeData.GetSides(x, y, z, this.size);
+							var sides = _CubeData.GetSides(x, y, z, this.size);
 							var cubieData = [0, 0, 0];
 							var cubieIdData = [[this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0]];
 							var cubieDataLink = sides.slice(0);
@@ -4705,7 +4760,7 @@
 								cw = false;
 							}
 							for (var i = 0; i < sides.length; i++) {
-								cubieData[i] = CubeData.PullSide(this.data, this.format, this.size, 0, sides[i]);
+								cubieData[i] = _CubeData.PullSide(this.data, this.format, this.size, 0, sides[i]);
 								cubieIdData[i][1] = Math.floor(sides[i] / 256) / 255;
 								cubieIdData[i][2] = (sides[i] % 256) / 255;
 							}
@@ -4832,16 +4887,16 @@
 		for(var i = 0;i<nray.length;i+=2){testCube.addRotation(nray[i],nray[i+1]);}*/
 		var allCubes;
 		function DOSTUFF() {
-			allCubes = CubeData.Create(CubeDataType.Surface, 3, 32076);
+			allCubes = _CubeData.Create(CubeDataType.Surface, 3, 32076);
 			var solvedCube = generateSolvedCube(3, CubeDataType.Surface);
 			for (var i = 0; i < 32076; i++) {//428166
 				//cubeSize,AlgLength,AlgNumber,compressed
-				var workingCube = CubeData.Copy(solvedCube);
+				var workingCube = _CubeData.Copy(solvedCube);
 				var algorithm = Algorithm.GetAlgorithm(3, 4, i, true);
 				cList.push(i);
 				//data,cube = 0,format,cubeSize,moves,moveCount=1,shouldEdit=true
 				Algorithm.TurnCube(workingCube, 0, CubeDataType.Surface, 3, algorithm, 4, true);
-				CubeData.PasteCube(allCubes, CubeDataType.Surface, workingCube, i, 3);
+				_CubeData.PasteCube(allCubes, CubeDataType.Surface, workingCube, i, 3);
 				if (i % 100 == 0)
 					console.log(i);
 			}
@@ -4859,8 +4914,8 @@
 					if (i != j) {
 						sectionCount = 0;
 						for (var k = 0; k < 6; k++) {
-							i1 = CubeData.PullInfo(allCubes, i * 6 + k, 27);
-							i2 = CubeData.PullInfo(allCubes, j * 6 + k, 27);
+							i1 = _CubeData.PullInfo(allCubes, i * 6 + k, 27);
+							i2 = _CubeData.PullInfo(allCubes, j * 6 + k, 27);
 							if (i1 === i2) {
 								sectionCount++;
 							} else {
