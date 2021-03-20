@@ -526,19 +526,136 @@
 		/*
 		class BinaryData
 		---------------------
-		- data:Uint8Array
+		- dataArray:Uint8Array
 		- elementBitLength:int
 		- elementCount:int
 		----------------------
 		BinaryData(maxElementSize:int, data:array, elementCount:int):BinaryData
 		getData(element:int):int
-		setData(element:int):bool
+		setData(element:int, info:int):bool
 		getMaxElementSize():int
-		getArray(startElement:int, endElement:int):array
-		setArray(startElement:int, endElement:int):bool
+		getArray(startElement:int, endElement:int):array[int]
+		setArray(startElement:int, data:array[int]:bool
+		getBitLength():int
 		
 		*/
+		
+		function BinaryData(maxElementSize=1, data=[0], elementCount=1){
+			// Returns an obect used for storing binary data
+			// This only can store unsigned integers in side.
 
+			this.setData = function(elementIndex=0, info=0, shouldLogError=false){
+				// Sets an element in the array, returns true for success, false for failure
+
+				// Check if info is in an invalid range
+				if(info > maxElementSize || info != Math.floor(info) || typeof (info) != "number"){
+					if(shouldLogError)
+						console.log("Error: Could not set binary data, info too large or invalid");
+					return false;
+				}
+
+				// Check if elementIndex is in range
+				if(elementIndex >= elementCount){
+					if(shouldLogError)
+						console.log("Error: Could not set binary data, Element index out of range or invalid");
+					return false;
+				}
+				// Check if max element size is 8 for optimization
+				// if(elementBitLength % 8 == 0){
+				// 	for(;currentByte <= endByte; currentByte++){					
+				// 		dataArray[currentByte] = info;
+				// 	}
+				// 	return true;
+				// }
+
+				// Loop through all the bits in the info variable set the coresponding bit in the data array
+				for(var i = 0; i < elementBitLength; i++){
+					var byte = Math.floor((elementIndex * elementBitLength + i) / 8);
+					var bit = (elementIndex * elementBitLength + i) % 8;
+					dataArray[byte] = changeBit(dataArray[byte], bit, getBit(info, i));
+				}
+			}
+
+			this.getData = function(elementIndex=0){
+				var result = 0;
+				for(var i = elementBitLength - 1; i >= 0; i--){
+					var byte = Math.floor((elementIndex * elementBitLength + i) / 8);
+					var bit = (elementIndex * elementBitLength + i) % 8;
+
+					result = result << 1;
+					result += getBit(dataArray[byte], bit);
+				}
+				return result;
+			}
+
+			function getBit(value=0, bit=0){
+				// Gets a binary bit out of a number
+				// We right shift value by bit places to get the bit we want in the first bit location, then we AND by 1 to leave only the first bit
+				return value >>> bit & 1;
+			}
+
+			function changeBit(value=0, bit=0, set=0){
+				// changes a bit in value to either set (1) or reset(0) and returns it
+				// Check if no change is needed, in this case return the orignal value
+				if(set === getBit(value, bit))
+					return value;
+				// else toggle the bit
+				// We do this by getting 1, left shifting it bit times and then XOR ing it with value
+				return value ^ (1 << bit);
+			}
+
+			// Calculate the minimum bit length to store a number of maxElementSize
+			var elementBitLength = 1;
+			var valueOfPOT = 2;
+			while(valueOfPOT < maxElementSize){
+				elementBitLength ++;
+				valueOfPOT *= 2;
+			}
+
+			// Calculate the actual maxElement size based on the bit length we calculated recieved
+			maxElementSize = valueOfPOT - 1;
+
+			// Verify the number of elements given in elementCount is enough to hold the data, if not, take up more more data
+			if(data.length > elementCount){
+				elementCount = data.length;
+			}
+
+			// Calculate the number of bytes needed to store the number of elements given
+			var byteCount = Math.ceil(elementBitLength * elementCount / 8);
+
+			// If the byteCount came out to be 1 (due to empty array and elementCount being set to 0), set it to 1
+			if (byteCount == 0){
+				byteCount = 1;
+			}
+
+			// create our data array based on the byte count calcualated
+			var dataArray = new Uint8Array(byteCount);
+			
+			// fill the array with data
+			for(var i = 0; i < data.length; i++){
+				this.setData(i, data[i]);
+			}
+
+			
+
+		}
+		
+		/*
+		class Algorithm
+		------------------
+		- data:BinaryData
+		- length:int
+		- cubeSize:int
+		- filter:array
+		------------------
+		Algorithm(moves:array, cubeSize:int):Algorithm
+		getMovesAsNumber():array			This will return the moves as [direction * cubeSize + layer,   ]
+		getMoves():array[int]    This will return the moves as [layer, direction, layer, direction]
+		getFilter():array[int] This will return the filter for all the moves combined in the algorithm
+		getMoveAsNumber(number:int):int
+		getMove(number:int):[int, int]
+		getFilterForMove(number:int): array
+		*/
 
 		/*
 		class CubeData
