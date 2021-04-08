@@ -610,12 +610,13 @@
 						textPos.x = index - textPos.y * 32.0;
 						textPos.xy /= 32.0;
 						level = texture2D(freqData, textPos).r;
-						fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);
-						if (abs(_pos.y) < level){
-							fin = vec4(color.rgb, opacity);
-						}
+						fin = vec4(color.rgb * vec3((level - abs(_pos.y)) * 2.5), opacity);
+						
 						gl_FragColor = fin;
-					}`
+					}`/*fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);
+						if (abs(_pos.y) < level){
+							fin = vec4(color.rgb * vec3((level - abs(_pos.y)) * 5.0), opacity);
+						}*/
 			},
 			uniforms: {
 				main: {
@@ -861,7 +862,7 @@
 				// Start generating the cubes, TODO mabye seperate this into a different function?
 				var chosenLights = [];
 				var possibleList = [];
-				var numberOfCubes = 1000;
+				var numberOfCubes = 300;
 				this.cubes = [];
 				for (var i = 0; i < numberOfCubes; i++) {
 					possibleList.push(i);
