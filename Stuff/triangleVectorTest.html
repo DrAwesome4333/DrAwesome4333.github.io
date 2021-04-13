@@ -416,6 +416,8 @@
                     ctXY.fillRect(tPoint.x, tPoint.y, 5, 5);
                     ctZY.fillRect(tPoint.z, tPoint.y, 5, 5);
                     ctXZ.fillRect(tPoint.x, tPoint.z, 5, 5);
+                }else{
+                    tPoint = {x:undefined, y:undefined, z:undefined};
                 }
                 document.getElementById("op").innerHTML = `Line Vector:<br>
                 x:${myLine.vector.x}
