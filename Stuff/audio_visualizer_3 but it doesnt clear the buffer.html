@@ -331,6 +331,7 @@
 			this.musicSection = musicSection;
 			this.size = size;//the size of the model
 			this.scale = 1;//how the model is scaled
+			this.beatPoints = 0;
 
 			this.color = color;
 			this.bufferLength = 36;
@@ -408,6 +409,16 @@
 					}
 				}
 
+
+				this.beatPoints += this.dp;
+				if(this.beatPoints < 0){
+					this.beatPoints = 0;
+				}
+				if(this.beatPoints > 5){
+					this.beatPoints = 0;
+					this.color = Graphics.getNewLightColor();
+				}
+				
 				this.scale = this.power * 5;
 				this.orbit += this.power * 0.5 * (this.maxDistance / this.orbitDistance);
 				this.orbit %= 360;
@@ -510,6 +521,17 @@
 			lightPos: [0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0],
 			lightColor: [0.25, 0.25, 0.25,  0.5, 0.0, 0.0,  0.0, 0.5, 0.0,  0.5, 0.5, 0.0,  0.0, 0.0, 0.5,  0.5, 0.0, 0.5,  0.0, 0.5, 0.5,  0.0, 0.0, 0.5],
 			backgroundColor: [0, 0, 0],
+			lightScore: [0, 0, 0, 0, 0, 0, 0, 0, 0],// to tell when to change light colors
+			getNewLightColor: function(){
+				var newColor = [Math.random(), Math.random(), Math.random()];
+				// Normalize the color and divide it by 2
+				var magnitude = Math.sqrt(newColor[0] ** 2 + newColor[1] ** 2 + newColor[2] ** 2) * 2;
+				if (magnitude == 0){
+					return [0, 0.5, 0];
+				}else{
+					return [newColor[0] / magnitude, newColor[1] / magnitude, newColor[2] / magnitude];
+				}
+			},
 			backgroundColorGoal: [0, 0, 0],
 			cubes: [],
 			state: {
@@ -604,18 +626,25 @@
 					float index;
 					vec2 textPos;
 					float level;
+					float wave;
+					const float PI = 3.1415926535897932384626433832795;
 					void main(void){
 						index = abs(_pos.x) * 512.0;
 						textPos.y = floor(index / 32.0);
 						textPos.x = index - textPos.y * 32.0;
 						textPos.xy /= 32.0;
 						level = texture2D(freqData, textPos).r;
-						fin = vec4(color.rgb * vec3((level - abs(_pos.y)) * 2.5), opacity);
-						
+						wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
+						fin = vec4(color.rgb * vec3(pow(level - abs(_pos.y + (wave * 2.0 - 1.0) * 0.1), 3.0) * 2.0), 0.5);
 						gl_FragColor = fin;
 					}`/*fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);
 						if (abs(_pos.y) < level){
 							fin = vec4(color.rgb * vec3((level - abs(_pos.y)) * 5.0), opacity);
+						}*/
+						//wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
+						/*
+						if(_pos.x > 0.0 && _pos.y > 0.0){
+							fin = texture2D(freqData, _pos);
 						}*/
 			},
 			uniforms: {
@@ -933,13 +962,11 @@
 
 				this.gl.useProgram(this.programs.fade)
 				this.gl.uniform3fv(this.uniforms.fade.color, this.backgroundColor);
-
-				var myArray = new Uint8Array(32 * 32);
 				
 
 				this.gl.activeTexture(this.gl.TEXTURE1)
 				this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.frequencyData);
-				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, Sound.data.frequency);
+				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, Sound.data.frequenceyAndWaveform);
 				//this.gl.uniform1iv(this.uniforms.fade.freq, Sound.data.frequency);
 
 				this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers.fadeCoverPoints);
@@ -1195,6 +1222,7 @@
 				//playing is not needed as this will not be controlled by the Sound object but the player object
 			},
 			data: {
+				frequenceyAndWaveform: new Uint8Array(1),
 				frequency: new Uint8Array(1),
 				waveform: new Uint8Array(1)
 			}
@@ -1347,8 +1375,9 @@
 				Player.loadSongs(fileEle.files);
 			})
 			//fEle.addEventListener("change",function(){audioSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Sound.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-			Sound.data.frequency = new Uint8Array(Sound.analyser.frequencyBinCount * 2);
-			Sound.data.waveform = new Uint8Array(Sound.analyser.frequencyBinCount);
+			Sound.data.frequenceyAndWaveform = new Uint8Array(Sound.analyser.frequencyBinCount * 2);
+			Sound.data.frequency = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, 0, Sound.analyser.frequencyBinCount);
+			Sound.data.waveform = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, Sound.analyser.frequencyBinCount, Sound.analyser.frequencyBinCount);
 			Player.loadResources();
 			Graphics.start();
 			update();
