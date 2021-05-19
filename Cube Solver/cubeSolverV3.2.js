@@ -4,14 +4,15 @@
 		* ✔ Turn CubeData into a class 
 		* ✔ Create a BinaryData class to handle compressed arrays, in a way that can be used in a cleaner way 
 		* ✔ Create a Algorithm class to create a consitent way to interact with algorithms
-		* Create a Cube class (we kind of already have it)
+		* ✔ Create a Cube class (we kind of already have it)
 		* ✔ Create a CubieData class for piece data
 		* Re - Design the Cubie class to have methods only it uses with it.
-		* Create a Model class so models can be independent of the Render Object
+		* ✔ Create a Model class so models can be independent of the Render Object
 		* Re work tasks that may take a while to web workers and promises
 		* Clean up the code a ton
 		* Create a start webGl function that will only do the things required to start webGl and can be recalled in case of context loss
 		*/
+
 		/**@type {WebGLRenderingContext} */
 		var gl = null;//A global refrence to Renderer.gl so that I don't have to keep typing Renderer.gl or this.gl, just gl.			
 		const PR = Math.PI / 180;//(Pi ratio, use this to convert degrees to Radians)
@@ -43,6 +44,9 @@
 			Right: 5
 		}
 
+		
+		const  VBO_FORMAT="vx,vy,vz,tu,tv,nx,ny,nz";
+
 		var shouldLogErrors = true;
 
 		var webWorkersAvailable = false;
@@ -54,22 +58,7 @@
 			console.info("No worker support");
 		}
 
-		function VCubie(type, style, data) {
-			this.type = type;// 0 1 or 2 for center, edge or corner
-			this.style = style;// selects a model type to get
-			this.home = 0;// lets the code know which surface is defined as the "home" surface, to make coloring easier.
-			this.dataLink = [0, 0, 0];//a list of numbers stored in the cubie by the cube so it can recognize what data this cubie is linked to.
-			this.model = Renderer.GetModel(style, type, data);
-			this.highlightedSides = [false, false, false, false];//used for hovering and error highlights
-			this.inError = false;
-			this.errorMessage = "";
-			//model format [VBO, IBO1(side 1), IBO2(side 2), IBO3(side 3), IBO4(back model) ,matrix, style, type, index count1 (ic), ic2, ic3, ic4, tempMatrix(used for temporary transforms such as turns before they get permanately added)]
-			//new model format [VBO, IBO(pointer), faceLocations, matrix, style, type, tempMatrix]
-			var nBuffer = gl.createBuffer();
-			gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, this.model[0], gl.STATIC_DRAW);
-			this.model[0] = nBuffer;
-		}
+		
 		/*
 		Cube data always starts with the left most information, then bottom most, and then back most. (smaller to biggest) (with the excpetion of model files)
 		There are a few formats a Cube can be save in:
@@ -133,22 +122,19 @@
 
 		function BinaryData(maxElementSize=1, data=[0], elementCount=1, dataFlag=-1){
 			// Returns an obect used for storing binary data
-			// This only can store unsigned integers in side.
+			// This only can store unsigned integers inside.
 
 			this.setData = function(elementIndex=0, info=0){
 				// Sets an element in the array, returns true for success, false for failure
 
 				// Check if info is in an invalid range
 				if(info > maxElementSize || info % 1 != 0 || typeof (info) != "number"){
-
 					throw "Error: Could not set binary data, info too large or invalid. Data recived: " + info;
-					return false;
 				}
 
 				// Check if elementIndex is in range
 				if(elementIndex >= elementCount){
 					throw "Error: Could not set binary data, Element index out of range or invalid. Data recived: " + info;
-					return false;
 				}
 
 				// Loop through all the bits in the info array set the coresponding bit in the data array
@@ -163,6 +149,9 @@
 			}
 
 			this.getData = function(elementIndex=0){
+				if(elementIndex >= elementCount || elementIndex < 0){
+					throw "Error, cannot access elements outside of array. Expected Range: 0 - " + (elementCount - 1) + " Value requested: " + elementCount;
+				}
 				var result = 0;
 				for(var i = elementBitLength - 1; i >= 0; i--){
 					var byte = Math.floor((elementIndex * elementBitLength + i) / 8);
@@ -193,7 +182,7 @@
 				var result = [];
 				// Check if we are in bounds of the array
 				if (startElementIndex < 0 || endElementIndex < 0 || startElementIndex >= elementCount || endElementIndex >= elementCount){
-					return [];
+					throw "Error, cannot access elements outside of array Expected Range: 0 - " + (elementCount - 1) + " Values requested: " + startElementIndex + " - " + endElementIndex;
 				}
 				// Check if it is reversed
 				if (endElementIndex < startElementIndex){
@@ -213,7 +202,7 @@
 			this.setArray = function(startElementIndex=0, info=[0]){
 				//Sets an array of data starting with startElement
 				if (startElementIndex < 0 || startElementIndex + info.length > elementCount){
-					return false;
+					throw "Error, cannot set elements outside of array Expected Range: 0 - " + (elementCount - 1) + " Values sent: " + startElementIndex + " - " + (startElementIndex + info.length);
 				}
 				var passed = true;
 				for(var i = 0; i < info.length; i++){
@@ -260,8 +249,7 @@
 			// Calculate the minimum bit length to store a number of maxElementSize
 			var elementBitLength = 1;
 			var valueOfPOT = 2;
-			var byteCount;
-			//var dataArray = new Uint8Array(1);
+			/**@type {Uint8Array[]} */
 			var dataArrays = [];
 			const MAX_BYTES_PER_ARRAY = 1024;
 			while(valueOfPOT < maxElementSize){
@@ -278,7 +266,7 @@
 			}
 
 			// Calculate the number of bytes needed to store the number of elements given
-			byteCount = Math.ceil(elementBitLength * elementCount / 8);
+			var byteCount = Math.ceil(elementBitLength * elementCount / 8);
 
 			// If the byteCount came out to be 1 (due to empty array and elementCount being set to 0), set it to 1
 			if (byteCount == 0){
@@ -608,7 +596,7 @@
 				// Given two face values, it will give the 3rd face's value for a corner
 				// We first create a list of valid combinations of of faces, then we see if value 1 and value 2
 				// Match up in any of them and return the 3rd value. Order matters, these arrays "wrap"
-				var validCombos = [
+				const VALID_COMBOS = [
 					[CubeFace.Left, CubeFace.Down, CubeFace.Back],
 					[CubeFace.Left, CubeFace.Front, CubeFace.Down],
 					[CubeFace.Left, CubeFace.Back, CubeFace.Up],
@@ -620,8 +608,8 @@
 				
 				for(var i = 0; i < 8; i++){
 					for(var j = 0; j < 3; j++){
-						if(validCombos[i][j] == value1 && validCombos[i][(j + 1) % 3] == value2){
-							return validCombos[i][(j + 2) % 3];
+						if(VALID_COMBOS[i][j] == value1 && VALID_COMBOS[i][(j + 1) % 3] == value2){
+							return VALID_COMBOS[i][(j + 2) % 3];
 						}
 					}
 				}
@@ -682,7 +670,11 @@
 		addAlgorithm(alg:[int]):bool
 		*/
 
-		function AlgorithmStorage(cubeSize=3, algLength=1, maxAlgs=1000000){
+		/**
+		 * @param {number} cubeSize
+		 */
+
+		function AlgorithmStorage(cubeSize, algLength=1, maxAlgs=1000000){
 
 			this.getMoves = function(algId=0){
 				// returns moves for a certain alg in number format
@@ -848,6 +840,7 @@
 
 			this.asyncSelfIndex = async function(){
 				// Exactly the same as Self index, except this will take advantage of a web worker
+				// TODO make this async (⓿_⓿)
 				// Verify we can still index on this storage, only new empty storages are accepted
 				if(algCount != 0){
 					console.info("You cannot index on pre filed algorithm storage");
@@ -983,6 +976,7 @@
 			}
 
 			this.selfIndex = function(){
+				// This will fill the Storage with algorithms that "try" to avoid repeating resulting cubes, there are no repeating cubes with in 3 moves cube.
 				// Verify we can still index on this storage, only new empty storages are accepted
 				if(algCount != 0){
 					console.info("You cannot index on pre filed algorithm storage");
@@ -1113,12 +1107,22 @@
 			var acceptsNewAlgs = true;
 		}
 
-		AlgorithmStorage.getLayerCount = function(cubeSize=3){
+		/**
+		 * @param {number} cubeSize 
+		 */
+		AlgorithmStorage.getLayerCount = function(cubeSize){
+			// Returns the number of MOVEABLE layers on the cube. For odd numbered cubes, this means
+			// You can only turn the size - 1 layers as you can't turn the middle layer in this format
 			return cubeSize % 2 == 0 ? cubeSize * 3 : (cubeSize - 1) * 3;
 		}
 
-		AlgorithmStorage.checkNextMove = function(cubeSize=3, previousMoves=[0], proposedNextMove=0){
-			//debugger;
+		/**
+		 * @param {number} cubeSize
+		 * @param {number[]} previousMoves
+		 * @param {number} proposedNextMove
+		 */
+		AlgorithmStorage.checkNextMove = function(cubeSize, previousMoves, proposedNextMove){
+			// Checks the move sequence to see if the proposed next move does not violoate any rules.
 			// Previous moves is saved as [moveId, moveId, movdId] not as [layer, direction, layer, direction]
 			const layerCount = AlgorithmStorage.getLayerCount(cubeSize);
 			// We do not care about move directions here, just the layer
@@ -1189,7 +1193,10 @@
 		applyFilter(cubeData:CubeData, startCube:int, endCube:int):bool
 		*/
 
-		function Filter(cubeSize=3, storageFormat=CubeDataType.Surface, algStorage=new AlgorithmStorage(cubeSize, 1, 1), algId=0, fromScratch=false){
+		/**
+		 * @param {number} cubeSize 
+		 */
+		function Filter(cubeSize, storageFormat=CubeDataType.Surface, algStorage=new AlgorithmStorage(cubeSize, 1, 1), algId=0, fromScratch=false){
 
 			var filterData = Filter.createNewFilterData(cubeSize, storageFormat);
 
@@ -1647,7 +1654,10 @@
 			
 		}
 
-		Filter.createNewFilterData = function(cubeSize=3, storageFormat=CubeDataType.Surface){
+		/**
+		 * @param {number} cubeSize 
+		 */
+		Filter.createNewFilterData = function(cubeSize, storageFormat=CubeDataType.Surface){
 			// Returns an array that a filter can use to apply rotations or moves to cubes
 			// Filters use the array to tell what index to pull from the starting cube to fill in the current index or
 			// more simply, cubeArray[i] = cubeArray[filterArray[i]]. Variations on this are used for the different storage formats
@@ -1680,7 +1690,10 @@
 			return result;
 		}
 
-		Filter.buildBaseFilters = function(cubeSize=3, storageFormat=CubeDataType.Surface){
+		/**
+		 * @param {number} cubeSize 
+		 */
+		Filter.buildBaseFilters = function(cubeSize, storageFormat=CubeDataType.Surface){
 			// Builds the basic filters that are used to create larger ones. This will build all the single move filters and save them in the cache
 			// Retuns the index of the filter
 			//	Check if filters for this size are already made
@@ -1717,6 +1730,9 @@
 
 		}
 
+		/**
+		 * @type {Filter[][]} 
+		 */
 		Filter.filterCache = [];
 
 		/*
@@ -1731,7 +1747,7 @@
 		CubeError(userReadableError:str, affectedCube:CubeData, affectedCubie:int, affectedFaces:[bool, bool, bool], errorType:str):CubeError
 		*/
 
-		function CubeError(userReadableError="", affectedCube=0, affectedCubie=0, affectedFaces=[false,false,false], errorType=""){
+		function CubeError(userReadableError="", affectedCube=-1, affectedCubie=-1, affectedFaces=[false,false,false,false], errorType=""){
 			this.userReadableError = userReadableError;
 			this.affectedCube = affectedCube;
 			this.affectedCubie = affectedCubie;
@@ -2154,7 +2170,7 @@
 								var totalCount = newIndexCount * cubeCount;
 								var newData = new BinaryData(23, [], totalCount);
 								for(var i = 0; i < newIndexCount; i++){
-									var indexes = CubeData.getCubieFacesFromSurfaceIndex(i, cubeSize);
+									var indexes = CubeData.getCubieFaceStickerIndex(i, cubeSize);
 									if(indexes.length > 3){
 										console.log("Error");
 										return false;
@@ -2168,7 +2184,7 @@
 										if(myCubie.isValid()){
 											newData.setData(i + cubeN * newIndexCount, myCubie.getCode())
 										}else{
-											errorLog.push(new CubeError("This Cubie cannot exist", cubeN, i, [true, true, true], "FAILED_CONVERSION"));
+											errorLog.push(new CubeError("This Cubie cannot exist", cubeN, i, [true, true, true, true], "FAILED_CONVERSION"));
 										}
 									}
 								}
@@ -2181,7 +2197,7 @@
 								break;
 							}
 							default:{
-								errorLog.push(new CubeError("Given storage format is invalid. Format Recieved: " + toFormat, -1, -1, [false,false,false], "INVALID_INPUT"));
+								errorLog.push(new CubeError("Given storage format is invalid. Format Recieved: " + toFormat, -1, -1, [false,false,false,false], "INVALID_INPUT"));
 								return false;
 								break;
 							}
@@ -2208,7 +2224,7 @@
 										var success = newData.setData(i + cubeN * newIndexCount, stickerId);
 										if(!success){
 											console.log(stickerId);
-											errorLog.push(new CubeError("Error, could not set sticker durring converion", cubeN, -1, [false,false,false],"CONVERION_FAILURE"))
+											errorLog.push(new CubeError("Error, could not set sticker durring converion", cubeN, -1, [false,false,false,false], "CONVERION_FAILURE"))
 										}
 									}
 								}
@@ -2221,14 +2237,14 @@
 								break;
 							}
 							default:{
-								errorLog.push(new CubeError("Given storage format is invalid. Format Recieved: " + toFormat, -1, -1, [false,false,false], "INVALID_INPUT"));
+								errorLog.push(new CubeError("Given storage format is invalid. Format Recieved: " + toFormat, -1, -1, [false,false,false,false], "INVALID_INPUT"));
 								return false;
 							}
 						}
 						break;
 					}
 					default:{
-						errorLog.push(new CubeError("Cube has an unsupported storage format. Format: " + storageFormat, -1, -1, [false,false,false], "INVALID_DATA"));
+						errorLog.push(new CubeError("Cube has an unsupported storage format. Format: " + storageFormat, -1, -1, [false,false,false,false], "INVALID_DATA"));
 						return false;
 						break;
 					}
@@ -2245,10 +2261,10 @@
 				/*
 					Format is as follows:
 						Each section will be separated by a :
-						data will start with "CBDTA"
+						data will start with "CBDTA" (stands for Cube Data)
 						then it will give the format code, valid codes are : "S" for surface, "P" for piece, "F" for fast
 							"E" is for error/invalid cube
-						Then we get the dimension in base 16 of the cube
+						Then we get the dimension in base 16 of the cube, why base 16, because base 16 is cool
 						Then we get the element data stream in base 24 for each element of the cube (base 24 is chosen because there are
 							24 possibilites for each piece)
 				*/
@@ -2279,18 +2295,24 @@
 
 				return result;
 			}
-			
+
+
+			/**@type {CubeError[]} */
 			var errorLog = [];
+
             if(data.getDataFlag() != storageFormat){
                 // If we recieve an un expected flag on the data, we need to convert it to the correct format;
                 // We save the given format, change this cube's format a default one, and convert the cubies.
                 var tempFormatSave = storageFormat;
 
 				if (data.getDataFlag() == -1){
+					// If the flag was set to -1, imply it was surface data
                 	storageFormat = CubeDataType.Surface;
 				}else{
+					// Else, use the flag given on the data
 					storageFormat = data.getDataFlag();
 				}
+
                 this.convertStorageFormat(tempFormatSave);
 
 				// Check if the conversion was unsuccessfull
@@ -2302,6 +2324,7 @@
 		}
 
 		CubeData.getFaceCoordinates = function(faceId=0, x=0, y=0, z=0){
+			// Turns 3D coordinates to relative face coordinates
 			switch(faceId){
 				case(CubeFace.Left):
 				//Fall through
@@ -2349,7 +2372,7 @@
 		}
 
 		CubeData.getTouchingFacesClockwise = function(x=0, y=0, z=0, cubeSize=3){
-			// returns all touching faces, in a clockwise order
+			// returns all touching faces, in clockwise order
 			var touchingFaces = [];
 			var isCW = true;
 				
@@ -2426,6 +2449,7 @@
 
 		CubeData.getCubieIndex = function(x=0, y=0, z=0, cubeSize=3){
 			// converts 3D cube coordinates to a cubie index
+			// Inverse of of getCubieCoordinates
 			const FaceSize = cubeSize * cubeSize;
 			const MiddleLayerSize = cubeSize * 2 + (cubeSize - 2) * 2;
 			if(x == 0){
@@ -2452,6 +2476,7 @@
 		}
 
 		CubeData.get3DCoordinates = function(faceId=0, x=0, y=0, cubeSize=3){
+			// Inverse of getFaceCoordinates
 			var cx, cy, cz; //  stands for cubie x, cubie y...
 			switch(faceId){
 				case(CubeFace.Left):{
@@ -2494,7 +2519,7 @@
 			return {x:cx, y:cy, z:cz};
 		}
 
-		CubeData.getCubieFacesFromSurfaceIndex = function(cubieIndex=0, cubeSize=3){
+		CubeData.getCubieFaceStickerIndex = function(cubieIndex=0, cubeSize=3){
 			// Given the cubie Index, we find out which stickers it would have from the surface storage fromat
 			// To get to the base corner of any face, we will use this constant * 
 			const FaceSize = cubeSize * cubeSize;
@@ -2568,7 +2593,7 @@
 					format = CubeDataType.Piece;
 					break;
 				default:
-					console.info("Invalid format");
+					console.info("Invalid format '" + parts[1] + "' for cube");
 					return null;
 					break;
 			}
@@ -2694,6 +2719,7 @@
 				}
 			}
 
+
 			function getDistanceFromMidLayer(c={x:0,y:0}){
 				if(isOdd){
 					return Math.min(Math.abs(c.x - center), Math.abs(c.y - center));
@@ -2703,6 +2729,8 @@
 					return Math.min(Math.abs(x), Math.abs(y));
 				}
 			}
+
+
 			const isOdd = cubeSize % 2 == 1;
 			var coords = CubeData.getCubieCoordinates(cubieIndex, cubeSize);
 			var face = CubeData.getTouchingFaces(coords.x, coords.y, coords.z, cubeSize)[0];
@@ -2713,7 +2741,8 @@
 
 		}
 
-		CubeData.verifyCube = function(cubeData=new CubeData(), cubeNumber=0){
+		/**@param {CubeData}cubeData */
+		CubeData.verifyCube = function(cubeData, cubeNumber=0){
 			// Checks if the cube is a possible configuration of a cube
 			// INCOMPLETE
 			// For now, it just makes sure there is the correct amount of each piece
@@ -2726,11 +2755,12 @@
 			const isOdd = cubeSize % 2 == 1;
 			const FaceSize = cubeSize ** 2;
 			
-			// If there are errors in the error log, the conversion failed and explains why
+			// If there are errors in the error log, the conversion failed and the log explains why
 			if(testErrorLog.length > 0){
 				return {passed:false, errors:testErrorLog};
 			}
 
+			/**@param {number}type */
 			function getCountOfType(type){
 				if(isTriNum(type)){
 					if(isOdd){
@@ -2753,6 +2783,7 @@
 				}
 			}
 
+			/**@param {number}num */
 			function isTriNum(num){
 				// We can tell if it is a triangle number
 				// By putting it through the inverse function
@@ -2778,7 +2809,10 @@
 			// OrbitList:[color0, color1, color2...]
 			// OrbitExpectedCount [expected count of each color for orbit0, orbit1, orbit2...]
 			// If there is a missmatch between the counter and the expected count, there is an error
+
+			/**@type {number[][]} */
 			var orbitColorCounter = [];
+			/**@type {number[]} */
 			var orbitExpectedCount = [];
 			var orbitCount = triNum(Math.ceil(cubeSize / 2));
 
@@ -2809,10 +2843,11 @@
 				}
 			}
 
-			// Check for things, if something is not right, start making an error log
+			// Check for correct counts, if something is not right, start making an error log
 			for(var i = 0; i < orbitCount; i ++){
 				var expCount = orbitExpectedCount[i];
 				var orbitGood = true;
+				/**@type {number[]} */
 				var errorColors = [];
 				for(var color = 0; color < 6; color ++){
 					if(orbitColorCounter[i][color] != expCount){
@@ -2821,7 +2856,7 @@
 					}
 				}
 
-				if(!orbitGood){// A mismatch was found, report errors for every cubie in the orbit
+				if(!orbitGood){// A mismatch was found, report errors for every cubie in the orbit with the affected colors
 					for(var j = 0; j < cubeSize ** 3 - (cubeSize - 2) ** 3; j ++){
 						if(CubeData.getOrbitNumber(j, cubeSize) == i){
 							// Verify the cubie has one of the affected colors and highlight those sides (once supported)
@@ -2829,7 +2864,7 @@
 							var testCubie = testData.getCubie(cubieCoords.x, cubieCoords.y, cubieCoords.z);
 							for(var k = 0; k < errorColors.length; k ++){
 								if(testCubie.getFaces().includes(errorColors[k])){
-									testErrorLog.push(new CubeError("This sticker may be incorrect", 0, j, [true, true, true], "ORBITCOUNT_FAILURE"));
+									testErrorLog.push(new CubeError("This sticker may be incorrect", 0, j, [true, true, true, true], "ORBITCOUNT_FAILURE"));
 									break;
 								}
 							}
@@ -2841,1005 +2876,1340 @@
 			if(testErrorLog.length > 0){
 				return {passed:false, errors:testErrorLog};
 			}
-			// TODO more verification tests
+			// TODO more verification tests for testing solvibility
 			return {passed:true, errors:[]};
 
 		}
 
+		/**@param {number}x */
 		function triNum(x){
 			// Returns the triangle number of x
 			// Used in orbit Identification of a cube
 			return 0.5 * (x ** 2) + 0.5 * x;
 		}
 
+		/**@param {number}y */
 		function inverseTriNum(y){
 			// Returns the positive inverse of a triangle number
 			// useful for identifying triangle numbers
 			return (-0.5 + Math.sqrt(0.25 - 2 * (-y)));
 		}
 
-	
-		var Renderer = {
-			Mat4Multiply: function (matA, matB) {
-				//multiplies 2 4X4 matricies, returns matrix
-				if (matA.length !== matB.length && matA.length !== 4) {
-					return [];
-				} else {
-					var matC = [matA[0] * matB[0] + matA[1] * matB[4] + matA[2] * matB[8] + matA[3] * matB[12],
-					matA[0] * matB[1] + matA[1] * matB[5] + matA[2] * matB[9] + matA[3] * matB[13],
-					matA[0] * matB[2] + matA[1] * matB[6] + matA[2] * matB[10] + matA[3] * matB[14],
-					matA[0] * matB[3] + matA[1] * matB[7] + matA[2] * matB[11] + matA[3] * matB[15],//row 1
+		var mainVertexSource = `
+		    uniform mat4 model_matrix;
+		    uniform mat4 perspective_matrix;
+		    attribute vec3 point;
+		    attribute vec2 main_uv;
+			attribute vec3 normal;
+		    varying vec2 _main_uv;
+			varying vec3 _fragment_position;
+			varying vec3 _normal;
+		    void main(void){
+		        _main_uv = main_uv;
+		        _normal = mat3(model_matrix) * normal;
+				_fragment_position = (model_matrix * vec4(point,1.0)).xyz;
+		        gl_Position = perspective_matrix * model_matrix * vec4(point, 1.0);
+		    }
+		    `;
+		var mainAttributes = ["point", "main_uv", "normal"];
+		var mainUniforms = [
+			{
+				name:"model_matrix",
+				type:"matrix4fv"
+			},{
+				name:"perspective_matrix",
+				type:"matrix4fv"
+			},{
+				name:"main_texture",
+				type:"1i"
+			},{
+				name:"colors",
+				type:"3fv"
+			},{
+				name:"overlay_color",
+				type:"3fv"
+			},{
+				name:"back_light",
+				type:"1iv"
+			},{
+				name:"overlay",
+				type:"1iv"
+			},{
+				name:"light_direction",
+				type:"3fv"
+			}
+		];
 
-					matA[4] * matB[0] + matA[5] * matB[4] + matA[6] * matB[8] + matA[7] * matB[12],
-					matA[4] * matB[1] + matA[5] * matB[5] + matA[6] * matB[9] + matA[7] * matB[13],
-					matA[4] * matB[2] + matA[5] * matB[6] + matA[6] * matB[10] + matA[7] * matB[14],
-					matA[4] * matB[3] + matA[5] * matB[7] + matA[6] * matB[11] + matA[7] * matB[15],//row 2
+		var mainFragmentSource = `
+		    precision highp float;
+		    uniform sampler2D main_texture;
+			uniform vec3 colors[4];
+		    uniform vec3 overlay_color;
+			uniform bool back_light[4];
+			uniform bool overlay[3];
+			uniform vec3 light_direction;
+			vec3 surface_to_Eye;
+			vec3 halfV;
+			vec4 data;
+			vec3 out_color;
+			vec3 _light_direction;// Because we can't normalize a uniform
+		    varying vec2 _main_uv;
+			varying vec3 _fragment_position;
+			varying vec3 _normal;
+		    void main(void){
+				// Calculate specular light levels
+				surface_to_Eye = normalize(-_fragment_position);
+				halfV = normalize(normalize(-light_direction) + surface_to_Eye);
+				float spec = max(pow(dot(normalize(_normal), halfV), 1000.0), 0.0);
 
-					matA[8] * matB[0] + matA[9] * matB[4] + matA[10] * matB[8] + matA[11] * matB[12],
-					matA[8] * matB[1] + matA[9] * matB[5] + matA[10] * matB[9] + matA[11] * matB[13],
-					matA[8] * matB[2] + matA[9] * matB[6] + matA[10] * matB[10] + matA[11] * matB[14],
-					matA[8] * matB[3] + matA[9] * matB[7] + matA[10] * matB[11] + matA[11] * matB[15],//row 3
+				// Calculate regular light level
+				_light_direction = -normalize(light_direction);
+				float light_level = max(dot(_light_direction, normalize(_normal)), 0.2);
 
-					matA[12] * matB[0] + matA[13] * matB[4] + matA[14] * matB[8] + matA[15] * matB[12],
-					matA[12] * matB[1] + matA[13] * matB[5] + matA[14] * matB[9] + matA[15] * matB[13],
-					matA[12] * matB[2] + matA[13] * matB[6] + matA[14] * matB[10] + matA[15] * matB[14],
-					matA[12] * matB[3] + matA[13] * matB[7] + matA[14] * matB[11] + matA[15] * matB[15]  //row 4
-					];
-
-					return matC;
+				if(light_level <= 0.0){
+					// Don't do specular light if there is no light
+					spec = 0.0;
 				}
-			},
-			Mat3Multiply: function (matA, matB) {
-				//multiplies 2 3X3 matricies returns matrix
-				if (matA.length !== 9 || matB.length !== 9) {
-					return [];
+
+		        data = texture2D(main_texture, _main_uv);
+				// Red and green identify the side 0, 0 being no side
+				if(data.r == 0.0 && data.g == 0.0){
+					if(back_light[3]){
+						out_color = colors[3];
+					}else{
+						out_color = colors[3] * light_level + vec3(spec);
+					}
+
+				} else if(data.r > 0.0 && data.g == 0.0){
+
+					if(back_light[0]){
+						out_color = colors[0];
+					}else{
+						out_color = colors[0] * light_level + vec3(spec);
+
+						if(overlay[0]){
+							out_color *= overlay_color;
+						}
+					}
+
+				} else if(data.r == 0.0 && data.g > 0.0){
+
+					if(back_light[1]){
+						out_color = colors[1];
+					}else{
+						out_color = colors[1] * light_level + vec3(spec);
+
+						if(overlay[1]){
+							out_color *= overlay_color;
+						}
+					}
+
 				} else {
-					var matC = [matA[0] * matB[0] + matA[1] * matB[3] + matA[2] * matB[6],
-					matA[0] * matB[1] + matA[1] * matB[4] + matA[2] * matB[7],
-					matA[0] * matB[2] + matA[1] * matB[5] + matA[2] * matB[8],//row 1
-					matA[3] * matB[0] + matA[4] * matB[3] + matA[5] * matB[6],
-					matA[3] * matB[1] + matA[4] * matB[4] + matA[5] * matB[7],
-					matA[3] * matB[2] + matA[4] * matB[5] + matA[5] * matB[8],//row 2
-					matA[6] * matB[0] + matA[7] * matB[3] + matA[8] * matB[6],
-					matA[6] * matB[1] + matA[7] * matB[4] + matA[8] * matB[7],
-					matA[6] * matB[2] + matA[7] * matB[5] + matA[8] * matB[8]//row 3
-					];
+
+					if(back_light[2]){
+						out_color = colors[2];
+					}else{
+						out_color = colors[2] * light_level + vec3(spec);
+
+						if(overlay[2]){
+							out_color *= overlay_color;
+						}
+					}
+
 				}
-				return matC;
-			},
-			Mat3Inverse: function (matA) {
-				var matB = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-				var det = this.Mat3Determinant(matA);
-				if (det != 0) {
-					det = 1 / det;
-					matB = [det * (matA[4] * matA[8] - matA[5] * matA[7]), -det * (matA[1] * matA[8] - matA[2] * matA[7]), det * (matA[1] * matA[5] - matA[2] * matA[4]),
-					-det * (matA[3] * matA[8] - matA[5] * matA[6]), det * (matA[0] * matA[8] - matA[2] * matA[6]), -det * (matA[0] * matA[5] - matA[2] * matA[3]),
-					det * (matA[3] * matA[7] - matA[4] * matA[6]), -det * (matA[0] * matA[7] - matA[1] * matA[6]), det * (matA[0] * matA[4] - matA[1] * matA[3])];
-				}
-				return matB;
-			},
-			Mat3Determinant: function (matA) {//[0 1 2
-				//  3 4 5
-				//6 7 8]
-				if (matA.length == 9) {
-					return (matA[0] * (matA[4] * matA[8] - matA[5] * matA[7]) - matA[1] * (matA[3] * matA[8] - matA[5] * matA[6]) + matA[2] * (matA[3] * matA[7] - matA[4] * matA[6]));
+
+		        gl_FragColor = vec4(out_color , 1.0);  
+		    }
+		     `;
+
+		
+		var debugFragmentSource = `
+		    precision highp float;
+		    uniform sampler2D main_texture;
+		    varying vec2 _uv;
+		    void main(void){
+		      gl_FragColor = texture2D(main_texture, _uv);
+		    }
+		     `;
+
+		var debugAttributes = ["point","uv"];
+		var debugUniforms = [{name:"main_texture",type:"1i"}]
+
+		var debugVertexSource = `
+		    attribute vec2 point;
+			attribute vec2 uv;
+		    varying vec2 _uv;
+		    void main(void){
+				_uv = uv;
+		        gl_Position = vec4(point,-1.0,1.0);
+		    }
+		    `;
+
+		
+		var mapVertexSource = `
+		    uniform mat4 model_matrix;
+		    uniform mat4 perspective_matrix;
+		    attribute vec3 point;
+			attribute vec2 uv;
+		    varying vec2 _uv;
+		    void main(void){
+				_uv = uv;
+		        gl_Position = perspective_matrix * model_matrix * vec4(point, 1.0);
+		    }
+		    `;
+		var mapAttributes = ["point", "uv"];
+		var mapUniforms = [
+			{
+				name:"model_matrix",
+				type:"matrix4fv"
+			},{
+				name:"perspective_matrix",
+				type:"matrix4fv"
+			},{
+				name:"main_texture",
+				type:"1i"
+			},{
+				name:"id_colors",
+				type:"3fv"
+			}];
+
+		var mapFragmentSource =`
+		    precision highp float;
+		    uniform vec3 id_colors[4];
+		    uniform sampler2D main_texture;
+		    varying vec2 _uv;
+			vec4 data;
+			vec3 out_color;
+			void main(void){
+		        data = texture2D(main_texture, _uv);
+				// Red and green identify the side 0, 0 being no side
+				if(data.r == 0.0 && data.g == 0.0){
+						out_color = id_colors[3];
+
+				} else if(data.r > 0.0 && data.g == 0.0){
+						out_color = id_colors[0];
+
+				} else if(data.r == 0.0 && data.g > 0.0){
+						out_color = id_colors[1];
 				} else {
+						out_color = id_colors[2];
+				}
+		        gl_FragColor = vec4(out_color, 1.0);  
+		    }
+		     `;
+			 
+		
+
+		/**
+		 * @param {WebGLRenderingContext} gl 
+		 * @param {string} vertexShaderSource 
+		 * @param {string} fragmentShaderSource
+		 * @param {{name:string,type:string}[]} uniformNames
+		 * @param {string[]} attribNames
+		 */
+		function WGLProgram(gl, vertexShaderSource, fragmentShaderSource, uniformNames, attribNames){
+			
+			var vertShader = gl.createShader(gl.VERTEX_SHADER);
+			gl.shaderSource(vertShader, vertexShaderSource);
+			gl.compileShader(vertShader);
+			if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS)) {
+				throw "ERROR IN VERTEX SHADER : " + gl.getShaderInfoLog(vertShader);
+			}
+
+			var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+			gl.shaderSource(fragShader, fragmentShaderSource);
+			gl.compileShader(fragShader);
+			if (!gl.getShaderParameter(fragShader, gl.COMPILE_STATUS)) {
+				throw "ERROR IN FRAG SHADER : " + gl.getShaderInfoLog(fragShader);
+			}
+
+			var program = gl.createProgram();
+			gl.attachShader(program, vertShader);
+			gl.attachShader(program, fragShader);
+			gl.linkProgram(program);
+
+			if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+				throw "Unknown error in program";
+			}
+
+			/**
+			 * @type {{}}
+			 */
+			var attributes = {};
+
+			for(var attrib in attribNames){
+				attributes[attribNames[attrib]] = gl.getAttribLocation(program, attribNames[attrib]);
+			}
+
+			/**
+			 * @type {{}}
+			 */
+			var uniforms = {};
+
+			for(var uniform = 0; uniform < uniformNames.length; uniform++){
+				uniforms[uniformNames[uniform].name] = {u:gl.getUniformLocation(program, uniformNames[uniform].name), type:uniformNames[uniform].type.toLocaleLowerCase().trim()};
+			}
+
+			this.enableVertexArrays = function(){
+				gl.useProgram(program);
+
+				for(var attrib in attributes){
+					gl.enableVertexAttribArray(attributes[attrib]);
+				}
+			}
+
+			/**
+			 * 
+			 * @param {string} uniform 
+			 * @param {*} newValue 
+			 * @param {boolean} matTranspose 
+			 */
+			this.setUniform = function(uniform, newValue, matTranspose=false){
+				if(typeof uniforms[uniform] == "undefined"){
+					throw "Unknown uniform";
+				}
+				var uType = uniforms[uniform].type;
+				var uni = uniforms[uniform].u;
+
+				switch(uType){
+					case '1f':{
+						gl.uniform1f(uni, newValue);
+						break;
+					}
+
+					case '1fv':{
+						gl.uniform1fv(uni, newValue);
+						break;
+					}
+
+					case '2f':{
+						gl.uniform2f(uni, newValue[0], newValue[1]);
+						break;
+					}
+
+					case '2fv':{
+						gl.uniform2fv(uni, newValue);
+						break;
+					}
+
+					case '3f':{
+						gl.uniform3f(uni, newValue[0], newValue[1], newValue[2]);
+						break;
+					}
+
+					case '3fv':{
+						gl.uniform3fv(uni, newValue);
+						break;
+					}
+
+					case '4f':{
+						gl.uniform4f(uni, newValue[0], newValue[1], newValue[2], newValue[3]);
+						break;
+					}
+
+					case '4fv':{
+						gl.uniform4fv(uni, newValue);
+						break;
+					}
+
+					case '1i':{
+						gl.uniform1i(uni, newValue);
+						break;
+					}
+
+					case '1iv':{
+						gl.uniform1iv(uni, newValue);
+						break;
+					}
+
+					case '2i':{
+						gl.uniform2i(uni, newValue[0], newValue[1]);
+						break;
+					}
+
+					case '2fi':{
+						gl.uniform2iv(uni, newValue);
+						break;
+					}
+
+					case '3i':{
+						gl.uniform3i(uni, newValue[0], newValue[1], newValue[2]);
+						break;
+					}
+
+					case '3iv':{
+						gl.uniform3iv(uni, newValue);
+						break;
+					}
+
+					case '4i':{
+						gl.uniform4i(uni, newValue[0], newValue[1], newValue[2], newValue[3]);
+						break;
+					}
+
+					case '4iv':{
+						gl.uniform4iv(uni, newValue);
+						break;
+					}
+
+					case 'matrix2fv':{
+						gl.uniformMatrix2fv(uni, matTranspose, newValue);
+						break;
+					}
+					
+					case 'matrix3fv':{
+						gl.uniformMatrix3fv(uni, matTranspose, newValue);
+						break;
+					}
+
+					case 'matrix4fv':{
+						gl.uniformMatrix4fv(uni, matTranspose, newValue);
+						break;
+					}
+
+					default: {
+						if(typeof newValue == "object"){
+							// Is this an array of say, samplers? use the v for vector
+							gl.uniform1iv(uni, newValue);
+						}else{
+							// If not, just use the value as an integer
+							gl.uniform1i(uni, newValue);
+						}
+						break;
+					}
+				}
+			}
+
+			this.getProgram = function(){
+				return program;
+			}
+
+			this.use = function(){
+				gl.useProgram(program);
+			}
+
+			/**
+			 * 
+			 * @param {string} attrib 
+			 * @returns {number}
+			 */
+			this.getAttribute = function(attrib){
+				return attributes[attrib];
+			}
+
+			/**
+			 * 
+			 * @param {string} uniform 
+			 * @returns {WebGLUniformLocation}
+			 */
+			this.getUniform = function(uniform){
+				return uniforms[uniform].u;
+			}
+
+		}
+
+
+		/**
+		 * @param {{x:number,y:number,z:number}[]} vertexPositions 
+		 * @param {{u:number,v:number}[]} textureCoords 
+		 * @param {{x:number,y:number,z:number}[]} normalVectors 
+		 * @param {{vertex:number,texture:number,normal:number}[]} points
+		 * @param {number[]} faces 
+		 */
+		function Model(vertexPositions, textureCoords, normalVectors, points, faces, format=VBO_FORMAT){
+			// This will store a model and will be able to generage webGL buffers for us!
+			// It will save buffers for each webgl context should the need arise to have multiple
+			/**
+			 * @type {{gl:WebGLRenderingContext, arrayBuffer:WebGLBuffer, faceBuffer:WebGLBuffer}[]}
+			 */
+			var buffers = [];
+			var elementCount = faces.length;
+
+			/**
+			 * @param {WebGLRenderingContext} gl
+			 */
+			function createBuffers(gl){
+				// First search to see if the buffer is already defined for us
+				// format specififes how to build the arrays.
+				// v stands for the vector
+				// t for texture
+				// n for normal
+				// _ for put a 0 here for now
+				var isBuilt = false;
+
+				for(var i = 0; i < buffers.length; i++){
+					if(buffers[i].gl == gl){
+						var isBuilt = true;
+						break;
+					}
+				}
+
+				if(isBuilt){
+					// If so, return the index of the filter
+					return i;
+				}
+
+				// Now we need to build the filters
+				var vCodes = format.split(",");
+				
+				// Now to build the the vertex array buffer
+				var vertexArray = [];
+				for(var i = 0; i < points.length; i++){
+					// Loops through each vertex/point
+					for(var j = 0; j < vCodes.length; j++){
+						// Loops through each data in the code
+						switch(vCodes[j].trim().toLocaleLowerCase()){
+
+							case "vx":
+								vertexArray.push(vertexPositions[points[i].vertex].x);
+								break;
+
+							case "vy":
+								vertexArray.push(vertexPositions[points[i].vertex].y);
+								break;
+
+							case "vz":
+								vertexArray.push(vertexPositions[points[i].vertex].z);
+								break;
+
+							case "tu":
+								vertexArray.push(textureCoords[points[i].texture].u);
+								break;
+
+							case "tv":
+								vertexArray.push(textureCoords[points[i].texture].v);
+								break;
+
+							case "nx":
+								vertexArray.push(normalVectors[points[i].normal].x);
+								break;
+
+							case "ny":
+								vertexArray.push(normalVectors[points[i].normal].y);
+								break;
+
+							case "nz":
+								vertexArray.push(normalVectors[points[i].normal].z);
+								break;
+
+							default:
+								vertexArray.push(0);
+								break;
+						}
+					}
+
+				}
+
+				// buffer the data
+				var typedVertexArray = new Float32Array(vertexArray);
+				var vertexObjectBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, vertexObjectBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, typedVertexArray, gl.STATIC_DRAW);
+
+
+				// Now build the element array buffer (which should be quite easy TBH)
+				var typedElementArray = new Uint16Array(faces);
+				var elementBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
+				gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, typedElementArray, gl.STATIC_DRAW);
+
+				buffers.push({gl:gl, arrayBuffer:vertexObjectBuffer, faceBuffer:elementBuffer});
+
+				return buffers.length - 1;
+
+			}
+
+			this.getVBO = function (gl){
+				var bufferIndex = createBuffers(gl);
+				return buffers[bufferIndex].arrayBuffer;
+			}
+
+			this.getEBO = function(gl){
+				var bufferIndex = createBuffers(gl);
+				return buffers[bufferIndex].faceBuffer;
+			}
+
+			this.getElementCount = function(){
+				return elementCount;
+			}
+
+		}
+
+		// this is a simple model to create a sqaure on the screen that displays
+		// the given texture;
+		var debugModel = new Model(
+		[
+			{x:0, y:0, z:-1},
+			{x:1, y:0, z:-1},
+			{x:1, y:1, z:-1},
+			{x:0, y:1, z:-1}
+		],[
+			{u:0, v:0},
+			{u:1, v:0},
+			{u:1, v:1},
+			{u:0, v:1}
+		],[
+			{x:0,y:0,z:0}
+		],[
+			{vertex:0, texture:0, normal:0},
+			{vertex:1, texture:1, normal:0},
+			{vertex:2, texture:2, normal:0},
+			{vertex:3, texture:3, normal:0}
+		],[0, 1, 2, 0, 2, 3],
+		"vx,vy,tu,tv");
+
+		
+		/**
+		 * @param {number} r 
+		 * @param {number} g 
+		 * @param {number} b 
+		 * @param {string} name
+		 */
+		function Color(r, g, b, name=""){
+
+			var colorString = ""; // A hex version of the string
+
+			this.getColor = function(){
+				return colorString;
+			}
+
+			this.getRGB = function (){
+				return {r:r, g:g, b:b};
+			}
+
+			this.getRGBDecimal = function(){
+				return {r:r / 255, g:g / 255, b:b / 255};
+			}
+
+			this.getRGBDecimalArray = function(){
+				return [r / 255, g / 255, b / 255];
+			}
+
+			this.getName = function(){
+				return name;
+			}
+
+			/**
+			 * @param {string} newName 
+			 */
+			this.setName = function(newName){
+				name = newName;
+			}
+
+			/**
+			 * @param {number}nr
+			 * @param {number}ng
+			 * @param {number}nb
+			*/
+
+			this.setColor = function(nr, ng, nb){
+				// Clamps the numbers between 0 and 255
+				r = Math.max(0, Math.min(Math.floor(nr), 255));
+				g = Math.max(0, Math.min(Math.floor(ng), 255));
+				b = Math.max(0, Math.min(Math.floor(nb), 255));
+				// Convert to hexidecimal
+				var rs = r.toString(16);
+				var gs = g.toString(16);
+				var bs = b.toString(16);
+
+				if(rs.length == 1){
+					rs = "0" + rs;
+				}
+				if(gs.length == 1){
+					gs = "0" + gs;
+				}
+				if(bs.length == 1){
+					bs = "0" + bs;
+				}
+
+				colorString = "#" + rs + gs + bs;
+			}
+			
+			this.setColor(r, g, b);
+		}
+
+		/**
+		 * @param {number[]|number[][]} matrixArray 
+		 * @param {boolean} columnMajor 
+		 */
+		function Matrix(matrixArray, columnMajor=false){
+			// Must be a square matrix
+			
+			// Check if it is a multi dim array
+			var multiDim = (typeof matrixArray[0] == "object");
+			var mat = [];// saved in row major
+			var dim;
+
+			if(!multiDim){
+				dim = Math.sqrt(matrixArray.length);
+				if(dim % 1 != 0){
+					throw "Matrix must be square";
+				}
+				for(var row = 0; row < dim; row ++){
+					mat.push([]);
+					for(var col = 0; col < dim; col ++){
+						mat[row].push(matrixArray[row * dim + col]);
+					}
+				}
+			}else{
+				dim = matrixArray.length;
+				//@ts-ignore // It says there's an error since matrixArray[0] can be a number or an array, but .length is not on numbers
+							// but we ensure that we don't access .length unless it is an object
+				if(dim != matrixArray[0].length){
+					throw "Matrix must be square";
+				}
+				for(var row = 0; row < dim; row ++){
+					mat.push([]);
+					for(var col = 0; col < dim; col ++){
+						mat[row].push(matrixArray[row][col]);
+					}
+				}
+			}
+			// Rearange the matrix if it was given in column major order
+			if(columnMajor){
+				// row and column refer to mat's format
+				for(var row = 0; row < dim; row ++){
+					for(var col = 0; col < dim; col ++){
+						if(multiDim){
+							mat[row][col] = matrixArray[col][row];
+						}else{
+							mat[row][col] = matrixArray[col * dim + row];
+						}
+					}
+				}
+			}
+
+			/**
+			 * @param {number[][]} matA 
+			 * @param {number[][]} matB 
+			 * @param {number} row 
+			 * @param {number} col 
+			 * @returns number
+			 */
+			function dot(matA, matB, row, col){
+				// Calculates the dot product of a row and a col of 2 matricies
+				// Used in the multiply function
+				var result = 0;
+				for(var i = 0; i < dim; i++){
+					result += matA[row][i] * matB[i][col];
+				}
+				return result;
+			}
+
+
+			/**
+			 * @param {Matrix} other 
+			 */
+			this.multiply = function(other){
+				if(dim != other.getDim()){
+					throw "Matrix dimensions do not match";
+				}
+
+				/**@type {number[][]} */
+				var result = [];
+				var oMat = other.getMultiArray();
+				for(var row = 0; row < dim; row ++){
+					result.push([]);
+					for(var col = 0; col < dim; col ++){
+						result[row].push(dot(mat, oMat, row, col));
+					}
+				}
+
+				return new Matrix(result);
+			}
+			
+
+			this.getDim = function(){
+				return dim;
+			}
+
+			/**
+			 * @param {Matrix} other 
+			 */
+			this.add = function(other){
+				var oDim = other.getDim();
+				if(dim != oDim){
+					throw "Cannot add matricies of differing dimensions";
+				}
+
+				var result = other.getMultiArray();
+				for(var row = 0; row < dim; row++){
+					for(var col = 0; col < dim; col++){
+						result[row][col] += mat[row][col];
+					}
+				}
+
+				return new Matrix(result);
+			}
+
+			/**
+			 * @param {number} value 
+			 * @returns Matrix
+			 */
+			this.scale = function(value){
+				var result = Matrix.getIdenity(dim).getMultiArray();
+
+				for(var row = 0; row < dim; row ++){
+					for(var col = 0; col < dim; col ++){
+						result[row][col] = value * mat[row][col];
+					}
+				}
+
+				return new Matrix(result);
+			}
+
+
+			this.determinant = function(){
+				// calculates the determinant
+				// We will do this recursively
+				if(dim == 2){
+					return mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0];
+				}
+
+				if(dim < 2){
+					// Not sure why you need a 1x1 matrix but it is possible
 					return 0;
 				}
-			},
-			Mat2Determinant: function (matA) {
-				return matA[0] * matA[2] - matA[1] * matA[3];
-			},
-			Mat3Transpose: function (matA) {
-				return [matA[0], matA[3], matA[6],
-				matA[1], matA[4], matA[7],
-				matA[2], matA[5], matA[8]]
-			},
-			Mat4Transpose: function (matA) {
-				return [matA[0], matA[4], matA[8], matA[12],
-				matA[1], matA[5], matA[9], matA[13],
-				matA[2], matA[6], matA[10], matA[14],
-				matA[3], matA[7], matA[11], matA[15]]
-			},
-			GetModel: function (style, type, data) {
-				//creates a new VBO, IBO, and model matrix for a piece using the data varable to have the (upto) 3 color ids
-				//old model format [VBO, IBO1(side 1), IBO2(side 2), IBO3(side 3), IBO4(back model) ,matrix,style,type, index count1 (ic), ic2, ic3, ic4,tempMatrix(used for temporary transforms such as turns before they get permanately added)]
-				//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
-				if (typeof this.Models[style] == "object") {
-					var model = [0, 0, [], [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], style, type, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]];
-					if (type == 0) {
-						model[0] = new Float32Array(this.Models[style].center);
-						if (this.Models[style].centerFaces[2] === null) {//create the IBO buffer if it doesn't exist already
-							this.Models[style].centerFaces[2] = gl.createBuffer();
-							gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.Models[style].centerFaces[2]);
-							gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.Models[style].centerFaces[0]), gl.STATIC_DRAW);
-						}
-						model[1] = this.Models[style].centerFaces[2];
-						model[2] = this.Models[style].centerFaces[1];
-						for (var cl = 0; cl < this.Models[style].centerLocations.length; cl++) {//loops through all stored color location objects, could be unrolled as these should be a constant size
-							for (var ci = 0; ci < this.Models[style].centerLocations[cl].color.length; ci++) {//loops through all the color locations stored in the color location objects. Simmilar method is used for id colors
-								model[0][this.Models[style].centerLocations[cl].color[ci] + 0] = this.Colors[data[cl]][0];// Applies the color given through data
-								model[0][this.Models[style].centerLocations[cl].color[ci] + 1] = this.Colors[data[cl]][1];
-								model[0][this.Models[style].centerLocations[cl].color[ci] + 2] = this.Colors[data[cl]][2];
-							}
-						}
-					} else if (type == 1) {
-						model[0] = new Float32Array(this.Models[style].edge);
-						if (this.Models[style].edgeFaces[2] === null) {//create the IBO buffer if it doesn't exist already
 
-							this.Models[style].edgeFaces[2] = gl.createBuffer();
-							gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.Models[style].edgeFaces[2]);
-							gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.Models[style].edgeFaces[0]), gl.STATIC_DRAW);
-						}
-						model[1] = this.Models[style].edgeFaces[2];
-						model[2] = this.Models[style].edgeFaces[1];
+				// we will use the first row as our base
+				var result = 0;
 
-						for (var cl = 0; cl < this.Models[style].edgeLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[style].edgeLocations[cl].color.length; ci++) {
-								model[0][this.Models[style].edgeLocations[cl].color[ci] + 0] = this.Colors[data[cl]][0];
-								model[0][this.Models[style].edgeLocations[cl].color[ci] + 1] = this.Colors[data[cl]][1];
-								model[0][this.Models[style].edgeLocations[cl].color[ci] + 2] = this.Colors[data[cl]][2];
-							}
+				// Build a 2d array that is 1 less than our current width
+				var detMatArray = Matrix.getIdenity(dim - 1).getMultiArray(); 
+
+				for(var col = 0; col < dim; col++){
+					for(var subCol = 0; subCol < dim; subCol++){
+						if(subCol == col){
+							continue;
 						}
-					} else {
-						model[0] = new Float32Array(this.Models[style].corner);
-						if (this.Models[style].cornerFaces[2] === null) {//create the IBO buffer if it doesn't exist already
-							this.Models[style].cornerFaces[2] = gl.createBuffer();
-							gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.Models[style].cornerFaces[2]);
-							gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.Models[style].cornerFaces[0]), gl.STATIC_DRAW);
-						}
-						model[1] = this.Models[style].cornerFaces[2];
-						model[2] = this.Models[style].cornerFaces[1];
-						for (var cl = 0; cl < this.Models[style].cornerLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[style].cornerLocations[cl].color.length; ci++) {
-								model[0][this.Models[style].cornerLocations[cl].color[ci] + 0] = this.Colors[data[cl]][0];
-								model[0][this.Models[style].cornerLocations[cl].color[ci] + 1] = this.Colors[data[cl]][1];
-								model[0][this.Models[style].cornerLocations[cl].color[ci] + 2] = this.Colors[data[cl]][2];
-							}
-						}
+						var detArrayCol = subCol < col ? subCol : subCol - 1;
+						for(var subRow = 1; subRow < dim; subRow++){
+							detMatArray[subRow - 1][detArrayCol] = mat[subRow][subCol];
+						}  
 					}
-					return model;
-				} else {
-					return [new Float32Array(16), null, [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], style, type, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]];
+					var detSign = col % 2 == 0 ? 1 : -1;
+					result += detSign * mat[0][col] * new Matrix(detMatArray).determinant();
+
 				}
-			},
-			UpdateModel: function (cubie, updateType, data) {
-				//updates a model to change the color, id color, or texture
-				//update types: 0 is color, 1 is id color, 2 is texture (un used for now)
-				if (updateType == 0) {
-					if (cubie.type == CubieType.Center) {
-						for (var cl = 0; cl < this.Models[cubie.style].centerLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[cubie.style].centerLocations[cl].color.length; ci++) {
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].centerLocations[cl].color[ci]) * 4, new Float32Array(this.Colors[data[(cl + cubie.home) % (cubie.type + 1)]]));//home position shifts how the data should be read
+
+				return result;
+			}
+
+			this.inverse = function(){
+				var det = this.determinant();
+				if(det != 0){
+					return new Matrix(this.cofactors().scale(1 / det).getMultiArray(true));
+				}else{
+					return null;
+				}
+			}
+
+			this.minors = function(){
+				var result = Matrix.getIdenity(dim).getMultiArray();
+				var subMat = Matrix.getIdenity(dim - 1).getMultiArray();
+				for(var row = 0; row < dim; row++){
+					for(var col = 0; col < dim; col++){
+						for(var subCol = 0; subCol < dim; subCol++){
+							if(subCol == col){
+								continue;
 							}
+							var subMatCol = subCol < col ? subCol : subCol - 1;
+							for(var subRow = 0; subRow < dim; subRow++){
+								if(subRow == row){
+									continue;
+								}
+								var subMatRow = subRow < row ? subRow : subRow - 1;
+								subMat[subMatRow][subMatCol] = mat[subRow][subCol];
+							}  
 						}
-					} else if (cubie.type == CubieType.Edge) {
-						for (var cl = 0; cl < this.Models[cubie.style].edgeLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[cubie.style].edgeLocations[cl].color.length; ci++) {
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].edgeLocations[cl].color[ci]) * 4, new Float32Array(this.Colors[data[(cl + cubie.home) % (cubie.type + 1)]]));
+						//var detSign = col % 2 == 0 ? 1 : -1;
+						result[row][col] = new Matrix(subMat).determinant();
+					}
+				}
+				return new Matrix(result);
+			}
+
+			this.cofactors= function(){
+				var result = Matrix.getIdenity(dim).getMultiArray();
+				var subMat = Matrix.getIdenity(dim - 1).getMultiArray();
+				for(var row = 0; row < dim; row++){
+					for(var col = 0; col < dim; col++){
+						for(var subCol = 0; subCol < dim; subCol++){
+							if(subCol == col){
+								continue;
 							}
+							var subMatCol = subCol < col ? subCol : subCol - 1;
+							for(var subRow = 0; subRow < dim; subRow++){
+								if(subRow == row){
+									continue;
+								}
+								var subMatRow = subRow < row ? subRow : subRow - 1;
+								subMat[subMatRow][subMatCol] = mat[subRow][subCol];
+							}  
 						}
-					} else if (cubie.type == CubieType.Corner) {
-						for (var cl = 0; cl < this.Models[cubie.style].cornerLocations.length; cl++) {//loops through the sides
-							for (var ci = 0; ci < this.Models[cubie.style].cornerLocations[cl].color.length; ci++) {//loops through all locations on one side
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].cornerLocations[cl].color[ci]) * 4, new Float32Array(this.Colors[data[(cl + cubie.home) % (cubie.type + 1)]]));
-							}
+						var detSign = (col  + row) % 2 == 0 ? 1 : -1;
+						result[row][col] = detSign * new Matrix(subMat).determinant();
+					}
+				}
+				return new Matrix(result);
+			}
+
+			this.getMultiArray = function(columnMajor=false){
+				var result = [];
+				if(columnMajor){
+					// row and column refer to mat's format
+					for(var col = 0; col < dim; col ++){
+						result.push([]);
+						for(var row = 0; row < dim; row ++){
+								result[col].push(mat[row][col]);
 						}
 					}
-				} else if (updateType == 1) {
-					if (cubie.type == CubieType.Center) {
-						for (var cl = 0; cl < this.Models[cubie.style].centerLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[cubie.style].centerLocations[cl].id_color.length; ci++) {
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].centerLocations[cl].id_color[ci]) * 4, new Float32Array(data[(cl + cubie.home) % (cubie.type + 1)]));
-							}
-						}
-					} else if (cubie.type == CubieType.Edge) {
-						for (var cl = 0; cl < this.Models[cubie.style].edgeLocations.length; cl++) {
-							for (var ci = 0; ci < this.Models[cubie.style].edgeLocations[cl].id_color.length; ci++) {
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].edgeLocations[cl].id_color[ci]) * 4, new Float32Array(data[(cl + cubie.home) % (cubie.type + 1)]));
-							}
-						}
-					} else if (cubie.type == CubieType.Corner) {
-						for (var cl = 0; cl < this.Models[cubie.style].cornerLocations.length; cl++) {//loops through the sides
-							for (var ci = 0; ci < this.Models[cubie.style].cornerLocations[cl].id_color.length; ci++) {//loops through all locations on one side
-								gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-								gl.bufferSubData(gl.ARRAY_BUFFER, (this.Models[cubie.style].cornerLocations[cl].id_color[ci]) * 4, new Float32Array(data[(cl + cubie.home) % (cubie.type + 1)]));
-							}
+				}else{
+					// row and column refer to mat's format
+					for(var row = 0; row < dim; row ++){
+						result.push([]);
+						for(var col = 0; col < dim; col ++){
+								result[row].push(mat[row][col]);
 						}
 					}
 				}
+				return result;
+			}
 
-			},
-			MainUniforms: {
-				main_texture: -1,
-				bump_texture: -1,
-				back_color: -1,
-				light_direction: -1,
-				overlay_color: -1,
-				world_matrix: -1,
-				normal_matrix: -1,
-				model_matrix: -1,
-				perspective_matrix: -1,
-				texture_mode: -1,
-				camera_postion: -1,
-				back_light: -1
-			},
-			MapUniforms: {
-				world_matrix: -1,
-				model_matrix: -1,
-				perspective_matrix: -1
-			},
-			MainAttributes: {
-				point: -1,
-				color: -1,
-				normal: -1,
-				main_uv: -1,
-				normal_uv: -1,
-				u_bitangent: -1,
-				v_bitangent: -1
-			},
-			MapAttributes: {
-				point: -1,
-				id_color: -1
-			},
-			DebugUniforms: {
-				main_texture: -1
-			},
-			DebugAttributes: {
-				point: -1,
-				uv: -1
-			},
-			Colors: [[0.0, 0.0, 1.0], [0.901, 0.5, 0.0], [1.0, 1.0, 0.0], [1.0, 1.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],//Blue, Orange, Yellow, White,  Red, Green//b,o,y,w,r,g
-			MapRenderBuffer: null,
-			MapDepthBuffer: null,
-			MapTexture: null,//Used to access the info of map at certain coordinates
-			MapSize: 1024,
-			MainTexture: null,//Used Differently between Modes
-			BumpTexture: null,
-			MainProgram: null,
-			MapProgram: null,
-			DebugProgram: null,
+			this.getArray = function(columnMajor=false){
+				var result = [];
+				if(columnMajor){
+					// row and column refer to mat's format
+					for(var col = 0; col < dim; col ++){
+						for(var row = 0; row < dim; row ++){
+								result.push(mat[row][col]);
+						}
+					}
+				}else{
+					// row and column refer to mat's format
+					for(var row = 0; row < dim; row ++){
+						for(var col = 0; col < dim; col ++){
+								result.push(mat[row][col]);
+						}
+					}
+				}
+				return result;
+			}
+		}
+
+		/**
+		 * @param {number} dim 
+		 * @returns {Matrix}
+		 */
+		Matrix.getIdenity = function(dim){
+			var result = [];
+			for(var row = 0; row < dim; row++){
+				result.push([]);
+				for(var col = 0; col < dim; col++){
+					if(col == row){
+						result[row].push(1);
+					}else{
+						result[row].push(0);
+					}
+				}
+			}
+			return new Matrix(result);
+		}
+
+		const MAP_SIZE = 1024;
+
+		function Renderer(){
+			var canvas = document.createElement("canvas");
+			document.getElementById("canvas").appendChild(canvas);/*The div element with the id 
+				'canvas' is the holder that holds the canvas allowing
+				it to fit into the page like formating style with ease.*/
+				
 			/**@type {WebGLRenderingContext} */
-			gl: null,
-			canvas: null,
-			/**@type {RenderingContext} */
-			ct: null,
-			bct: null,
-			textureCanvas: null,
-			bumpCanvas: null,
-			MapMode: false,//Tells if we are rendering to the map or main screen.
-			RenderMode: 0,//Tells about texture info. In mode 0, if texture is black it is a sticker color, white is background color, in mode 1 alpha 0 is sicker color, else, it is the texture data. In mode 2 it just displays texture
-			LightDirection: [-0.5, -0.5, -2],
-			HightlightColor: [0.5, 0.5, 0.5],
-			BackColor: [0.9, 0.9, 0.9],
-			ErrorColor: [1.0, 0.1, 0.1],
-			ErrorAnimationColor: [0.1, 0.1, 0.1],
-			ErrorTimer: 0,
-			ErrorSpeed: 50,
-			BackFlash: false,
-			FieldOfView: 90,
-			CameraAngle: [0, 0, 0],
-			BumpImage: null,
-			SetUp: function () {
-				//sets up Webgl
-				this.HasRun = true;
-				this.canvas = document.createElement("canvas");
-				this.textureCanvas = document.createElement("canvas");
-				this.bumpCanvas = document.createElement("canvas");
-				this.canvas.width = window.innerWidth;
-				this.canvas.height = window.innerHeight;
-				document.getElementById("canvas").appendChild(this.canvas);/*The div element with the id 
-		canvas is the holder that holds the canvas allowing
-		it to fit into the page like formating style with ease.*/
-				this.gl = this.canvas.getContext("webgl", {
-					alpha: false, antialias: true
-				}) || this.canvas.getContext("experimental-webgl", {
-					alpha: false, antialias: true
-				});//gotta support that IE
-				if (this.gl == null) {
-					alert("Could not start up WebGL!\nPlease make sure you have a WebGL 1.0 enabled browser and try again!\nThis works best in Chrome.");
-					throw "Error: requested webgl context returned: " + this.gl;
-				}
-				this.textureCanvas.width = 1024;
-				this.textureCanvas.height = 1024;
-				this.ct = this.textureCanvas.getContext("2d");
-				this.ct.fillStyle = "black";
-				this.ct.strokeStyle = "white";
-				this.ct.lineWidth = 100;
-				this.ct.lineJoin = "round";
-				this.ct.fillRect(0, 0, 1024, 1024)
-				this.ct.strokeRect(0, 0, 1024, 1024);
+			// @ts-ignore // it has a problem with this statement as getContext() can return a 2d context
+			var gl = canvas.getContext("webgl", {
+				alpha: false, antialias: true
+			}) || canvas.getContext("experimental-webgl", {
+				alpha: false, antialias: true
+			});//gotta support that IE
 
-				this.bumpCanvas.width = 1024;
-				this.bumpCanvas.height = 1024;
-				this.bct = this.bumpCanvas.getContext("2d");
-				this.bct.fillStyle = "rgb(128,128,255)";
-				this.bct.fillRect(0, 0, 1024, 1024)
+			if(gl == undefined || gl == null){
+				throw "Failed to start webGL";
+			}
 
-				/*
-				for(var x= 0;x<32;x++){
-					for(var y= 0;y<32;y++){
-						this.bct.fillStyle = "rgb("+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*36+109)+","+Math.floor(Math.random()*128+128)+")";
-						
-						this.bct.fillRect(x*32,y*32,32,32);
-					}
-				}//*/
-				for (var i = 0; i < 500; i++) {
-					this.bct.fillStyle = "rgb(" + Math.floor(Math.random() * 256) + "," + Math.floor(Math.random() * 256) + ",255)";
-					this.bct.beginPath();
-					this.bct.fillRect(Math.floor(Math.random() * 1024) + 60, Math.floor(Math.random() * 1024) + 60, 10, 10)
-				}
-				this.bct.strokeStyle = "rgb(128,128,255)";
-				this.bct.lineWidth = 100;
-				this.bct.lineJoin = "round";
-				this.bct.strokeRect(0, 0, 1024, 1024);
-				//*
-				this.bct.lineWidth = 1;
-				this.bct.strokeStyle = "rgb(128,0,255)";
-				this.bct.beginPath();
-				this.bct.moveTo(60, 60);
-				this.bct.lineTo(964, 60);
-				this.bct.stroke();
-				this.bct.strokeStyle = "rgb(128,255,255)";
-				this.bct.beginPath();
-				this.bct.moveTo(60, 964);
-				this.bct.lineTo(964, 964);
-				this.bct.stroke();
-				this.bct.strokeStyle = "rgb(255,128,255)";
-				this.bct.beginPath();
-				this.bct.moveTo(964, 60);
-				this.bct.lineTo(964, 964);
-				this.bct.stroke();
-				this.bct.strokeStyle = "rgb(0,128,255)";
-				this.bct.beginPath();
-				this.bct.moveTo(60, 60);
-				this.bct.lineTo(60, 964);
-				this.bct.stroke();
+			var mainProgram = new WGLProgram(gl, mainVertexSource, mainFragmentSource, mainUniforms, mainAttributes);
+			var mapProgram = new WGLProgram(gl, mapVertexSource, mapFragmentSource, mapUniforms, mapAttributes);
+			var debugProgram = new WGLProgram(gl, debugVertexSource, debugFragmentSource, debugUniforms, debugAttributes);
+			mainProgram.enableVertexArrays();
+			mapProgram.enableVertexArrays();
+			debugProgram.enableVertexArrays();
+			gl.clearColor(0.0, 1.0, 0.0, 1.0);
+			gl.enable(gl.DEPTH_TEST);
+			gl.depthFunc(gl.LEQUAL);
+			gl.clearDepth(1.0);
+			gl.enable(gl.CULL_FACE);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+			var lightDirection = [-0.5, -0.5, -2];
+			var highLightColor = new Color(128, 128, 128, "Grey");
+			var bgColor = new Color(10, 10, 10, "Black");
+			var errorAnimationColor = new Color(10, 10, 10); // used for the red flashing
+			var errorColor = new Color(255, 0, 0, "Red");
+			var errorTimer = 0;
+			var errorAnimationSpeed = 50;
+			var backFlashing = false;
+			const MAP_SIZE = 1024;
 
-				//*/
-				//	this.bumpImage = new Image(); Removed as I don't own these textures and should no use them for now
-				//this.bumpImage.src = "vpZuv.png";
-				//*/
-				/*
-				this.bumpImage.onload = function(){
-					gl.useProgram(Renderer.MainProgram);
-					gl.activeTexture(gl.TEXTURE2);
-						if(!Renderer.BumpTexture){
-							
-							Renderer.BumpTexture = gl.createTexture();
-						}
-						Renderer.bct.drawImage(Renderer.bumpImage,50,50,924,924);
-						gl.bindTexture(gl.TEXTURE_2D, Renderer.BumpTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Renderer.bumpCanvas);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-						gl.generateMipmap(gl.TEXTURE_2D);
-						
-						gl.uniform1i(Renderer.MainUniforms.bump_texture,2);
-				};//*/
-				gl = this.gl;//so I don't have to keep calling it this.gl
-				gl.clearColor(0.0, 0.0, 0.0, 1.0);
-				gl.enable(gl.DEPTH_TEST);
-				gl.depthFunc(gl.LEQUAL);
-				gl.clearDepth(1.0);
-				gl.enable(gl.CULL_FACE);
-				this.Clear();
+			// Set up the textures, starting with the map
+			gl.activeTexture(gl.TEXTURE0);
+			
+			var mapTexture = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, mapTexture);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, MAP_SIZE, MAP_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+			
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-				//set up the programs.
+			var mapFrameBuffer = gl.createFramebuffer();
+			gl.bindFramebuffer(gl.FRAMEBUFFER, mapFrameBuffer);
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, mapTexture, 0);
+			var mapDepthBuffer = gl.createRenderbuffer();
+			gl.bindRenderbuffer(gl.RENDERBUFFER, mapDepthBuffer);
 
-				//Main program
-				mainVertexShader = gl.createShader(gl.VERTEX_SHADER);
-				gl.shaderSource(mainVertexShader, mainVertexSource);
-				gl.compileShader(mainVertexShader);
-				if (!gl.getShaderParameter(mainVertexShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN MAIN VERTEX SHADER : " + gl.getShaderInfoLog(mainVertexShader));
-					throw "ERROR IN MAIN VERTEX SHADER : " + gl.getShaderInfoLog(mainVertexShader);
-				}
-
-				mainFragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-				gl.shaderSource(mainFragmentShader, mainFragmentSource);
-				gl.compileShader(mainFragmentShader);
-				if (!gl.getShaderParameter(mainFragmentShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN MAIN FRAGMENT SHADER : " + gl.getShaderInfoLog(mainFragmentShader));
-					throw "ERROR IN MAIN FRAGMENT SHADER : " + gl.getShaderInfoLog(mainFragmentShader);
-				}
-
-				this.MainProgram = gl.createProgram();
-				gl.attachShader(this.MainProgram, mainVertexShader);
-				gl.attachShader(this.MainProgram, mainFragmentShader);
-				gl.linkProgram(this.MainProgram);
-
-
-				this.MainUniforms.main_texture = gl.getUniformLocation(this.MainProgram, "main_texture");
-				this.MainUniforms.bump_texture = gl.getUniformLocation(this.MainProgram, "bump_texture");
-				this.MainUniforms.back_color = gl.getUniformLocation(this.MainProgram, "back_color");
-				this.MainUniforms.light_direction = gl.getUniformLocation(this.MainProgram, "light_direction");
-				this.MainUniforms.overlay_color = gl.getUniformLocation(this.MainProgram, "overlay_color");
-				this.MainUniforms.world_matrix = gl.getUniformLocation(this.MainProgram, "world_matrix");
-				this.MainUniforms.normal_matrix = gl.getUniformLocation(this.MainProgram, "normal_matrix");
-				this.MainUniforms.model_matrix = gl.getUniformLocation(this.MainProgram, "model_matrix");
-				this.MainUniforms.perspective_matrix = gl.getUniformLocation(this.MainProgram, "perspective_matrix");
-				this.MainUniforms.texture_mode = gl.getUniformLocation(this.MainProgram, "texture_mode");
-				this.MainUniforms.camera_postion = gl.getUniformLocation(this.MainProgram, "camera_position");
-				this.MainUniforms.back_light = gl.getUniformLocation(this.MainProgram, "backLight");
-
-				this.MainAttributes.point = gl.getAttribLocation(this.MainProgram, "point");
-				this.MainAttributes.color = gl.getAttribLocation(this.MainProgram, "color");
-				this.MainAttributes.normal = gl.getAttribLocation(this.MainProgram, "normal");
-				this.MainAttributes.u_bitangent = gl.getAttribLocation(this.MainProgram, "u_bitangent");
-				this.MainAttributes.v_bitangent = gl.getAttribLocation(this.MainProgram, "v_bitangent");
-				this.MainAttributes.main_uv = gl.getAttribLocation(this.MainProgram, "main_uv");
-				this.MainAttributes.normal_uv = gl.getAttribLocation(this.MainProgram, "normal_uv");
-
-
-				if (!gl.getProgramParameter(this.MainProgram, gl.LINK_STATUS)) {
-					alert("UNKNOWN ERROR IN Main PROGRAM");
-					throw "Unknown error in main program";
-				}
-				gl.useProgram(this.MainProgram);
-				for (a in this.MainAttributes) {
-					gl.enableVertexAttribArray(this.MainAttributes[a]);
-				}
-
-
-				//Map program
-				mapVertexShader = gl.createShader(gl.VERTEX_SHADER);
-				gl.shaderSource(mapVertexShader, mapVertexSource);
-				gl.compileShader(mapVertexShader);
-				if (!gl.getShaderParameter(mapVertexShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN MAP VERTEX SHADER : " + gl.getShaderInfoLog(mapVertexShader));
-					throw "ERROR IN MAP VERTEX SHADER : " + gl.getShaderInfoLog(mapVertexShader);
-				}
-
-				mapFragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-				gl.shaderSource(mapFragmentShader, mapFragmentSource);
-				gl.compileShader(mapFragmentShader);
-				if (!gl.getShaderParameter(mapFragmentShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN MAP FRAGMENT SHADER : " + gl.getShaderInfoLog(mapFragmentShader));
-					throw "ERROR IN MAP FRAGMENT SHADER : " + gl.getShaderInfoLog(mapFragmentShader);
-				}
-
-				this.MapProgram = gl.createProgram();
-				gl.attachShader(this.MapProgram, mapVertexShader);
-				gl.attachShader(this.MapProgram, mapFragmentShader);
-				gl.linkProgram(this.MapProgram);
-
-
-				this.MapUniforms.world_matrix = gl.getUniformLocation(this.MapProgram, "world_matrix");
-				this.MapUniforms.model_matrix = gl.getUniformLocation(this.MapProgram, "model_matrix");
-				this.MapUniforms.perspective_matrix = gl.getUniformLocation(this.MapProgram, "perspective_matrix");
-
-				this.MapAttributes.point = gl.getAttribLocation(this.MapProgram, "point");
-				this.MapAttributes.id_color = gl.getAttribLocation(this.MapProgram, "id_color");
-
-
-				if (!gl.getProgramParameter(this.MapProgram, gl.LINK_STATUS)) {
-					alert("UNKNOWN ERROR IN Map PROGRAM");
-					throw "Unknown error in Map program";
-				}
-				gl.useProgram(this.MapProgram);
-				for (a in this.MapAttributes) {
-					gl.enableVertexAttribArray(this.MapAttributes[a]);
-				}
-
-				//debug program
-				debugVertexShader = gl.createShader(gl.VERTEX_SHADER);
-				gl.shaderSource(debugVertexShader, debugVertexSource);
-				gl.compileShader(debugVertexShader);
-				if (!gl.getShaderParameter(debugVertexShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN debug VERTEX SHADER : " + gl.getShaderInfoLog(debugVertexShader));
-					throw "ERROR IN debug VERTEX SHADER : " + gl.getShaderInfoLog(debugVertexShader);
-				}
-
-				debugFragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-				gl.shaderSource(debugFragmentShader, debugFragmentSource);
-				gl.compileShader(debugFragmentShader);
-				if (!gl.getShaderParameter(debugFragmentShader, gl.COMPILE_STATUS)) {
-					alert("ERROR IN debug FRAGMENT SHADER : " + gl.getShaderInfoLog(debugFragmentShader));
-					throw "ERROR IN debug FRAGMENT SHADER : " + gl.getShaderInfoLog(debugFragmentShader);
-				}
-
-				this.DebugProgram = gl.createProgram();
-				gl.attachShader(this.DebugProgram, debugVertexShader);
-				gl.attachShader(this.DebugProgram, debugFragmentShader);
-				gl.linkProgram(this.DebugProgram);
-
-
-				this.DebugUniforms.main_texture = gl.getUniformLocation(this.DebugProgram, "main_texture");
-
-				this.DebugAttributes.point = gl.getAttribLocation(this.DebugProgram, "point");
-				this.DebugAttributes.uv = gl.getAttribLocation(this.DebugProgram, "uv");
-
-
-				if (!gl.getProgramParameter(this.DebugProgram, gl.LINK_STATUS)) {
-					alert("UNKNOWN ERROR IN Debug PROGRAM");
-					throw "Unknown error in Debug program";
-				}
-				gl.useProgram(this.DebugProgram);
-				for (a in this.DebugAttributes) {
-					gl.enableVertexAttribArray(this.DebugAttributes[a]);
-				}
-
-				gl.useProgram(this.MainProgram);
-				gl.activeTexture(gl.TEXTURE0);
-				this.MapTexture = gl.createTexture();
-				gl.bindTexture(gl.TEXTURE_2D, this.MapTexture);
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.MapSize, this.MapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);//This is line of code is from webgl fundamentals 
-
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-				this.MapBuffer = gl.createFramebuffer();
-				gl.bindFramebuffer(gl.FRAMEBUFFER, this.MapBuffer);
-				gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.MapTexture, 0);
-				this.MapDepthBuffer = gl.createRenderbuffer();
-				gl.bindRenderbuffer(gl.RENDERBUFFER, this.MapDepthBuffer);
-
-				// make a depth buffer and the same size as the targetTexture
-				gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.MapSize, this.MapSize);
-				gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.MapDepthBuffer);
-
-
-				this.UpdateTextures(this.textureCanvas, true);
-
-				debugVBuffer = gl.createBuffer();//convert the arrays to webgl buffers
-				gl.bindBuffer(gl.ARRAY_BUFFER, debugVBuffer);
-				gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-					0.0, 0.0, 0.0, 0.0,
-					1.0, 0.0, 1.0, 0.0,
-					1.0, 1.0, 1.0, 1.0,
-					0.0, 1.0, 0.0, 1.0]), gl.STATIC_DRAW);
-				debugEBuffer = gl.createBuffer();//convert the arrays to webgl buffers
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, debugEBuffer);
-				gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
-
-
-			},
-			SetUpMap: function (shouldClear = false) {//prepares for rendering to the map
-				gl.bindFramebuffer(gl.FRAMEBUFFER, this.MapBuffer);
-				gl.clearColor(1.0, 1.0, 1.0, 1.0);
-				if (shouldClear) {
-					this.Clear();
-				}
-				gl.viewport(0, 0, this.MapSize, this.MapSize);
-			},
-			SetUpMain: function (shouldClear = false) {//prepares for rendering to the main screen
-				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-				if (this.BackFlash) {
-					gl.clearColor(this.ErrorAnimationColor[0], this.ErrorAnimationColor[1], this.ErrorAnimationColor[2], 1.0);
-				} else {
-					gl.clearColor(0.0, 0.0, 0.0, 1.0);
-				}
-				if (shouldClear) {
-					this.Clear();
-				}
-				gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-			},
-			setAts: function (pn) {
-
-				//Attributes go point(3),color(3),normal(3),id_color(3)(used by map),main_uv(2),normal_uv(2)
-				if (pn === 0) {
-					//gl.useProgram(this.MainProgram);
-					gl.vertexAttribPointer(this.MainAttributes.point, 3, gl.FLOAT, false, 4 * 22, 0);
-					gl.vertexAttribPointer(this.MainAttributes.color, 3, gl.FLOAT, false, 4 * 22, 3 * 4);
-					gl.vertexAttribPointer(this.MainAttributes.normal, 3, gl.FLOAT, false, 4 * 22, 6 * 4);
-					gl.vertexAttribPointer(this.MainAttributes.main_uv, 2, gl.FLOAT, false, 4 * 22, 12 * 4);
-					gl.vertexAttribPointer(this.MainAttributes.normal_uv, 2, gl.FLOAT, false, 4 * 22, 14 * 4);
-					gl.vertexAttribPointer(this.MainAttributes.u_bitangent, 3, gl.FLOAT, false, 4 * 22, 16 * 4);
-					gl.vertexAttribPointer(this.MainAttributes.v_bitangent, 3, gl.FLOAT, false, 4 * 22, 19 * 4);
-				} else if (pn === 1) {
-					//gl.useProgram(this.MapProgram);
-					gl.vertexAttribPointer(this.MapAttributes.point, 3, gl.FLOAT, false, 4 * 22, 0);
-					gl.vertexAttribPointer(this.MapAttributes.id_color, 3, gl.FLOAT, false, 4 * 22, 9 * 4);
-				} else if (pn === 2) {
-					//gl.useProgram(this.DebugProgram);
-					gl.vertexAttribPointer(this.DebugAttributes.point, 2, gl.FLOAT, false, 4 * 4, 0);
-					gl.vertexAttribPointer(this.DebugAttributes.uv, 2, gl.FLOAT, false, 4 * 4, 2 * 4);
-				}
-			},
-			SetUpCamera: function () {
-				//sets up the uniforms
-
-				this.canvas.width = window.innerWidth;
-				this.canvas.height = window.innerHeight;
-				this.near = 1;
-				this.far = 100;
-				var width = gl.drawingBufferWidth;
-				var height = gl.drawingBufferHeight;
-				var f = Math.tan(Math.PI * 0.5 - 0.5 * this.FieldOfView * PR);
-				var rangeInv = 1.0 / (this.near - this.far);
-
-				var psm = [
-					f / (width / height), 0, 0, 0,
-					0, f, 0, 0,
-					0, 0, (this.near + this.far) * rangeInv, -1,
-					0, 0, this.near * this.far * rangeInv * 2, 0
-				];
-				var worldMat = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-				var t1 = [1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, trans,
-					0, 0, 0, 1];
-				var rym = [Math.cos(degy * PR), 0, -Math.sin(degy * PR), 0,
-					0, 1, 0, 0,
-				Math.sin(degy * PR), 0, Math.cos(degy * PR), 0,
-					0, 0, 0, 1];
-				var rxm = [1, 0, 0, 0,
-					0, Math.cos(degx * PR), Math.sin(degx * PR), 0,
-					0, -Math.sin(degx * PR), Math.cos(degx * PR), 0,
-					0, 0, 0, 1];
-				var rzm = [Math.cos(degz * PR), -Math.sin(degz * PR), 0, 0,
-				Math.sin(degz * PR), Math.cos(degz * PR), 0, 0,
-					0, 0, 1, 0,
-					0, 0, 0, 1];
-
-				worldMat = this.Mat4Multiply(worldMat, t1);
-				worldMat = this.Mat4Multiply(worldMat, rym);
-				worldMat = this.Mat4Multiply(worldMat, rzm);
-				worldMat = this.Mat4Multiply(worldMat, rxm);
-				//Renderer.UpdateTextures(this.textureCanvas,true);
-				this.SetUpMap(true);
-				gl.useProgram(this.MapProgram);
-				gl.uniformMatrix4fv(this.MapUniforms.world_matrix, false, Renderer.Mat4Transpose(worldMat));
-				gl.uniformMatrix4fv(this.MapUniforms.model_matrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-				gl.uniformMatrix4fv(this.MapUniforms.perspective_matrix, false, psm);
-
-				this.SetUpMain(true);
-				gl.useProgram(this.MainProgram);
-				gl.uniformMatrix4fv(this.MainUniforms.world_matrix, false, Renderer.Mat4Transpose(worldMat));
-				gl.uniformMatrix4fv(this.MainUniforms.model_matrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-				gl.uniformMatrix4fv(this.MainUniforms.perspective_matrix, false, psm);
-				gl.uniform1i(this.MainUniforms.texture_mode, this.RenderMode);
-				gl.uniform3fv(this.MainUniforms.light_direction, this.LightDirection);
-				gl.uniform3fv(this.MainUniforms.back_color, this.BackColor);
-				gl.uniform3fv(this.MainUniforms.overlay_color, this.HightlightColor);
-				gl.uniform3fv(this.MainUniforms.camera_postion, [0, 0, -trans]);
-
-
-
-			},
-			RenderCubies: function (cubies = [new VCubie(0, 0, [0, 0, 0])], mapRender = false, cubeMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) {
-				//Renders the given cubies passed in an array of objects.
-				//Must call camera Set up before using this function!
-				//set up the uniforms
-				Renderer.SetUpMain();
-
-				gl.useProgram(Renderer.MainProgram);
-				for (var c = 0; c < cubies.length; c++) {
-					//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
-					var cubie = cubies[c];
-					var modelMat = Renderer.Mat4Multiply(cubeMatrix, cubie.model[6]);
-					modelMat = Renderer.Mat4Multiply(modelMat, cubie.model[3]);
-					gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubie.model[1]);
-
-					this.setAts(0);
-					var cubeTo3 = this.Mat3Inverse([modelMat[0], modelMat[1], modelMat[2], 
-													modelMat[4], modelMat[5], modelMat[6], 
-													modelMat[8], modelMat[9], modelMat[10]
-													]);//transpose removed to send in correctly ordered value to webgl
-					gl.uniformMatrix4fv(this.MainUniforms.model_matrix, false, Renderer.Mat4Transpose(modelMat));
-					gl.uniformMatrix3fv(this.MainUniforms.normal_matrix, false, cubeTo3);
-					if (cubie.inError) {
-						gl.uniform3fv(this.MainUniforms.back_color, this.ErrorAnimationColor);
-						gl.uniform1f(this.MainUniforms.back_light, true);
-					} else {
-						gl.uniform3fv(this.MainUniforms.back_color, this.BackColor);
-
-						gl.uniform1f(this.MainUniforms.back_light, false);
-					}
-
-					for (var i = 0; i < 4; i++) {
-						if (i < cubie.type + 2) {
-
-							if (cubie.highlightedSides[i]) {
-								gl.uniform3fv(this.MainUniforms.overlay_color, this.HightlightColor);
-							} else {
-								gl.uniform3fv(this.MainUniforms.overlay_color, [1.0, 1.0, 1.0]);
-							}
-
-							/*if(mapRender){
-								Renderer.SetUpMap(false);
-								gl.uniformMatrix4fv(this.MapUniforms.model_matrix,false,Renderer.Mat4Transpose(modelMat));
-								gl.drawElements(gl.TRIANGLES, cubie.model[2][i*2+1], gl.UNSIGNED_SHORT, cubie.model[2][i*2]*2); //*2 because each number is 2 bytes
-								Renderer.SetUpMain(false);
-							}else{*/
-							//}
-
-
-							gl.drawElements(gl.TRIANGLES, cubie.model[2][i * 2 + 1], gl.UNSIGNED_SHORT, cubie.model[2][i * 2] * 2);
-
-						}
-
-
-					}
-				}
-				if (mapRender) {
-					Renderer.SetUpMap(false);
-					gl.useProgram(Renderer.MapProgram);
-					for (var c = 0; c < cubies.length; c++) {
-						//new model format [VBO,IBO(pointer),faceLocations,matrix,style,type,tempMatrix]
-						var cubie = cubies[c];
-						var modelMat = Renderer.Mat4Multiply(cubeMatrix, cubie.model[6]);
-						modelMat = Renderer.Mat4Multiply(modelMat, cubie.model[3]);
-						gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model[0]);
-						gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubie.model[1]);
-						gl.uniformMatrix4fv(this.MapUniforms.model_matrix, false, Renderer.Mat4Transpose(modelMat));
-						this.setAts(1);
-
-						for (var i = 0; i < 3; i++) {
-							if (i < cubie.type + 1) {
-								gl.drawElements(gl.TRIANGLES, cubie.model[2][i * 2 + 1], gl.UNSIGNED_SHORT, cubie.model[2][i * 2] * 2); //*2 because each number is 2 bytes
-							}
-						}//end face loop			
-					}//end cubie loop
-
-					Renderer.SetUpMain(false);
-				}//end map
-
-
-			},
-			UpdateTextures: function (source, isPOT) {
-				gl.useProgram(this.MainProgram);
+			gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, MAP_SIZE, MAP_SIZE);
+			gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, mapDepthBuffer);
+			
+			// Set up the main texture
+			var mainTexture = gl.createTexture();
+			/**
+			 * @param {HTMLCanvasElement} source 
+			 * @param {boolean} isPOT 
+			 */
+			this.updateMainTexture = function(source, isPOT){
+				gl.useProgram(mainProgram.getProgram());
 				gl.activeTexture(gl.TEXTURE1);
-				if (!this.MainTexture) {
 
-					this.MainTexture = gl.createTexture();
-				}
-				gl.bindTexture(gl.TEXTURE_2D, this.MainTexture);
+				gl.bindTexture(gl.TEXTURE_2D, mainTexture);
 				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 				if (isPOT) {
 					gl.generateMipmap(gl.TEXTURE_2D);
 				}
-				gl.uniform1i(this.MainUniforms.main_texture, 1);
+				mainProgram.setUniform("main_texture", 1);
+				gl.useProgram(mapProgram.getProgram());
+				mapProgram.setUniform("main_texture", 1);
+			}
 
-				gl.activeTexture(gl.TEXTURE2);
-				if (!this.BumpTexture) {
+			// Draw a base texture to have for rendering cubies
+			var textureCanvas = document.createElement("canvas");
+			var ctx = textureCanvas.getContext("2d");
+			textureCanvas.width  = 1024;
+			textureCanvas.height = 1024;
+			var faceSize = 512 - 20;
+				// fill in the background with black
+			ctx.fillStyle = "#000";
+			ctx.fillRect(0, 0, 1024, 1024);
+				// fill in the top left (bottom left for WebGL) with red for color 1
+			ctx.fillStyle = "#F00";
+			ctx.fillRect(10, 10, faceSize, faceSize);
+				// top right
+			ctx.fillStyle = "#0F0";
+			ctx.fillRect(512 + 10, 10, faceSize, faceSize);
+				// bottom left
+			ctx.fillStyle = "#FF0";
+			ctx.fillRect(10, 512 + 10, faceSize, faceSize);
 
-					this.BumpTexture = gl.createTexture();
-				}
-				gl.bindTexture(gl.TEXTURE_2D, this.BumpTexture);
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.bumpCanvas);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-				if (isPOT) {
-					gl.generateMipmap(gl.TEXTURE_2D);
-				}
-				gl.uniform1i(this.MainUniforms.bump_texture, 2);
-			},
-			Clear: function () {//clears the current webgl frame
+			// Now save it to our texture
+			this.updateMainTexture(textureCanvas, true);
+
+			// Camera Varibles
+			var feildOfView = 90;// In degrees
+			var camNear = 1;
+			var camFar = 1000;
+			
+			function prepareCamera(){
+				// Should only need to be called upon screen resize
+				// Update the canvas's internal height and width
+				// to match that of the screen
+				canvas.width = canvas.clientWidth;
+				canvas.height = canvas.clientHeight;
+				
+				var viewWidth = gl.drawingBufferWidth;
+				var viewHeight = gl.drawingBufferHeight;
+
+				// Calculate the slope of the view fulstrum
+				var factor = Math.tan(Math.PI * 0.5 - 0.5 * feildOfView * PR);
+				var rangeInv = 1 / (camNear - camFar);
+				// Use the above values to compute a perspective matrix
+				// Note we do not need to use the Matrix class to create this as
+				// no operations will be done in javascript to this matrix
+				var psm = [
+					factor / (viewWidth / viewHeight), 0, 0, 0,
+					0, factor, 0, 0,
+					0, 0, (camNear + camFar) * rangeInv, -1,
+					0, 0, camNear * camFar * rangeInv * 2, 0
+				];
+				
+				// Update the uniforms to this matrix in the map and main programs
+				mapProgram.use();
+				mapProgram.setUniform("perspective_matrix", psm);
+
+				mainProgram.use(); 
+				mainProgram.setUniform("perspective_matrix", psm);
+				// Update other uniforms as well
+				mainProgram.setUniform("light_direction", lightDirection);
+				mainProgram.setUniform("overlay_color", highLightColor.getRGBDecimalArray());
+				// All other uniforms will be set by the cubie rendering them
+				
+			}
+			
+			prepareCamera();
+
+			function clear(){
 				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 				gl.flush();
-			},
-			HasRun: false,
-			Models: [
-				{
-					//do not put these arrays in float 32 in this area of the code.
-					center: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+			}
 
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,//bottom
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+			this.clearAll = function(){
+				//Clears both the main screen and the map render buffer
+				prepMapRender();
+				clear();
+				prepMainRender();
+				clear();
+			}
 
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//back
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,  //front
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, //top
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, //right
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0
-					],//The pre built buffers, color is input by the Render.GetModel and UpdateModel functions
+			function prepMapRender(shouldClear=false){
+				// Set up rendering to the map buffer
+				gl.bindFramebuffer(gl.FRAMEBUFFER, mapFrameBuffer);
+				// The background of the map is white
+				gl.clearColor(1, 1, 1, 1);
+				if (shouldClear){
+					clear();
+				}
+				// Set the view port to the size of the render buffer;
+				gl.viewport(0, 0, MAP_SIZE, MAP_SIZE);
+			}
 
 
-					edge: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+			function prepMainRender(shouldClear=false){
+				// Unbind any bound framebuffer
+				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+				if(backFlashing){
+					// If we are animating the back color, load that color as the clear color
+					var c = errorAnimationColor.getRGBDecimal();
+					gl.clearColor(c.r, c.g, c.b, 1);
+				}else{
+					var c = bgColor.getRGBDecimal();
+					gl.clearColor(c.r, c.g, c.b, 1);
+				}
 
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,//bottom
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+				if (shouldClear){
+					clear();
+				}
+				// Set the view port to the size of the drawing buffer
+				gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+			}
 
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//back
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//front
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, //top
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,//right
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0
-					],
-					//Attributes go point(3),color(3),normal(3),id_color(3)(used by map),main_uv(2),normal_uv(2), vectors (6)
-
-
-					corner: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,//bottom
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//back
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//front
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, //top
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0,
-
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,//right
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0
+			/**
+			 * 
+			 * @param {WGLProgram} program 
+			 */
+			function setAtts(program){
+				if(program == mainProgram){
+					gl.vertexAttribPointer(mainProgram.getAttribute("point"), 3, gl.FLOAT, false, 4 * 8, 0);
+					gl.vertexAttribPointer(mainProgram.getAttribute("main_uv"), 2, gl.FLOAT, false, 4 * 8, 4 * 3);
+					gl.vertexAttribPointer(mainProgram.getAttribute("normal"), 3, gl.FLOAT, false, 4 * 8, 4 * 5);
+				}else if(program == mapProgram){
+					gl.vertexAttribPointer(mapProgram.getAttribute("point"), 3, gl.FLOAT, false, 4 * 8, 0);
+					gl.vertexAttribPointer(mapProgram.getAttribute("uv"), 2, gl.FLOAT, false, 4 * 8, 4 * 3);
+				}else if(program == debugProgram){
+					gl.vertexAttribPointer(debugProgram.getAttribute("point"), 2, gl.FLOAT, false, 4 * 4, 0);
+					gl.vertexAttribPointer(debugProgram.getAttribute("uv"), 2, gl.FLOAT, false, 4 * 4, 4 * 2);
+				}
+			}
 
 
-					],
-					//the mainTexture defines where the color is displayed with alpha 0.0 (when in mode 1)
-					//These are built with X- being the front main surface, Y- being the bottom and Z- being the left so defalut corners will
-					//be for the bottom left, furthest from the camera, Default edges will be left bottom, 
-					//Defalut centers will be left, The models will be on a base 1 basis where each Cubie is 1.0 by 1.0 by 1.0 large. 
-					//Cubies will range from -0.5 to 0.5 for the main part of the cubie for fitting with other parts of the cube. 
-					//Extra parts such as connectors may be added beyond this limit but will not change how the size of the cube is treated
-					//Cube will be automaticaly scaled using a scaling Matrix to fit the users screen best.
-					centerLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }],
-					edgeLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }, { color: [91, 113, 135, 157], id_color: [97, 119, 141, 163] }],
-					cornerLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }, { color: [91, 113, 135, 157], id_color: [97, 119, 141, 163] }, { color: [179, 201, 223, 245], id_color: [185, 207, 229, 251] }],//these are used to find the locations for the color and id_color inputs for each side to do a sub buffer when the colors need an update. [color:[start of color index], id_color:[19,23,ect.]]     Up to 3 color indexes are made depending on the colors the part needs 
+			/**
+			 * 
+			 * @param {VCube} cube
+			 * @param {boolean} doMapRender 
+			 */
+			this.renderCube = function(cube, doMapRender=false){
+				prepareCamera();
+				/**@type {VCubie[]} */
+				var cubies = cube.getCubies();
+				mainProgram.use();
+				prepMainRender();
+				var cubieCount = cubies.length;
+				var cubeModelMat = cube.getPosMatrix();
+				var cubeRotMat = cube.getRotMatrix();
+				var cubeScaleMat = cube.getScaleMatrix();
+				var sideRotMat = cube.getRotatingSideMat();
+				var rotatingCubies = cube.getRotatingCubies();
+				var mainCubeModelMat = cubeModelMat.multiply(cubeScaleMat).multiply(cubeRotMat);
+				var sideCubeModelMat = cubeModelMat.multiply(cubeScaleMat).multiply(cubeRotMat).multiply(sideRotMat);
+				var cubeIdColor = cube.getIdCode();
+				
+				var bg = cube.baseColor.getRGBDecimal();
+				var cubeColors = cube.colorPallet;
 
-					centerFaces: [[0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23], [0, 6, 6, 30], null],
-					edgeFaces: [[0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23], [0, 6, 6, 6, 12, 24], null],
-					cornerFaces: [[0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23], [0, 6, 6, 6, 12, 6, 18, 18], null]//separeated as to help with selecting a side to hilight when hovered over
-					//New, E buffers (Faces) are now stored in 1 buffer that is shared among ALL CUBIES of the same type and style. This will cut down memory and and more importantly, drop the number of required uploads to buffers.
-					//so instead of [[face1],[face2],[face3],[body]] it will go [[face1,face2,face3,body],[face1Start,face1length....],buffer]	
-					//the cube can be broken into 4 parts, 1 for each color (3), and then another part that is not tied to a color but still renders as part of the piece. (in the current model, this is nothing)
-				},
-				{
-					//do not put these arrays in float 32 in this area of the code.
-					center: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0
+				for(var c = 0; c < cubieCount; c++){
+					var cubie = cubies[c];
+					var modelMat;
+					if(rotatingCubies.includes(c)){
+						modelMat = sideCubeModelMat.multiply(cubie.modelMat).getArray(true);
+					}else{
+						modelMat = mainCubeModelMat.multiply(cubie.modelMat).getArray(true);
+					}
+					
+					gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model.getVBO(gl));
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubie.model.getEBO(gl));
+
+					setAtts(mainProgram);
+					mainProgram.setUniform("model_matrix", modelMat);
+					var colorsToLoad = [0, 0, 0, 0, 0, 0, 0, 0, 0, bg.r, bg.g, bg.b];
+					if(cubie.inError.includes(true)){
+						var nclr = errorAnimationColor.getRGBDecimal();
+						colorsToLoad = [0, 0, 0, 0, 0, 0, 0, 0, 0, nclr.r, nclr.g, nclr.b];
+					}
+					for (var i = 0; i < cubie.type + 1; i ++){
+						// TODO replace with color given by cube
+						var clr = cubeColors[cubie.cubie.getFace(i)].getRGBDecimal();
+						colorsToLoad[i * 3] = clr.r;
+						colorsToLoad[i * 3 + 1] = clr.g;
+						colorsToLoad[i * 3 + 2] = clr.b;
+					}
+
+					mainProgram.setUniform("colors", colorsToLoad);
+					mainProgram.setUniform("back_light", cubie.inError);
+					
+					mainProgram.setUniform("overlay", cubie.highlightedSides);
+
+					gl.drawElements(gl.TRIANGLES, cubie.model.getElementCount(), gl.UNSIGNED_SHORT, 0);
+				}
+
+				
+
+				if(!doMapRender){
+					return;
+				}
+
+				mapProgram.use();
+				prepMapRender();
+				//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+				//clear();
 
 
-					],//The pre built buffers, color is input by the Render.GetModel and UpdateModel functions
+				for(var c = 0; c < cubieCount; c++){
+					var cubie = cubies[c];
+					var modelMat;
+					if(rotatingCubies.includes(c)){
+						modelMat = sideCubeModelMat.multiply(cubie.modelMat).getArray(true);
+					}else{
+						modelMat = mainCubeModelMat.multiply(cubie.modelMat).getArray(true);
+					}
+					
+					gl.bindBuffer(gl.ARRAY_BUFFER, cubie.model.getVBO(gl));
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubie.model.getEBO(gl));
+
+					setAtts(mapProgram);
+					mapProgram.setUniform("model_matrix", modelMat);
+					var bg = bgColor.getRGBDecimal();
+					// TODO replace these colors with id colors
+					var colorsToLoad = [cubeIdColor / 255, 0, 0, cubeIdColor / 255, 0, 0, cubeIdColor / 255, 0, 0, cubeIdColor / 255, 1, 1];
+					for (var i = 0; i < cubie.type + 1; i ++){
+						colorsToLoad[i * 3 + 1] = Math.floor(cubie.dataLink[i] / 256) / 255;
+						colorsToLoad[i * 3 + 2] = cubie.dataLink[i] % 256 / 255;
+					}
+
+					mapProgram.setUniform("id_colors", colorsToLoad);
+
+					gl.drawElements(gl.TRIANGLES, cubie.model.getElementCount(), gl.UNSIGNED_SHORT, 0);	
+				}
+
+				// prepMainRender();
+
+				// debugProgram.use();
+				// gl.bindBuffer(gl.ARRAY_BUFFER, debugModel.getVBO(gl));
+				// gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, debugModel.getEBO(gl));
+				// setAtts(debugProgram);
+				// gl.drawElements(gl.TRIANGLES, debugModel.getElementCount(), gl.UNSIGNED_SHORT, 0)
+
+			}
+
+			/**
+			 * @param {number} x 
+			 * @param {number} y 
+			 */
+			this.getMapPixel = function(x, y){
+				gl.bindFramebuffer(gl.FRAMEBUFFER, mapFrameBuffer)
+				var info = new Uint8Array(4);
+				gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, info);
+				return info;
+			}
+
+			this.update = function(){
+				// Runs background animations
+				var goalC = errorColor.getRGB();
+				var origC = bgColor.getRGB();
+				errorAnimationColor.setColor(origC.r + errorTimer / 1000 * (goalC.r - origC.r), origC.g + errorTimer / 1000 * (goalC.g - origC.g), origC.b + errorTimer / 1000 * (goalC.b - origC.b));
+				errorTimer += errorAnimationSpeed;
+				if (errorTimer >= 1000) {
+					errorAnimationSpeed = -Math.abs(errorAnimationSpeed);
+				}
+				if (errorTimer <= 0) {
+					errorAnimationSpeed = Math.abs(errorAnimationSpeed);
+					backFlashing = false;
+				}
+
+			}
+
+			this.beginFlash = function(){
+				backFlashing = true;
+				errorAnimationSpeed = 50;
+				errorTimer = 0;
+			}
+			
+
+		}
 
 
-					edge: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,//bottom
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
-
-
-					],
-					//Attributes go point(3),color(3),normal(3),id_color(3)(used by map),main_uv(2),normal_uv(2), vectors (6)
-
-
-					corner: [-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,//Left
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,//bottom
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-						0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-					-0.5, -0.5, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-
-						0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,//back
-					-0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-					-0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-						0.5, 0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0
-
-
-					],
-					//the mainTexture defines where the color is displayed with alpha 0.0 (when in mode 1)
-					//These are built with X- being the front main surface, Y- being the bottom and Z- being the left so defalut corners will
-					//be for the bottom left, furthest from the camera, Default edges will be left bottom, 
-					//Defalut centers will be left, The models will be on a base 1 basis where each Cubie is 1.0 by 1.0 by 1.0 large. 
-					//Cubies will range from -0.5 to 0.5 for the main part of the cubie for fitting with other parts of the cube. 
-					//Extra parts such as connectors may be added beyond this limit but will not change how the size of the cube is treated
-					//Cube will be automaticaly scaled using a scaling Matrix to fit the users screen best.
-					centerLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }],
-					edgeLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }, { color: [91, 113, 135, 157], id_color: [97, 119, 141, 163] }],
-					cornerLocations: [{ color: [3, 25, 47, 69], id_color: [9, 31, 53, 75] }, { color: [91, 113, 135, 157], id_color: [97, 119, 141, 163] }, { color: [179, 201, 223, 245], id_color: [185, 207, 229, 251] }],//these are used to find the locations for the color and id_color inputs for each side to do a sub buffer when the colors need an update. [color:[start of color index], id_color:[19,23,ect.]]     Up to 3 color indexes are made depending on the colors the part needs 
-
-					centerFaces: [[0, 1, 2, 0, 2, 3], [0, 6, 0, 0], null],
-					edgeFaces: [[0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7], [0, 6, 6, 6, 0, 0], null],
-					cornerFaces: [[0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11], [0, 6, 6, 6, 12, 6, 0, 0], null]//separeated as to help with selecting a side to hilight when hovered over
-					//New, E buffers (Faces) are now stored in 1 buffer that is shared among ALL CUBIES of the same type and style. This will cut down memory and and more importantly, drop the number of required uploads to buffers.
-					//so instead of [[face1],[face2],[face3],[body]] it will go [[face1,face2,face3,body],[face1Start,face1length....],buffer]	
-					//the cube can be broken into 4 parts, 1 for each color (3), and then another part that is not tied to a color but still renders as part of the piece. (in the current model, this is nothing)
-				}]
-
-		};
 		var Controls = {
 			GetMouseSelection: function () {//returns info about what the mouse is over in webgl
-				var xRatio = Renderer.MapSize / window.innerWidth;
-				var yRatio = Renderer.MapSize / window.innerHeight;
+				var xRatio = MAP_SIZE / window.innerWidth;
+				var yRatio = MAP_SIZE / window.innerHeight;
 				var X = Math.floor(Controls.MouseX * xRatio);
 				var Y = Math.floor((window.innerHeight - Controls.MouseY) * yRatio);
 				var hasMessage = false;
-				gl.bindFramebuffer(gl.FRAMEBUFFER, Renderer.MapBuffer);
-				var info = new Uint8Array(4);
-
-				gl.readPixels(X, Y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, info)
-				//op.innerHTML="Cube Number: "+info[0] + ", Sticker Number: "+(info[1]*256+info[2])+", Mouse Location: "+X+" , "+Y;
+				var info = tstRender.getMapPixel(X, Y);
+				op.innerHTML="Cube Number: " + info[0] + ", Sticker Number: " + (info[1] * 256 + info[2]) + ", Mouse Location: " + X + " , " + Y;
 				if (info[0] != 255) {
 					if (!Controls.MouseIsDown) {
 						document.getElementById("cube_edit").style.cursor = "pointer";
 					} else {
 						document.getElementById("cube_edit").style.cursor = "move";
 					}
-					if (this.MouseClicked) {
+					if (this.MouseClicked && !(info[1] == 255 && info[2] == 255)) {
 						VCubeList[info[0]].changeSticker((info[1] * 256 + info[2]), selColor, true);
 					}
 					//highlight sides
-					for (var i = 0; i < VCubeList[info[0]].cubies.length; i++) {
+					var cubies = VCubeList[info[0]].getCubies();
+					for (var i = 0; i < cubies.length; i++) {
 						var disCubie = false;
-						for (var j = 0; j < VCubeList[info[0]].cubies[i].dataLink.length; j++) {
+						for (var j = 0; j < cubies[i].dataLink.length; j++) {
 
-							if (VCubeList[info[0]].cubies[i].dataLink[j] === (info[1] * 256 + info[2])) {
-								VCubeList[info[0]].cubies[i].highlightedSides[j] = true;
-								if (VCubeList[info[0]].cubies[i].inError) {
+							if (cubies[i].dataLink[j] === (info[1] * 256 + info[2])) {
+								cubies[i].highlightedSides[j] = true;
+								if (cubies[i].inError.includes(true)) {
 									hasMessage = true;
-									document.getElementById("cube_edit").title = VCubeList[info[0]].cubies[i].errorMessage;
+									document.getElementById("cube_edit").title = cubies[i].errorMessage;
 								}
 								disCubie = true;
 							} else {
-								VCubeList[info[0]].cubies[i].highlightedSides[j] = false;
+								cubies[i].highlightedSides[j] = false;
 							}
 						}
-
-						//VCubeList[info[0]].cubies[i].inError = disCubie;
 					}
 				} else {
 					if (!Controls.MouseIsDown) {
@@ -3860,7 +4230,7 @@
 			MouseClicked: false,
 			ClickTime: 200,//how long a the mouse must be down for it to no longer be a click
 			ClickTimer: null,
-			SelectedCube: -1,
+			SelectedCube: 0,
 			SetUp: function () {
 				document.getElementById("cube_edit").addEventListener("mousemove", Controls.MouseMove);
 				document.getElementById("cube_edit").addEventListener("mouseout", Controls.MouseUp);
@@ -3947,24 +4317,20 @@
 					Controls.OldMouseX = Controls.MouseX;
 					Controls.OldMouseY = Controls.MouseY;
 
-					var rym = [Math.cos(dx * PR), 0, -Math.sin(dx * PR), 0,
+					var rym = new Matrix([Math.cos(dx * PR), 0, -Math.sin(dx * PR), 0,
 						0, 1, 0, 0,
 					Math.sin(dx * PR), 0, Math.cos(dx * PR), 0,
-						0, 0, 0, 1];
-					var rxm = [1, 0, 0, 0,
+						0, 0, 0, 1]);
+					var rxm = new Matrix([1, 0, 0, 0,
 						0, Math.cos(dy * PR), Math.sin(dy * PR), 0,
 						0, -Math.sin(dy * PR), Math.cos(dy * PR), 0,
-						0, 0, 0, 1];
-					var tMat = Renderer.Mat4Multiply(rym, rxm);
-					VCubeList[Controls.SelectedCube].model_matrix = Renderer.Mat4Multiply(tMat, VCubeList[Controls.SelectedCube].model_matrix);
+						0, 0, 0, 1]);
+					var tMat = rym.multiply(rxm);
+					VCubeList[Controls.SelectedCube].addRotMat(tMat);
 					document.getElementById("cube_edit").style.cursor = "move";
 				}
 			}
 
-		};
-		var ScoreMethods = {
-			Surface: 0,
-			Piece: 0
 		};
 
 		function CubeNode(data=new CubeData(), cubeId=-1, algorithmStorage=data==null?null:new AlgorithmStorage(data.getCubeSize(), 0), algIds=[-1], cubeScore=-1, totalPoints=Infinity){
@@ -3981,8 +4347,17 @@
 			this.last = null;
 		}
 
-		CubeNode.insertAfter = function(nodeInList=new CubeNode(), newNode=new CubeNode()){
+		/**
+		 * @param {CubeNode}nodeInList 
+		 * @param {CubeNode}newNode
+		 * */
+		CubeNode.insertAfter = function(nodeInList, newNode){
+			// Inserts a node after a specified node. 
+			// Returns true if it was successful or
+			// returns false if either the node in the list or the node 
+			// we are inserting after it are null
 			if(nodeInList == null || newNode == null){
+				// There was nothing to insert or there was nothing to insert into
 				return false;
 			}
 			var tmpSave = nodeInList.next;
@@ -3996,8 +4371,17 @@
 			return true;
 		}
 
-		CubeNode.insertBefore = function(nodeInList=new CubeNode(), newNode=new CubeNode()){
+		/**
+		 * @param {CubeNode}nodeInList 
+		 * @param {CubeNode}newNode
+		 * */
+		CubeNode.insertBefore = function(nodeInList, newNode){
+			// Inserts a node before a specified node. 
+			// Returns true if it was successful or
+			// returns false if either the node in the list or the node 
+			// we are inserting before it are null
 			if(nodeInList == null || newNode == null){
+				// There was nothing to insert or there was nothing to insert into
 				return false;
 			}
 			var tmpSave = nodeInList.last;
@@ -4011,7 +4395,13 @@
 			return true;
 		}
 
-		CubeNode.removeNode = function(node=new CubeNode()){
+		/**
+		 * @param {CubeNode}node
+		 * */
+		CubeNode.removeNode = function(node){
+			// removes the node from the list
+			// and updates the previous and next
+			// node's accordinglly
 			if(node == null){
 				return;
 			}
@@ -4030,8 +4420,10 @@
 			}
 		}
 
-
-		function basicSuccesCallBack(algorithm=new AlgorithmStorage(), algId=0, time=0, cycles=0){
+		/**
+		 * @param {AlgorithmStorage} algorithm 
+		 */
+		function basicSuccesCallBack(algorithm, algId=0, time=0, cycles=0){
 			console.log(`Cube was solved in ${Math.round(time)} seconds and ${cycles} cycles. The algorithm is ${algorithm.getMoves(algId)}`);
 		
 		}
@@ -4055,43 +4447,51 @@
 
 			for(var i = 0; i < errors.length; i ++){
 				if(errors[i].affectedCubie != -1){
-					testCube.cubies[errors[i].affectedCubie].inError = true;
-					testCube.cubies[errors[i].affectedCubie].errorMessage = errors[i].userReadableError;
+					var cubies = testCube.getCubies();
+					cubies[errors[i].affectedCubie].inError = errors[i].affectedFaces;
+					cubies[errors[i].affectedCubie].errorMessage = errors[i].userReadableError;
 				}
 			}
-			Renderer.BackFlash = true;
-			Renderer.ErrorSpeed = Math.abs(Renderer.ErrorSpeed);
-			Renderer.ErrorTimer = 0;
+			tstRender.beginFlash();
 
 		}
 
 		function clearCubeErrors(vcube=new VCube()){
-			vcube.cubies.forEach(cubie => {
-				cubie.inError = false;
+			var cubies = vcube.getCubies();
+			cubies.forEach(cubie => {
+				cubie.inError = [false, false, false, false];
 				cubie.errorMessage = "";
 			});
 		}
+
 
 		async function solveCube(cubeData=new CubeData(), cubeNumber=0, startCallBack=basicStartCallBack, successCallBack=basicSuccesCallBack, failureCallBack=basicFailureCallBack){
 			// Functions we are going to use:
 			/** @returns {CubeNode} **/
 			function getNewNode(canRetireLastNode=false){
+				// Returns a cube node to use if possible
 				if(inactiveNode == null){
+					// Check if there are no inactive nodes to try to create a new one
 					if(totalCubeCount < MAX_CUBE_COUNT){
-
+						// Make sure we are not going over our limit on cubes
+						// If so, create a new node
 						totalCubeCount ++;
 						activeCubeCount ++;
 						return new CubeNode(cubeStorage, totalCubeCount - 1);			
 						
 					}else{
+						// If we have reached our limit on cubes and there are no inactive nodes
+						// we need to retire the last node and use it
 						if(canRetireLastNode){
 							retireLastNode();
 							return getNewNode();
 						}
+						// If retiring is not allowed, we have nothing to return.
 						return null;
 					}	
 				}else{
-					// Reuse a used node;
+					// Reuse a used node since there is an inacitve one available
+					// Yay recycling!
 					var theNode = inactiveNode;
 					inactiveNode = theNode.next;
 					activeCubeCount ++;
@@ -4104,11 +4504,17 @@
 				// Removes a node from the active list and
 				// moves it to the inactive list
 				if(node == firstNode){
+					// If this is the first node we are removing, we need to
+					// reassign wich node is the first node
 					firstNode = node.next;
 				}
+
 				CubeNode.removeNode(node);
 				var isFirstInactiveNode = !CubeNode.insertAfter(inactiveNode, node);
+
 				if(isFirstInactiveNode){
+					// If this is the first inactive node, we need to 
+					// assign it as the first inactive node.
 					inactiveNode = node;
 				}
 				activeCubeCount --;
@@ -4214,7 +4620,7 @@
 
 			}
 
-			/** @param {[CubeNode]|[]}cubeNodes **/
+			/** @param {CubeNode[]}cubeNodes **/
 			function scoreCubes(cubeNodes){
 				var results = [];
 				var cubeCount = cubeNodes.length;
@@ -4226,11 +4632,10 @@
 
 			/** 
 			 * @param {CubeNode}cubeNode 
-			 * @return {[number]}
+			 * @return {number[]}
 			 * **/
 			function getAlgorithmFromNode(cubeNode){
 				if(cubeNode == null || cubeNode.algorithmStorage == null || cubeNode.algIds.includes(-1)){
-					// @ts-ignore
 					return [];
 				}
 				var alg = [];
@@ -4238,7 +4643,6 @@
 				for(var i = 0; i < algCount; i++){
 					alg = alg.concat(cubeNode.algorithmStorage.getMoves(cubeNode.algIds[i]));
 				}
-				// @ts-ignore
 				return alg;
 			}
 
@@ -4257,6 +4661,10 @@
 				return alg;
 			}
 			
+			/**
+			 * @param {number[]}list
+			 * @param {number[]}indexList
+			 */
 			function sortList(list, indexList=[]){
 				// the list is sorted in place, the return value is a map to return the list to the original order
 				if(indexList.length != list.length){
@@ -4483,105 +4891,356 @@
 			
 		}
 
+		/**
+		 * @param {0|1|2} type 
+		 * @param {number} style 
+		 * @param {number[]} data 
+		 */
 
-
-		var Utility = {
-			ArrayMatch: function (a1, a2, reportError = false) {
-				//Error codes: 0 is mismatched length, 1 will provide a list of mismatched elements
-
-				var errors = [];
-				if (a1.length === a2.length) {
-					var length = a1.length;
-					for (var i = 0; i < length; i++) {
-						if (a1[i] != a2[i]) {
-							if (!reportError) {
-								return false;
-							} else {
-								errors.push(i);
-							}
-						}
-					}
-					if (reportError) {
-						if (errors.length === 0)
-							return [true];
-						else
-							return [false, 1, errors];
-					}
-					return true;
-				}
-				if (reportError)
-					return [false, 0];
-				return false;
-			}
+		 function VCubie(type, style, data) {
+			this.type = type;// 0 1 or 2 for center, edge or corner
+			this.style = style;// selects a model type to get
+			this.home = 0;// lets the code know which surface is defined as the "home" surface, to make coloring easier.
+			this.dataLink = [0, 0, 0];//a list of numbers stored in the cubie by the cube so it can recognize what data this cubie is linked to.
+			this.idColors = [[0, 0, 0],[0, 0, 0],[0, 0, 0]];// REMOVE, it is unused
+			this.highlightedSides = [false, false, false, false];//used for hovering and error highlights
+			this.inError = [false, false, false, false];
+			this.errorMessage = "";
+			this.cubie = new Cubie(type);
+			this.modelMat = Matrix.getIdenity(4);
+			this.model = VCubie.models[style][type];
 		}
 
-		function VCube(size=3, format=0, data=new CubeData(size, 1, format), scale=5, style=CubieStyle.Plain, model_matrix=[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], selectable=false) {
+		VCubie.models = [{
+			0:new Model(
+				[
+					{x:-0.5, y:-0.5, z:-0.5},
+					{x:-0.5, y:-0.5, z: 0.5},
+					{x:-0.5, y: 0.5, z: 0.5},
+					{x:-0.5, y: 0.5, z:-0.5},
+
+					{x: 0.5, y:-0.5, z:-0.5},
+					{x: 0.5, y:-0.5, z: 0.5},
+					{x: 0.5, y: 0.5, z: 0.5},
+					{x: 0.5, y: 0.5, z:-0.5}
+				],[
+					{u:0.0, v:0.0},
+					{u:0.5, v:0.0},
+					{u:0.5, v:0.5},
+					{u:0.0, v:0.5},
+
+					{u:1, v:1}
+
+				],[
+					{x:-1, y:0, z:0},
+					{x:0, y:-1, z:0},
+					{x:0, y:0, z:-1},
+					{x:0, y:0, z:1},
+					{x:0, y:1, z:0},
+					{x:1, y:0, z:0},
+				],[
+					{vertex:0, texture:0, normal:0},
+					{vertex:1, texture:1, normal:0},
+					{vertex:2, texture:2, normal:0},
+					{vertex:3, texture:3, normal:0},
+
+					{vertex:4, texture:4, normal:1},
+					{vertex:5, texture:4, normal:1},
+					{vertex:1, texture:4, normal:1},
+					{vertex:0, texture:4, normal:1},
+
+					{vertex:4, texture:4, normal:2},
+					{vertex:0, texture:4, normal:2},
+					{vertex:3, texture:4, normal:2},
+					{vertex:7, texture:4, normal:2},
+
+					{vertex:1, texture:4, normal:3},
+					{vertex:5, texture:4, normal:3},
+					{vertex:6, texture:4, normal:3},
+					{vertex:2, texture:4, normal:3},
+
+					{vertex:3, texture:4, normal:4},
+					{vertex:2, texture:4, normal:4},
+					{vertex:6, texture:4, normal:4},
+					{vertex:7, texture:4, normal:4},
+
+					{vertex:5, texture:4, normal:5},
+					{vertex:4, texture:4, normal:5},
+					{vertex:7, texture:4, normal:5},
+					{vertex:6, texture:4, normal:5},
+				], [0, 1, 2, 0, 2, 3,
+					4, 5, 6, 4, 6, 7,
+					8, 9,10, 8,10,11,
+					12,13,14,12,14,15,
+					16,17,18,16,18,19,
+					20,21,22,20,22,23]),
+
+				1:new Model(
+					[
+						{x:-0.5, y:-0.5, z:-0.5},
+						{x:-0.5, y:-0.5, z: 0.5},
+						{x:-0.5, y: 0.5, z: 0.5},
+						{x:-0.5, y: 0.5, z:-0.5},
+
+						{x: 0.5, y:-0.5, z:-0.5},
+						{x: 0.5, y:-0.5, z: 0.5},
+						{x: 0.5, y: 0.5, z: 0.5},
+						{x: 0.5, y: 0.5, z:-0.5}
+					],[
+						{u:0.0, v:0.0},
+						{u:0.5, v:0.0},
+						{u:0.5, v:0.5},
+						{u:0.0, v:0.5},
+	
+						{u:0.5, v:0.0},
+						{u:1.0, v:0.0},
+						{u:1.0, v:0.5},
+						{u:0.5, v:0.5},
+	
+						{u:1, v:1}
+	
+					],[
+						{x:-1, y:0, z:0},
+						{x:0, y:-1, z:0},
+						{x:0, y:0, z:-1},
+						{x:0, y:0, z:1},
+						{x:0, y:1, z:0},
+						{x:1, y:0, z:0},
+					],[
+						{vertex:0, texture:0, normal:0},
+						{vertex:1, texture:1, normal:0},
+						{vertex:2, texture:2, normal:0},
+						{vertex:3, texture:3, normal:0},
+	
+						{vertex:4, texture:4, normal:1},
+						{vertex:5, texture:5, normal:1},
+						{vertex:1, texture:6, normal:1},
+						{vertex:0, texture:7, normal:1},
+	
+						{vertex:4, texture:8, normal:2},
+						{vertex:0, texture:8, normal:2},
+						{vertex:3, texture:8, normal:2},
+						{vertex:7, texture:8, normal:2},
+	
+						{vertex:1, texture:8, normal:3},
+						{vertex:5, texture:8, normal:3},
+						{vertex:6, texture:8, normal:3},
+						{vertex:2, texture:8, normal:3},
+	
+						{vertex:3, texture:8, normal:4},
+						{vertex:2, texture:8, normal:4},
+						{vertex:6, texture:8, normal:4},
+						{vertex:7, texture:8, normal:4},
+	
+						{vertex:5, texture:8, normal:5},
+						{vertex:4, texture:8, normal:5},
+						{vertex:7, texture:8, normal:5},
+						{vertex:6, texture:8, normal:5},
+					], [0, 1, 2, 0, 2, 3,
+						4, 5, 6, 4, 6, 7,
+						8, 9,10, 8,10,11,
+						12,13,14,12,14,15,
+						16,17,18,16,18,19,
+						20,21,22,20,22,23]),
+					2:new Model(
+						[
+							{x:-0.5, y:-0.5, z:-0.5},
+							{x:-0.5, y:-0.5, z: 0.5},
+							{x:-0.5, y: 0.5, z: 0.5},
+							{x:-0.5, y: 0.5, z:-0.5},
+
+							{x: 0.5, y:-0.5, z:-0.5},
+							{x: 0.5, y:-0.5, z: 0.5},
+							{x: 0.5, y: 0.5, z: 0.5},
+							{x: 0.5, y: 0.5, z:-0.5}
+						],[
+							{u:0.0, v:0.0},
+							{u:0.5, v:0.0},
+							{u:0.5, v:0.5},
+							{u:0.0, v:0.5},
+		
+							{u:0.5, v:0.0},
+							{u:1.0, v:0.0},
+							{u:1.0, v:0.5},
+							{u:0.5, v:0.5},
+		
+							{u:0.0, v:0.5},
+							{u:0.5, v:0.5},
+							{u:0.5, v:1.0},
+							{u:0.0, v:1.0},
+		
+							{u:1, v:1}
+		
+						],[
+							{x:-1, y:0, z:0},
+							{x:0, y:-1, z:0},
+							{x:0, y:0, z:-1},
+							{x:0, y:0, z:1},
+							{x:0, y:1, z:0},
+							{x:1, y:0, z:0},
+						],[
+							{vertex:0, texture:0, normal:0},
+							{vertex:1, texture:1, normal:0},
+							{vertex:2, texture:2, normal:0},
+							{vertex:3, texture:3, normal:0},
+		
+							{vertex:4, texture:4, normal:1},
+							{vertex:5, texture:5, normal:1},
+							{vertex:1, texture:6, normal:1},
+							{vertex:0, texture:7, normal:1},
+		
+							{vertex:4, texture:8, normal:2},
+							{vertex:0, texture:9, normal:2},
+							{vertex:3, texture:10, normal:2},
+							{vertex:7, texture:11, normal:2},
+		
+							{vertex:1, texture:12, normal:3},
+							{vertex:5, texture:12, normal:3},
+							{vertex:6, texture:12, normal:3},
+							{vertex:2, texture:12, normal:3},
+		
+							{vertex:3, texture:12, normal:4},
+							{vertex:2, texture:12, normal:4},
+							{vertex:6, texture:12, normal:4},
+							{vertex:7, texture:12, normal:4},
+		
+							{vertex:5, texture:12, normal:5},
+							{vertex:4, texture:12, normal:5},
+							{vertex:7, texture:12, normal:5},
+							{vertex:6, texture:12, normal:5},
+						], [0, 1, 2, 0, 2, 3,
+							4, 5, 6, 4, 6, 7,
+							8, 9,10, 8,10,11,
+							12,13,14,12,14,15,
+							16,17,18,16,18,19,
+							20,21,22,20,22,23])
+				
+				}];
+
+
+				// size, dataStorageFormat, cubeData, cubeNumber, selectable, scale, pos, style 
+		function VCube(size=3, dataStorageFormat=0, cubeData=new CubeData(size, 1, dataStorageFormat), cubeNumber=0, selectable=true, scale=1, pos={x:0,y:0,z:-2*scale}, style=CubieStyle.Plain) {
 			this.size = size;//the number of cubies on the cube
-			this.scale = scale;//the physical size of the cube
-			this.format = format;
+			this.format = dataStorageFormat;
 			this.style = style;
 			this.selectable = selectable;//determines if this should render on color map for cube edits
-			this.model_matrix = model_matrix;//defines the whole cubes model matrix for positioning and such.
-			this.scale_matrix = [scale / size, 0, 0, 0,
+			this.colorPallet = [new Color(0, 0, 255, "Blue"), new Color(250, 128, 0, "Orange"), new Color(255, 255, 0, "Yellow"), new Color(255, 255, 255, "White"), new Color(255, 0, 0, "Red"), new Color(0, 255, 0, "Green")];
+			this.baseColor = new Color(200, 200, 200);
+			var scale_matrix = new Matrix([scale / size, 0, 0, 0,
 				0, scale / size, 0, 0,
 				0, 0, scale / size, 0,
-				0, 0, 0, 1];
-			this.cubies = [];
-			this.retainStartData = false;//tells if the data it has should be updated or not when rotating or if it is just visual
-			this.recording = false;//decides weither or not the rotation que should be emptied after each move.
-			this.edit = true;
-			this.timeControl = false;//tells wether or not the cube's animation is time controlled by something else such as a slider
-			this.animationTime = 0;
-			this.animationStart = 0;
-			this.rotating = false;
-			this.animationDuration = 100;
-			this.currentDegrees = 0;
-			this.targetDegrees = 0;
-			this.rotationLocations = [0, 0, 0, 0];//cos -sin sin cos
-			this.rotationMatrix = [];
-			this.rotatingCubies = [];
-			this.rotationQue = [];//saves the planned moves and previous moves if recording is set to true
-			this.quePosition = 0;//used when recording as the que is not emptied then.
-			this.idColor = VCubeList.length;//for identifying its self when clicked on for rotations and changes
+				0, 0, 0, 1]);
+			var rotMatrix = Matrix.getIdenity(4);
+			/**@type {VCubie[]} */
+			var cubies = [];
+			var retainStartData = false;//tells if the data it has should be updated or not when rotating or if it is just visual
+			var recording = false;//decides weither or not the rotation que should be emptied after each move.
+			var edit = true;
+
+			var timeControl = false;//tells wether or not the cube's animation is time controlled by something else such as a slider
+			var animationTime = 0;
+			var animationStart = 0;
+			var rotating = false;
+			var animationDuration = 100;
+			var currentDegrees = 0;
+			var targetDegrees = 0;
+
+			var rotationLocations = [0, 0, 0, 0];//cos -sin sin cos
+			var rotationMatrix = Matrix.getIdenity(4).getArray();
+			var rotatingCubies = [];
+			var rotationQue = [];//saves the planned moves and previous moves if recording is set to true
+			var quePosition = 0;//used when recording as the que is not emptied then.
+			var idColor = VCubeList.length;//for identifying its self when clicked on for rotations and changes
 			//Id color informatiton for cubies R: cube in VCubelist, G * 255 + B = sticker on cube.
-			var cubeId = 0; // Which cube in the cube data we are using.
 
 			VCubeList.push(this);
 
 			this.getCubeData = function(){
-				return data;
+				return cubeData;
 			}
 
-			this.changeScale = function (scale) {
-				this.scale = scale;
-				this.scale_matrix = [scale / this.size, 0, 0, 0,
+
+			this.getIdCode = function(){
+				return idColor;
+			}
+
+			this.changeScale = function (newScale) {
+				scale = newScale;
+				scale_matrix = new Matrix([scale / this.size, 0, 0, 0,
 					0, scale / this.size, 0, 0,
 					0, 0, scale / this.size, 0,
-					0, 0, 0, 1];
+					0, 0, 0, 1]);
 			};
-			this.changeSticker = function (stickerIndex=0, stickerValue=0, override=false) {
+
+			this.getScaleMatrix = function(){
+				return scale_matrix;
+			};
+
+			/**
+			 * @param {number} x 
+			 * @param {number} y 
+			 * @param {number} z 
+			 */
+			this.setPos = function(x, y, z){
+				pos = {x:x, y:y, z:z};
+			}
+
+			this.getPosMatrix = function(){
+				return new Matrix([1, 0, 0, pos.x,
+								   0, 1, 0, pos.y,
+								   0, 0, 1, pos.z,
+								   0, 0, 0, 1]);
+			};
+
+			this.getRotMatrix = function(){
+				return rotMatrix;
+			}
+
+			/**
+			 * 
+			 * @param {Matrix} mat 
+			 */
+			this.addRotMat = function(mat){
+				rotMatrix = mat.multiply(rotMatrix);
+			}
+
+			this.getRotatingSideMat = function(){
+				return new Matrix(rotationMatrix);
+			};
+
+			this.getCubies = function(){
+				return cubies;
+			};
+
+			this.getRotatingCubies = function(){
+				return rotatingCubies;
+			}
+
+
+
+			function changeSticker (stickerIndex=0, stickerValue=0, override=false) {
 				//sticker is a number that identifies which sticker is being changed
 				//id is what color to change the sticker to
 				//override allows the function to automatically change the format of the cube to surface type if possible to change a single sticker
 				//returns true or false to tell if it was a success or not
-				if (this.format == CubeDataType.Surface && !this.recording && this.edit) {
+				if (dataStorageFormat == CubeDataType.Surface && !recording && edit) {
 					
-					data.setStickerByIndex(stickerIndex, stickerValue, cubeId);
+					cubeData.setStickerByIndex(stickerIndex, stickerValue, cubeNumber);
 
-					this.updateColors();
+					updateColors();
 					return true;
-				} else if (this.format == CubeDataType.Piece && override && !this.recording && this.edit) {
+				} else if (dataStorageFormat == CubeDataType.Piece && override && !recording && edit) {
 					
-					data.convertStorageFormat(CubeDataType.Surface);
-					this.format = CubeDataType.Surface;
-					this.changeSticker(stickerIndex, stickerValue);
+					cubeData.convertStorageFormat(CubeDataType.Surface);
+					dataStorageFormat = CubeDataType.Surface;
+					changeSticker(stickerIndex, stickerValue);
 					return true;
 				} else {
-					if (this.format == CubeDataType.Piece && !override) {
+					if (dataStorageFormat == CubeDataType.Piece && !override) {
 						throw "Cannot change data type of cube without override enabled!";
-					} else if (this.format == CubeDataType.Compact) {
+					} else if (dataStorageFormat == CubeDataType.Compact) {
 						throw "Cannot change data type of cube from compact data!";
-					} else if (!(!this.recording && this.edit)) {
+					} else if (!(!recording && edit)) {
 						throw "Cannot edit data, cube does not have editing enabled!";
 					}
 					else {
@@ -4589,118 +5248,126 @@
 					}
 				}
 			};
-			this.updateColors = function () {//updates the colors on cubies to match that of the data, resets the cubies position as a result, should only be used on edit cubes or cubes that update the data as they go along.
-				for (var i = 0; i < this.cubies.length; i++) {
-					var c = this.cubies[i];
+
+			this.changeSticker = function(stickerIndex=0, stickerValue=0, override=false){
+				changeSticker(stickerIndex, stickerValue, override);
+			}
+
+
+			function updateColors() {//updates the colors on cubies to match that of the data, resets the cubies position as a result, should only be used on edit cubes or cubes that update the data as they go along.
+				for (var i = 0; i < cubies.length; i++) {
+					var c = cubies[i];
 					var newColors = [0, 0, 0];
 					for (var j = 0; j < c.type + 1; j++) {
 				
-						newColors[j] = data.getStickerByIndex(c.dataLink[j], cubeId);
+						newColors[j] = cubeData.getStickerByIndex(c.dataLink[j], cubeNumber);
 					}
 					c.home = 0;
-					Renderer.UpdateModel(c, 0, newColors);
+					c.cubie.setFaces(newColors);
 				}
 			};
-			this.resetCubies = function () {
+
+			this.updateColors = function () {
+				updateColors();
+			};
+
+
+			function resetCubies() {
 				// TODO Redo graphics
 				//resets the cubies back to their original positions, good for redoing stuff I guess
-				if (!this.recording && !this.retainStartData) {
-					this.updateColors();
+				if (!recording && !retainStartData) {
+					updateColors();
 				} else {
-					this.quePosition = 0;
+					quePosition = 0;
 				}
-				var baseMatrix = [
-					1, 0, 0, -this.size / 2 + 0.5,
-					0, 1, 0, -this.size / 2 + 0.5,
-					0, 0, 1, -this.size / 2 + 0.5,
+				var baseMatrix = new Matrix([
+					1, 0, 0, -size / 2 + 0.5,
+					0, 1, 0, -size / 2 + 0.5,
+					0, 0, 1, -size / 2 + 0.5,
 					0, 0, 0, 1
-				];//cube space (until it is scaled based on the scale) is represented as a size by size by size area with 0,0,0 in the middle, pieces will start in their LDB location and then rotated to the correct location
+				]);
+				//cube space (until it is scaled based on the scale) is represented as a size by size by size area with 0,0,0 in the middle, pieces will start in their LDB location and then rotated to the correct location
 				//depending on how their home is set up, a different  rotation may be used.
 				//values can be pre computed
-				var rym = [
+				var rym = new Matrix([
 					0, 0, -1, 0,
 					0, 1, 0, 0,
 					1, 0, 0, 0,
-					0, 0, 0, 1];//rotation to back
-				var rym3 = [
+					0, 0, 0, 1]);//rotation to back
+				var rym3 = new Matrix([
 					0, 0, 1, 0,
 					0, 1, 0, 0,
 					-1, 0, 0, 0,
-					0, 0, 0, 1];//rotation to front
-				var rym2 = [
+					0, 0, 0, 1]);//rotation to front
+				var rym2 = new Matrix([
 					-1, 0, 0, 0,
 					0, 1, 0, 0,
 					0, 0, -1, 0,
-					0, 0, 0, 1];//rotation to right
+					0, 0, 0, 1]);//rotation to right
 
-				var rzm = [
+				var rzm = new Matrix([
 					0, -1, 0, 0,
 					1, 0, 0, 0,
 					0, 0, 1, 0,
-					0, 0, 0, 1];//rotation to bottom
-				var rzm3 = [
+					0, 0, 0, 1]);//rotation to bottom
+				var rzm3 = new Matrix([
 					0, 1, 0, 0,
 					-1, 0, 0, 0,
 					0, 0, 1, 0,
-					0, 0, 0, 1];//rotation to top
-				var rxm = 
+					0, 0, 0, 1]);//rotation to top
+				var rxm = new Matrix(
 				   [1, 0, 0, 0,
 					0, 0, 1, 0,
 					0, -1, 0, 0,
-					0, 0, 0, 1];// backwards 90deg;
-				var rxm2 = 
+					0, 0, 0, 1]);// backwards 90deg;
+				var rxm2 = new Matrix(
 				   [1, 0, 0, 0,
 					0, -1, 0, 0,
 					0, 0, -1, 0,
-					0, 0, 0, 1]; // 180;
-				var rxm3 = 
+					0, 0, 0, 1]); // 180;
+				var rxm3 = new Matrix(
 				   [1, 0, 0, 0,
 					0, 0, -1, 0,
 					0, 1, 0, 0,
-					0, 0, 0, 1]; // forwards 90deg;
-				var scaleXIndex = 3;
-				var scaleYIndex = 7;
-				var scaleZIndex = 11;
-				var translation = [
-					1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, 1,
-					0, 0, 0, 1];
-				for (var i = 0; i < this.cubies.length; i++) {
-					var actualCoords = CubeData.getCubieCoordinates(i, this.size);
-					var stickerIndexs = CubeData.getCubieFacesFromSurfaceIndex(i, this.size);
-					var contactFaces = CubeData.getTouchingFacesClockwise(actualCoords.x, actualCoords.y, actualCoords.z, this.size);
+					0, 0, 0, 1]); // forwards 90deg;
+
+				for (var i = 0; i < cubies.length; i++) {
+					var actualCoords = CubeData.getCubieCoordinates(i, size);
+					var stickerIndexs = CubeData.getCubieFaceStickerIndex(i, size);
+					var contactFaces = CubeData.getTouchingFacesClockwise(actualCoords.x, actualCoords.y, actualCoords.z, size);
 					
 					var homeFace = contactFaces[0];
 					var secondaryFace = -1;// Default
 					if(contactFaces.length > 1){
 						secondaryFace = contactFaces[1];
 					}
-					var modMat = [
+					var modMat = new Matrix([
 						1, 0, 0, 0,
 						0, 1, 0, 0,
 						0, 0, 1, 0,
-						0, 0, 0, 1];
-
-					translation[scaleZIndex] = actualCoords.z;
-					translation[scaleYIndex] = actualCoords.y;
-					translation[scaleXIndex] = actualCoords.x;
+						0, 0, 0, 1]);
 					
-					modMat = Renderer.Mat4Multiply(modMat, translation);
-					modMat = Renderer.Mat4Multiply(modMat, baseMatrix);
+					var translation = new Matrix([
+						1, 0, 0, actualCoords.x,
+						0, 1, 0, actualCoords.y,
+						0, 0, 1, actualCoords.z,
+						0, 0, 0, 1]);
+					
+					modMat = modMat.multiply(translation);
+					modMat = modMat.multiply(baseMatrix);
 					switch(homeFace){
 						case CubeFace.Left:{
 							switch(secondaryFace){
 								case CubeFace.Back:{
-									modMat = Renderer.Mat4Multiply(modMat, rxm3);
+									modMat = modMat.multiply(rxm3);
 									break;
 								}
 								case CubeFace.Up:{
-									modMat = Renderer.Mat4Multiply(modMat, rxm2);
+									modMat = modMat.multiply(rxm2);
 									break;
 								}
 								case CubeFace.Front:{
-									modMat = Renderer.Mat4Multiply(modMat, rxm);
+									modMat = modMat.multiply(rxm);
 									break;
 								}
 								case CubeFace.Down:
@@ -4716,19 +5383,19 @@
 							switch(secondaryFace){
 								
 								case CubeFace.Front:{
-									modMat = Renderer.Mat4Multiply(modMat, rzm);
-									modMat = Renderer.Mat4Multiply(modMat, rxm);
+									modMat = modMat.multiply(rzm);
+									modMat = modMat.multiply(rxm);
 									break;
 								}
 								case CubeFace.Back:{
-									modMat = Renderer.Mat4Multiply(modMat, rzm);
-									modMat = Renderer.Mat4Multiply(modMat, rxm3);
+									modMat = modMat.multiply(rzm);
+									modMat = modMat.multiply(rxm3);
 									break;
 								}
 								case CubeFace.Right:
 									// Fall through;
 								default:{
-									modMat = Renderer.Mat4Multiply(modMat, rzm);
+									modMat = modMat.multiply(rzm);
 									break;
 								}
 							}
@@ -4737,17 +5404,17 @@
 						case CubeFace.Back:{
 							switch(secondaryFace){
 								case CubeFace.Up:{
-									modMat = Renderer.Mat4Multiply(modMat, rym);
-									modMat = Renderer.Mat4Multiply(modMat, rxm2);
+									modMat = modMat.multiply(rym);
+									modMat = modMat.multiply(rxm2);
 									break;
 								}
 								case CubeFace.Right:{
-									modMat = Renderer.Mat4Multiply(modMat, rym);
-									modMat = Renderer.Mat4Multiply(modMat, rxm3);
+									modMat = modMat.multiply(rym);
+									modMat = modMat.multiply(rxm3);
 									break;
 								}
 								default:{
-									modMat = Renderer.Mat4Multiply(modMat, rym);
+									modMat = modMat.multiply(rym);
 									break;
 								}
 							}
@@ -4757,17 +5424,17 @@
 						case CubeFace.Front:{
 							switch(secondaryFace){
 								case CubeFace.Up:{
-									modMat = Renderer.Mat4Multiply(modMat, rym3);
-									modMat = Renderer.Mat4Multiply(modMat, rxm2);
+									modMat = modMat.multiply(rym3);
+									modMat = modMat.multiply(rxm2);
 									break;
 								}
 								case CubeFace.Right:{
-									modMat = Renderer.Mat4Multiply(modMat, rym3);
-									modMat = Renderer.Mat4Multiply(modMat, rxm);
+									modMat = modMat.multiply(rym3);
+									modMat = modMat.multiply(rxm);
 									break;
 								}
 								default:{
-									modMat = Renderer.Mat4Multiply(modMat, rym3);
+									modMat = modMat.multiply(rym3);
 									break;
 								}
 							}
@@ -4777,12 +5444,12 @@
 						case CubeFace.Up:{
 							switch(secondaryFace){
 								case CubeFace.Right:{
-									modMat = Renderer.Mat4Multiply(modMat, rym2);
-									modMat = Renderer.Mat4Multiply(modMat, rzm3);
+									modMat = modMat.multiply(rym2);
+									modMat = modMat.multiply(rzm3);
 									break;
 								}
 								default:{
-									modMat = Renderer.Mat4Multiply(modMat, rzm3);
+									modMat = modMat.multiply(rzm3);
 									break;
 								}
 							}
@@ -4791,31 +5458,40 @@
 						
 						default:{
 							// AKA the right
-							modMat = Renderer.Mat4Multiply(modMat, rym2);
+							modMat = modMat.multiply(rym2);
 						}
 					}
 
 
-					this.cubies[i].model[3] = modMat;
+					cubies[i].modelMat = modMat;
 
 				}
 
 
 			};
+
+			this.resetCubies = function () {
+				resetCubies();
+			}
+
+
 			this.addRotation = function (layer, direction) {//adds a rotation to the que
 
-				var layerCount = AlgorithmStorage.getLayerCount(this.size);
-				this.rotationQue.push(layer + direction * layerCount);
+				var layerCount = AlgorithmStorage.getLayerCount(size);
+				rotationQue.push(layer + direction * layerCount);
 			};
-			this.rotate = function (move) {//only used to actualy rotate the data by the vCube itself, not meant to be accessed else where.
+
+
+			function rotate(move) {//only used to actualy rotate the data by the vCube itself, not meant to be accessed else where.
 				// TODO, update this to accept an algorithm or filter
 				var algStorage = new AlgorithmStorage(size, 1, 1);
 				algStorage.addAlgorithm([move]);
-				var filter = algStorage.getFilter(0, this.format);
-				filter.applyFilter(data, cubeId);
+				var filter = algStorage.getFilter(0, dataStorageFormat);
+				filter.applyFilter(cubeData, cubeNumber);
 
 			};
-			this.rotateCubies = function (move) {//updates the cubies position in the cubie list for proper coordinate selecting for animations and cube editing
+
+			function rotateCubies(move) {//updates the cubies position in the cubie list for proper coordinate selecting for animations and cube editing
 
 				//turns can be simplified into pieces that are swapped and transformed, using a lot of the cubeData utilities made previously, this should not be a hard task.
 				// TODO, allow this to accept an algorthm and an id
@@ -4826,38 +5502,40 @@
 				var destinationList;
 
 
-				destinationList = this.cubies.slice(0);
+				destinationList = cubies.slice(0);
 				var filterLength = filterData.length;
 				
-				const LocationCount = this.size ** 3 - (this.size - 2) ** 3;
+				const LocationCount = size ** 3 - (size - 2) ** 3;
 
 				for (var j = 0; j < filterLength; j++) {
 					var originLocation = filterData[j];
 					originLocation %= LocationCount;
-					destinationList[j] = this.cubies[originLocation];
+					destinationList[j] = cubies[originLocation];
 
-					var dl = CubeData.getCubieFacesFromSurfaceIndex(j, size);
-					var cubieIdData = [[this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0]];
+					var dl = CubeData.getCubieFaceStickerIndex(j, size);
+					var cubieIdData = [[idColor / 255, 0, 0], [idColor / 255, 0, 0], [idColor / 255, 0, 0]];
 					for (var i = 0; i < dl.length; i++) {
 						cubieIdData[i][1] = Math.floor(dl[i] / 256) / 255;
 						cubieIdData[i][2] = (dl[i] % 256) / 255;
 					}
 					destinationList[j].dataLink = dl;
-					Renderer.UpdateModel(destinationList[j], 1, cubieIdData);
+					destinationList[j].idColors = cubieIdData;
 				}
-				this.cubies = destinationList.slice(0);
+				cubies = destinationList.slice(0);
 
 
 			}
-			this.render = function (shouldAnimate) {
+
+
+			this.update = function (shouldAnimate=true) {
 				//shouldAnimate decides if the cube should progress its animation or not.
 
 
-				if (!this.timeControl && shouldAnimate) {//Is the cube just being moved but not controlled by an external source?
-					if (this.rotating) {
-						this.animationTime++;
-						if (this.animationTime >= this.animationDuration) {//Is the animation done?
-							this.animationTime = 0;
+				if (!timeControl && shouldAnimate) {//Is the cube just being moved but not controlled by an external source?
+					if (rotating) {
+						animationTime++;
+						if (animationTime >= animationDuration) {//Is the animation done?
+							animationTime = 0;
 
 							/*
 							var rym=[Math.cos(degy*pr),0,-Math.sin(degy*pr),0,
@@ -4873,333 +5551,305 @@
 									 0,0,1,0,
 									 0,0,0,1];
 							*/
-							this.rotationMatrix[this.rotationLocations[0]] = Math.round(Math.cos(PR * this.targetDegrees));//update the rotation matrix to reflect the goal position
-							this.rotationMatrix[this.rotationLocations[1]] = Math.round(-Math.sin(PR * this.targetDegrees));
-							this.rotationMatrix[this.rotationLocations[2]] = Math.round(Math.sin(PR * this.targetDegrees));
-							this.rotationMatrix[this.rotationLocations[3]] = Math.round(Math.cos(PR * this.targetDegrees));
-							for (var i = 0; i < this.rotatingCubies.length; i++) {
+							rotationMatrix[rotationLocations[0]] = Math.round(Math.cos(PR * targetDegrees));//update the rotation matrix to reflect the goal position
+							rotationMatrix[rotationLocations[1]] = Math.round(-Math.sin(PR * targetDegrees));
+							rotationMatrix[rotationLocations[2]] = Math.round(Math.sin(PR * targetDegrees));
+							rotationMatrix[rotationLocations[3]] = Math.round(Math.cos(PR * targetDegrees));
+							for (var i = 0; i < rotatingCubies.length; i++) {
 								//Add the rotation matrix applied through the temp matrix on the cubies to the cubies own model matrix and reset the temp matrix
-								this.cubies[this.rotatingCubies[i]].model[3] = Renderer.Mat4Multiply(this.rotationMatrix, this.cubies[this.rotatingCubies[i]].model[3]);
-								this.cubies[this.rotatingCubies[i]].model[6] = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+								cubies[rotatingCubies[i]].modelMat = new Matrix(rotationMatrix).multiply(cubies[rotatingCubies[i]].modelMat);
 
 							}
 
-							this.rotatingCubies = [];
-							this.rotateCubies(this.rotationQue[0]);
-							this.rotate(this.rotationQue[0]);
-							if (!this.recording) {
-								this.rotationQue.splice(0, 1);
+							rotatingCubies = [];
+							rotateCubies(rotationQue[0]);
+							rotate(rotationQue[0]);
+							if (!recording) {
+								rotationQue.splice(0, 1);
 							}
-							if (this.recording || this.retainStartData && this.rotationQue.length > this.quePosition + 1) {
+							if (recording || retainStartData && rotationQue.length > quePosition + 1) {
 								//Are we recording and is there more information in the que? if so don't damage the start data but start animating the next rotation
-								this.quePosition++;
+								quePosition++;
 
 								var layer;
 								var direction;
-								var isOdd = (this.size % 2 == 1);
+								var isOdd = (size % 2 == 1);
 								var plane = 0;//0 is along z value, 1 is y, 2 is x
 								var planeLocation = 0;//tells which slice of cube you are on.
-								layer = this.rotationQue[this.quePosition];
-								direction = Math.floor(layer / AlgorithmStorage.getLayerCount(this.size));//add one to this to see how many times a rotation should be done
-								layer %= AlgorithmStorage.getLayerCount(this.size);
+								layer = rotationQue[quePosition];
+								direction = Math.floor(layer / AlgorithmStorage.getLayerCount(size));//add one to this to see how many times a rotation should be done
+								layer %= AlgorithmStorage.getLayerCount(size);
 
 								if (isOdd) {
-									plane = Math.floor(layer / (this.size - 1));
-									planeLocation = layer % (this.size - 1);
-									if (planeLocation + 1 > this.size / 2) {
+									plane = Math.floor(layer / (size - 1));
+									planeLocation = layer % (size - 1);
+									if (planeLocation + 1 > size / 2) {
 										planeLocation++;
 									}
 								}
 								else {
-									plane = Math.floor(layer / this.size);
-									planeLocation = layer % this.size;
+									plane = Math.floor(layer / size);
+									planeLocation = layer % size;
 								}
-								var cl = this.cubies.length;
+								var cl = cubies.length;
 								for (var i = 0; i < cl; i++) {
 									switch(plane){
 										case 0:{
 											if (CubeData.getCubieCoordinates(i, size).x == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 										case 1:{
 											if (CubeData.getCubieCoordinates(i, size).y == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 										case 2:{
 											if (CubeData.getCubieCoordinates(i, size).z == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 									}
 								}
-								this.rotationMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+								rotationMatrix = Matrix.getIdenity(4).getArray();
 								switch (direction) {
-									case 0: this.targetDegrees = 90;
+									case 0: targetDegrees = 90;
 										break;
-									case 1: this.targetDegrees = 180;
+									case 1: targetDegrees = 180;
 										break;
-									case 2: this.targetDegrees = -90;
+									case 2: targetDegrees = -90;
 										break;
 
 								}
 								switch (plane) {
-									case 0: this.rotationLocations = [5, 6, 9, 10];
+									case 0: rotationLocations = [5, 6, 9, 10];
 										break;
-									case 1: this.rotationLocations = [0, 2, 8, 10];
-										this.targetDegrees *= -1;
+									case 1: rotationLocations = [0, 2, 8, 10];
+										targetDegrees *= -1;
 										break;
-									case 2: this.rotationLocations = [0, 1, 4, 5];
+									case 2: rotationLocations = [0, 1, 4, 5];
 										break;
 
 								}
-							} else if (this.rotationQue.length > 0) {
+							} else if (rotationQue.length > 0) {
 								//if we are not recoriding but still have some info in the que, animate and update the data as well for the next rotaion in que.
 								var layer;
 								var direction;
-								var isOdd = (this.size % 2 == 1);
+								var isOdd = (size % 2 == 1);
 								var plane = 0;//0 is along z value, 1 is y, 2 is x
 								var planeLocation = 0;//tells which slice of cube you are on.
-								layer = this.rotationQue[0];
+								layer = rotationQue[0];
 								//this.rotate(layer);
-								direction = Math.floor(layer / AlgorithmStorage.getLayerCount(this.size));//add one to this to see how many times a rotation should be done
-								layer %= AlgorithmStorage.getLayerCount(this.size);
+								direction = Math.floor(layer / AlgorithmStorage.getLayerCount(size));//add one to this to see how many times a rotation should be done
+								layer %= AlgorithmStorage.getLayerCount(size);
 
 								if (isOdd) {
-									plane = Math.floor(layer / (this.size - 1));
-									planeLocation = layer % (this.size - 1);
-									if (planeLocation + 1 > this.size / 2) {
+									plane = Math.floor(layer / (size - 1));
+									planeLocation = layer % (size - 1);
+									if (planeLocation + 1 > size / 2) {
 										planeLocation++;
 									}
 								}
 								else {
-									plane = Math.floor(layer / this.size);
-									planeLocation = layer % this.size;
+									plane = Math.floor(layer / size);
+									planeLocation = layer % size;
 								}
-								var cl = this.cubies.length;
+								var cl = cubies.length;
 								for (var i = 0; i < cl; i++) {
 									switch(plane){
 										case 0:{
 											if (CubeData.getCubieCoordinates(i, size).x == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 										case 1:{
 											if (CubeData.getCubieCoordinates(i, size).y == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 										case 2:{
 											if (CubeData.getCubieCoordinates(i, size).z == planeLocation) {
-												this.rotatingCubies.push(i);
+												rotatingCubies.push(i);
 											}
 											break;
 										}
 									}
 								}
-								this.rotationMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+								rotationMatrix = Matrix.getIdenity(4).getArray();
 								switch (direction) {
-									case 0: this.targetDegrees = 90;
+									case 0: targetDegrees = 90;
 										break;
-									case 1: this.targetDegrees = 180;
+									case 1: targetDegrees = 180;
 										break;
-									case 2: this.targetDegrees = -90;
+									case 2: targetDegrees = -90;
 										break;
 
 								}
 								switch (plane) {
-									case 0: this.rotationLocations = [5, 6, 9, 10];
+									case 0: rotationLocations = [5, 6, 9, 10];
 										break;
-									case 1: this.rotationLocations = [0, 2, 8, 10];
-										this.targetDegrees *= -1;//for some reason this plane rotates differently causing a desync between visual and internal data
+									case 1: rotationLocations = [0, 2, 8, 10];
+										targetDegrees *= -1;//for some reason this plane rotates differently causing a desync between visual and internal data
 										break;
-									case 2: this.rotationLocations = [0, 1, 4, 5];
+									case 2: rotationLocations = [0, 1, 4, 5];
 										break;
 
 								}
 							} else {
-								this.rotating = false;
+								rotating = false;
 							}
-							this.resetCubies();
+							resetCubies();
 						} else {//if the animation is on going, update the rotation matrix for all the cubies that are affected
-							var per = this.animationTime / this.animationDuration;
-							this.currentDegrees = per * per * this.targetDegrees;
-							this.rotationMatrix[this.rotationLocations[0]] = Math.cos(PR * this.currentDegrees);
-							this.rotationMatrix[this.rotationLocations[1]] = -Math.sin(PR * this.currentDegrees);
-							this.rotationMatrix[this.rotationLocations[2]] = Math.sin(PR * this.currentDegrees);
-							this.rotationMatrix[this.rotationLocations[3]] = Math.cos(PR * this.currentDegrees);
-							for (var i = 0; i < this.rotatingCubies.length; i++) {
-								this.cubies[this.rotatingCubies[i]].model[6] = this.rotationMatrix;
-							}
+							var per = animationTime / animationDuration;
+							currentDegrees = per * per * targetDegrees;
+							rotationMatrix[rotationLocations[0]] = Math.cos(PR * currentDegrees);
+							rotationMatrix[rotationLocations[1]] = -Math.sin(PR * currentDegrees);
+							rotationMatrix[rotationLocations[2]] = Math.sin(PR * currentDegrees);
+							rotationMatrix[rotationLocations[3]] = Math.cos(PR * currentDegrees);
+							// for (var i = 0; i < rotatingCubies.length; i++) {
+							// 	// REMOVE, rotation will be applied at render time
+							// 	// cubies[rotatingCubies[i]].model[6] = rotationMatrix;
+							// }
 						}
 
-					} else if (this.rotationQue.length > 0) {//if we are not rotating right now, should we be?
-						this.rotating = true;
+					} else if (rotationQue.length > 0) {//if we are not rotating right now, should we be?
+						rotating = true;
 						var layer;
 						var direction;
-						var isOdd = (this.size % 2 == 1);
+						var isOdd = (size % 2 == 1);
 						var plane = 0;//0 is along z value, 1 is y, 2 is x
 						var planeLocation = 0;//tells which slice of cube you are on.
-						if (this.recording || this.retainStartData) {
-							layer = this.rotationQue[this.quePosition];
+						if (recording || retainStartData) {
+							layer = rotationQue[quePosition];
 						} else {
-							layer = this.rotationQue[0];
+							layer = rotationQue[0];
 							//this.rotate(layer);
 						}
-						direction = Math.floor(layer / AlgorithmStorage.getLayerCount(this.size));//add one to this to see how many times a rotation should be done
-						layer %= AlgorithmStorage.getLayerCount(this.size);
+						direction = Math.floor(layer / AlgorithmStorage.getLayerCount(size));//add one to this to see how many times a rotation should be done
+						layer %= AlgorithmStorage.getLayerCount(size);
 
 						if (isOdd) {
-							plane = Math.floor(layer / (this.size - 1));
-							planeLocation = layer % (this.size - 1);
-							if (planeLocation + 1 > this.size / 2) {
+							plane = Math.floor(layer / (size - 1));
+							planeLocation = layer % (size - 1);
+							if (planeLocation + 1 > size / 2) {
 								planeLocation++;
 							}
 						} else {
-							plane = Math.floor(layer / this.size);
-							planeLocation = layer % this.size;
+							plane = Math.floor(layer / size);
+							planeLocation = layer % size;
 						}
-						var cl = this.cubies.length;
-						this.rotatingCubies = [];
+						var cl = cubies.length;
+						rotatingCubies = [];
 						for (var i = 0; i < cl; i++) {
 							switch(plane){
 								case 0:{
 									if (CubeData.getCubieCoordinates(i, size).x == planeLocation) {
-										this.rotatingCubies.push(i);
+										rotatingCubies.push(i);
 									}
 									break;
 								}
 								case 1:{
 									if (CubeData.getCubieCoordinates(i, size).y == planeLocation) {
-										this.rotatingCubies.push(i);
+										rotatingCubies.push(i);
 									}
 									break;
 								}
 								case 2:{
 									if (CubeData.getCubieCoordinates(i, size).z == planeLocation) {
-										this.rotatingCubies.push(i);
+										rotatingCubies.push(i);
 									}
 									break;
 								}
 							}
 						}
-						this.rotationMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+						rotationMatrix = Matrix.getIdenity(4).getArray();
 						switch (direction) {
-							case 0: this.targetDegrees = 90;
+							case 0: targetDegrees = 90;
 								break;
-							case 1: this.targetDegrees = 180;
+							case 1: targetDegrees = 180;
 								break;
-							case 2: this.targetDegrees = -90;
+							case 2: targetDegrees = -90;
 								break;
 
 						}
 						switch (plane) {
-							case 0: this.rotationLocations = [5, 6, 9, 10];
+							case 0: rotationLocations = [5, 6, 9, 10];
 								break;
-							case 1: this.rotationLocations = [0, 2, 8, 10];
-								this.targetDegrees *= -1;
+							case 1: rotationLocations = [0, 2, 8, 10];
+								targetDegrees *= -1;
 								break;
-							case 2: this.rotationLocations = [0, 1, 4, 5];
+							case 2: rotationLocations = [0, 1, 4, 5];
 								break;
 
 						}
 					}
 				}
-				Renderer.RenderCubies(this.cubies, this.selectable, Renderer.Mat4Multiply(this.scale_matrix, this.model_matrix));
 			};
 			//add cubies and load colors from the data.
-			for (var x = 0; x < this.size; x++) {
-				for (var y = 0; y < this.size; y++) {
-					for (var z = 0; z < this.size; z++) {
+			for (var x = 0; x < size; x++) {
+				for (var y = 0; y < size; y++) {
+					for (var z = 0; z < size; z++) {
 						var count = CubeData.getTouchingFaces(x , y, z, size).length;
 						if (count > 0) {
 							var cubieIndex = CubeData.getCubieIndex(x, y, z, size);
-							var sides = CubeData.getCubieFacesFromSurfaceIndex(cubieIndex, size);
+							var sides = CubeData.getCubieFaceStickerIndex(cubieIndex, size);
 							
 							var cubieData = [0, 0, 0];
-							var cubieIdData = [[this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0], [this.idColor / 256, 0, 0]];
+							var cubieIdData = [[idColor / 255, 0, 0], [idColor / 255, 0, 0], [idColor / 255, 0, 0]];
 							var cubieDataLink = sides.slice(0);
 							
 							for (var i = 0; i < sides.length; i++) {
-								cubieData[i] = data.getStickerByIndex(sides[i], cubeId);
-								cubieIdData[i][1] = Math.floor(sides[i] / 256) / 255;
+								cubieData[i] = cubeData.getStickerByIndex(sides[i], cubeNumber);
+								cubieIdData[i][1] = Math.floor(sides[i] / 255) / 255;
 								cubieIdData[i][2] = (sides[i] % 256) / 255;
 							}
-							this.cubies.push(new VCubie(count - 1, this.style, cubieData));
-							Renderer.UpdateModel(this.cubies[this.cubies.length - 1], 1, cubieIdData);
-							this.cubies[this.cubies.length - 1].dataLink = cubieDataLink;
+							//@ts-ignore
+							cubies.push(new VCubie(count - 1, style, cubieData));
+							cubies[cubies.length - 1].dataLink = cubieDataLink;
 						}
 					}
 				}
 			}
-			this.resetCubies();
-
-
+			resetCubies();
 		}
-		var degx = 0;
-		var degy = 0;
-		var degz = 0;
-		var trans = -10;
+
 		var op = document.getElementById("debugOP");
-		var debugVBuffer = null;
-		var debugEBuffer = null;
 		var selColor = 0;
 
 		var VCubeList = [];
 
 		var testCube;
-		var sCube;
+
+		var tstRender = new Renderer();
+
 		function start() {
-			Renderer.SetUp();
 			Controls.SetUp();
-			Renderer.SetUpCamera();
-			Renderer.Clear();
-			testCube = new VCube(3, CubeDataType.Piece, undefined, undefined, undefined, undefined, true);
-			testCube.render();
+			testCube = new VCube(3, CubeDataType.Piece);
 			draw();
 		}
 
 		function draw() {
-			Renderer.ErrorAnimationColor = [Renderer.ErrorTimer / 1000 * Renderer.ErrorColor[0], Renderer.ErrorTimer / 1000 * Renderer.ErrorColor[1], Renderer.ErrorTimer / 1000 * Renderer.ErrorColor[2]];
-			Renderer.ErrorTimer += Renderer.ErrorSpeed;
-			if (Renderer.ErrorTimer >= 1000) {
-				Renderer.ErrorSpeed = -Math.abs(Renderer.ErrorSpeed);
-			}
-			if (Renderer.ErrorTimer <= 0) {
-				Renderer.ErrorSpeed = Math.abs(Renderer.ErrorSpeed);
-				Renderer.BackFlash = false;
-			}
-			Renderer.SetUpCamera();
-			Renderer.SetUpMain(true);
-			testCube.render(true);
-			Renderer.SetUpMain();
-			/*
-			gl.useProgram(Renderer.DebugProgram);//debug for drawing the color map to the screen
-							
-			gl.uniform1i(Renderer.DebugUniforms.main_texture,2);
-						
-			gl.bindBuffer(gl.ARRAY_BUFFER,debugVBuffer);
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,debugEBuffer);
-						
-			Renderer.setAts(2);
-							
-			gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
-			//*/
+			
+			testCube.update();
+			tstRender.clearAll();
+			tstRender.update();
+			tstRender.renderCube(testCube, true);
+
 			var info = Controls.GetMouseSelection();
 			if (Controls.MouseJustWentDown && info.Cube != 255) {
-				Controls.SelectedCube = info.Cube;
-			}
-			if (Controls.MouseIsDown && !Controls.MouseJustWentDown && Controls.selectedCube != -1) {
+			 	Controls.SelectedCube = info.Cube;
+			 }
+			 if (Controls.MouseIsDown && !Controls.MouseJustWentDown && Controls.selectedCube != -1) {
 				Controls.MoveCube();
 			} else if (!Controls.MouseIsDown) {
-				Controls.SelectedCube = -1;
-			}
+			 	Controls.SelectedCube = -1;
+			 }
 
 			requestAnimationFrame(draw);
 		}
@@ -5208,15 +5858,7 @@
 		/*
 		Notes and TO DO
 		Allow vCubes to have a time seeker/be controlled by a slider
-		Create turn filter for piece type data
-			Add this feature to rearrange cubies in side of the vCube array to allow for PROPER coordinate selecting
-		Allow vCubes to be edited (surface type only) (Maybe force all vCubes to have a surface data type for memory reasons?)
 		Create Settings object - object that handels all settings and setting operations (such as visual, language, and various other items)
-		Create Solver object - object that handels all solving operations
-			Add Solver.Score method that will score the cubes based on different criteria to give a total
-			Add Solver.solve method, solves the cube. (Possibly using A* algorithm?)
-			Add Solver.CheckIfPossible method.
-			Add Solver.CheckIfValid method.
 		Work on mobile function
 		Optimize algorithm code
 		Run tests
@@ -5438,61 +6080,79 @@
 
 		function ScoreAllXMoveCubes(cubeSize = 3, xNumber = 3) {
 			//Search to see if the _Algorithm was cached yet, if not request to start the run for it.
-			var isCreated = false;
-			var indexNumber = 0;
-			var scores = [];
-			for (var i = 0; i < _Algorithm.TotalAlgorithms.length; i += 3) {
-				if (_Algorithm.TotalAlgorithms[i] == cubeSize && _Algorithm.TotalAlgorithms[i + 1] == xNumber) {
-					isCreated = true;
-					indexNumber = i;
-					break;
+
+			function scoreCube(cubeData){
+
+				var cubeScore = 0;
+				const FaceSize = cubeSize ** 2;
+				// To score the cubes, we are going to count the 
+				// Number of sqaures that are touching of the same color 
+				// (2 squares touching results in 2 points in this case)
+				// TODO improve this metric later
+				for(var i = 0; i < FaceSize; i ++){
+					var x = i % cubeSize;
+					var y = Math.floor(i / cubeSize);
+
+					// Go through each sticker on each side and see how many colors of its own it touches
+					// Note that if x or y is out of range, getSticker will return -1
+					//debugger;
+
+					for(var side = 0; side < 6; side++){
+						var stickerColor = cubeData.getSticker(side, x, y);
+						
+						if(stickerColor == cubeData.getSticker(side, x + 1, y)){
+							cubeScore ++;
+						}
+
+						if(stickerColor == cubeData.getSticker(side, x - 1, y)){
+							cubeScore ++;
+						}
+
+						if(stickerColor == cubeData.getSticker(side, x, y + 1)){
+							cubeScore ++;
+						}
+
+						if(stickerColor == cubeData.getSticker(side, x, y - 1)){
+							cubeScore ++;
+						}
+
+					}
+
 				}
+				
+				return cubeScore;
+
 			}
-			if (!isCreated) {
-				console.log(xNumber + " Move Algorithms for a " + cubeSize + " sized cube have not been created, A request for it was made, please what for it to finish");
-				_Algorithm.AlgIndex(cubeSize, xNumber);
-				return;
-			}
+
+			var scores = [];
+			var all3MoveAlgs = new AlgorithmStorage(cubeSize, xNumber);
+			all3MoveAlgs.selfIndex();
 
 			AllxMoveAlgs = [];
-			numberOfAlgs = 0;
-			for (var i = 0; i < _Algorithm.TotalAlgorithms[indexNumber + 2]; i++) {
-				var newAlg = _Algorithm.GetAlgorithm(cubeSize, xNumber, i, false);
-				for (var j = 0; j < newAlg.length; j++) {
-					AllxMoveAlgs.push(newAlg[j]);
-				}
+			var numberOfAlgs = all3MoveAlgs.getAlgCount();
+			var filters = []
+
+			for(var i = 0; i < numberOfAlgs; i++){
+				filters.push(all3MoveAlgs.getFilter(i, CubeDataType.Surface))
 			}
 
-			var ftu = -1;//filter to use
-			for (var i = 0; i < _Algorithm.SavedFilters.length; i += 4) {//check for the filters we need for the moves we are doing, if they are not already built, build them.
-				if (_Algorithm.SavedFilters[i] == cubeSize && _Algorithm.SavedFilters[i + 1] == CubeDataType.Surface && _Algorithm.SavedFilters[i + 2] == xNumber) {
-					ftu = i + 3;
-					break;
-				}
-			}
-			if (ftu == -1) {
-				_Algorithm.SavedFilters.push(cubeSize, CubeDataType.Surface, xNumber, _Algorithm.BuildFilters(cubeSize, CubeDataType.Surface, _Algorithm.CompressMoves(AllxMoveAlgs, cubeSize), _Algorithm.TotalAlgorithms[indexNumber + 2] * xNumber, xNumber));
-				ftu = _Algorithm.SavedFilters.length - 1;
-			}
+			var scoreFound = false;
 
-			for (var i = 0; i < _Algorithm.TotalAlgorithms[indexNumber + 2]; i++) {
-				myCube = generateSolvedCube(cubeSize, CubeDataType.Surface);
-				_Algorithm.TurnCube(myCube, 0, CubeDataType.Surface, cubeSize, _Algorithm.GetAlgorithm(cubeSize, xNumber, i, true), 1, true, true, xNumber);
-				aScore = _Solver.ScoreCube(myCube, CubeDataType.Surface, cubeSize);
+			for (var i = 0; i < numberOfAlgs; i++) {
+				var myCube = new CubeData(cubeSize, 1);
+				filters[i].applyFilter(myCube);
+				var aScore = scoreCube(myCube);
 				scoreFound = false;
 
 				for (var j = 0; j < scores.length; j++) {
-					if (scores[j][0] == aScore[0]) {
+					if (scores[j][0] == aScore) {
 						scores[j][1]++;
 						scoreFound = true;
 					}
 				}
 				if (!scoreFound) {
-					scores.push([aScore[0], 1])
+					scores.push([aScore, 1])
 				}
 			}
 			XmoveScores.push({ "CubeSize": cubeSize, "AlgLength": xNumber, "Scores": scores })
-
-
 		}
-
