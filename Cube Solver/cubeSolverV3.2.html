@@ -189,7 +189,7 @@
 	</script>
 </head>
 
-<body onload="startPages();/*hidePages(1,['loading_screen'],[])*/hidePages(1,['cube_edit','canvas'],[]);start();"
+<body onload="startPages();/*hidePages(1,['loading_screen'],[])*/hidePages(1,['cube_edit','canvas'],[]);"
 	onresize="">
 
 	<div id="canvas" class="page"></div>
@@ -203,30 +203,30 @@
 	<div id="cube_edit" class="page">
 		<div id="side_bar"
 			style="width:50px;height:50vh;border-radius:3px;position:absolute;top:25vh;left:-3px;background-color:#323232;transition:all 0.5s ease-in-out;z-index:1;">
-			<div class="color0 swatch" style="top: 4vh;"
+			<div class="color0 swatch" style="top: 4vh;" id="csw0"
 				onclick="swbg.style.top='calc( 4vh - 4px)';selColor=0;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
-			<div class="color1 swatch" style="top:12vh;"
+			<div class="color1 swatch" style="top:12vh;" id="csw1"
 				onclick="swbg.style.top='calc(12vh - 4px)';selColor=1;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
-			<div class="color2 swatch" style="top:20vh;"
+			<div class="color2 swatch" style="top:20vh;" id="csw2"
 				onclick="swbg.style.top='calc(20vh - 4px)';selColor=2;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
-			<div class="color3 swatch" style="top:28vh;"
+			<div class="color3 swatch" style="top:28vh;" id="csw3"
 				onclick="swbg.style.top='calc(28vh - 4px)';selColor=3;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
-			<div class="color4 swatch" style="top:36vh;"
+			<div class="color4 swatch" style="top:36vh;" id="csw4"
 				onclick="swbg.style.top='calc(36vh - 4px)';selColor=4;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
-			<div class="color5 swatch" style="top:44vh;"
+			<div class="color5 swatch" style="top:44vh;" id="csw5"
 				onclick="swbg.style.top='calc(44vh - 4px)';selColor=5;event.stopPropagation();"
 				ontouchstart="this.dispatchEvent(new MouseEvent('click'));event.stopPropagation();"></div>
 			<div class="colorbg" id="swbg"></div>
 		</div>
 		<input type="button" value="Options" onclick="hidePages(1,['options'],['canvas'])"
 			style="position:absolute;bottom:0vh;left:0vh;" ontouchstart="this.dispatchEvent(new MouseEvent('click'));">
-		<input type="button" value="Solve"
-			onclick="/*mode=1;hidePages(-1,['cube_solve'],['canvas'])*/solveCube(testCube.getCubeData(), 0);event.stopPropagation();"
+		<input type="button" value="Solve" id="solve_cube"
+			onclick="/*mode=1;hidePages(-1,['cube_solve'],['canvas'])*/event.stopPropagation();"
 			ontouchstart="this.dispatchEvent(new MouseEvent('click'));" style="position:absolute;bottom:0vh;right:0vh;">
 		<input type="button" value="i" style="position:absolute;top:0vh;right:0vh;"
 			ontouchstart="this.dispatchEvent(new MouseEvent('click'));">
@@ -255,7 +255,7 @@
 			</blockquote>
 		</blockquote>
 	</div>
-	<script src = "cubeSolverV3.2.js"></script>
+	<script type = "module" src = "cubeSolverV3.2.js"></script>
 </body>
 
 </html>
