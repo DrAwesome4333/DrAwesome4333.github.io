@@ -1,5 +1,5 @@
 // @ts-check
-import { CubeDataType, CubieType, CubieStyle, CubeFace } from "./cubeconsts.js";
+import {CUBE_DATA_TYPE, CUBIE_TYPE,CUBIE_STYLE, CUBE_FACE} from "./cubeconsts.js"
 import { BinaryData } from "./binarydata.js";
 var shouldLogErrors = true;
 /*
@@ -8,16 +8,16 @@ class CubeData
 - data : BinaryData
 - cubeCount : int  does not change after creation
 - cubeSize : int   does not change after creation
-- storageFormat : CubeDataType
+- storageFormat : CUBE_DATA_TYPE
 - errorLog : array[CubeError]
 
 ----------------
-CubeData(cubeSize:int, cubeCount:int, storageFormat:CubeDataType, data:BinaryData):CubeData
+CubeData(cubeSize:int, cubeCount:int, storageFormat:CUBE_DATA_TYPE, data:BinaryData):CubeData
 getCubeCount():int
 getCubeSize():int
 getCubeData(startCube:int, endCube:int):BinaryData
-getStorageFormat():CubeDataType
-convertStorageFormat(toFormat:CubeDataType):bool
+getStorageFormat():CUBE_DATA_TYPE
+convertStorageFormat(toFormat:CUBE_DATA_TYPE):bool
 getErrorLog():array[CubeError]
 applyAlgorithm(algorithm:Algorithm, cube:int):bool
 getCubie(x:int, y:int, z:int):CubieData
@@ -27,7 +27,7 @@ setSticker(side:int, x:int, y:int, sticker:int):none
 -getCubieFromIndex(cubieIndex:int):Cubie
 	
 */
-function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surface, data = generateSolvedCubeBinaryData(cubeSize, cubeCount)) {
+function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CUBE_DATA_TYPE.Surface, data = generateSolvedCubeBinaryData(cubeSize, cubeCount)) {
     // An object that can store one or many cubes of the same dimensions
 
     this.getCubeCount = function () {
@@ -90,14 +90,14 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
     this.getStickerByIndex = function (index = 0, cubeNumber = 0) {
         switch (storageFormat) {
-            case CubeDataType.Fast:
+            case CUBE_DATA_TYPE.Fast:
             // Fall through
-            case CubeDataType.Surface: {
+            case CUBE_DATA_TYPE.Surface: {
                 var dataPerCube = cubeSize ** 2 * 6;
                 return data.getData(index + dataPerCube * cubeNumber);
                 break;
             }
-            case CubeDataType.Piece: {
+            case CUBE_DATA_TYPE.Piece: {
                 // I feel this is for the best as we already have to translate the
                 // cubie to 3d coordinates just to get the right one, so we will just pass it on
                 var face = Math.floor(index / (cubeSize ** 2));
@@ -116,9 +116,9 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
             return -1;
         }
         switch (storageFormat) {
-            case (CubeDataType.Fast):
+            case (CUBE_DATA_TYPE.Fast):
             // fall through
-            case (CubeDataType.Surface): {
+            case (CUBE_DATA_TYPE.Surface): {
                 // We are going to see which face we are looking at
                 // Based on the face, x, and y we can calculate the index of the sticker
                 // Sticker faces always start with the left - most, bottom - most, back - most sticker as the starting corner.
@@ -132,7 +132,7 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
                 return data.getData(index + dataPerCube * cubeNumber);
                 break;
             }
-            case (CubeDataType.Piece): {
+            case (CUBE_DATA_TYPE.Piece): {
                 // We will first convert the face coordinates to 3D coordinates, use that to get the cubie
                 // then we will calculate which face of the cubie we need and then return that face's value
 
@@ -145,7 +145,7 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
                 if (cubieFaceId[0] == face) {
                     return myCubie.getFace(0);
-                } else if (myCubie.getType() == CubieType.Edge) {
+                } else if (myCubie.getType() == CUBIE_TYPE.Edge) {
                     // If it was not the home face and we have an edge, then we only have one more option to choose
                     return myCubie.getFace(1);
                 } else {
@@ -174,9 +174,9 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
     this.setStickerByIndex = function (index = 0, value = 0, cubeNumber = 0) {
         switch (storageFormat) {
-            case (CubeDataType.Fast):
+            case (CUBE_DATA_TYPE.Fast):
             // fall through
-            case (CubeDataType.Surface): {
+            case (CUBE_DATA_TYPE.Surface): {
                 // We are going to see which face we are looking at
                 // Based on the face, x, and y we can calculate the index of the sticker
                 // Sticker faces always start with the left - most, bottom - most, back - most sticker as the starting corner.
@@ -206,9 +206,9 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
     this.setSticker = function (face = 0, x = 0, y = 0, value = 0, cubeNumber = 0) {
         switch (storageFormat) {
-            case (CubeDataType.Fast):
+            case (CUBE_DATA_TYPE.Fast):
             // fall through
-            case (CubeDataType.Surface): {
+            case (CUBE_DATA_TYPE.Surface): {
                 // We are going to see which face we are looking at
                 // Based on the face, x, and y we can calculate the index of the sticker
                 // Sticker faces always start with the left - most, bottom - most, back - most sticker as the starting corner.
@@ -251,7 +251,7 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
             return false;
         }
 
-        if (storageFormat == CubeDataType.Piece) {
+        if (storageFormat == CUBE_DATA_TYPE.Piece) {
             // We are going to first, calculate the index of the cubie's destination, then get the Cubie's code and save it in that index
             // Verify Cubie is valid (required for this format)
             if (!value.isValid()) {
@@ -268,16 +268,16 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
             var dataPerCube = cubeSize ** 3 - (cubeSize - 2) ** 3;
             return data.setData(index + dataPerCube * cubeNumber, value.getCode());
 
-        } else if (storageFormat == CubeDataType.Surface || storageFormat == CubeDataType.Fast) {
+        } else if (storageFormat == CUBE_DATA_TYPE.Surface || storageFormat == CUBE_DATA_TYPE.Fast) {
             // We will calculate the indexes of each face, then set the data from the given Cubie to each face's index
             var type = 0;
 
             // Find out the type if it is an edge or corner
             if ((x == 0 && y == 0) || (x == 0 && y == cubeSize - 1) || (x == cubeSize - 1 && y == 0) || (x == cubeSize - 1 && y == x)) {
                 if (z == 0 || z == cubeSize - 1) {
-                    type = CubieType.Corner;
+                    type = CUBIE_TYPE.Corner;
                 } else {
-                    type = CubieType.Edge;
+                    type = CUBIE_TYPE.Edge;
                 }
             }
 
@@ -338,25 +338,25 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
             }
             return;
         }
-        if (storageFormat == CubeDataType.Piece) {
+        if (storageFormat == CUBE_DATA_TYPE.Piece) {
             var index = CubeData.getCubieIndex(x, y, z, cubeSize);
             var type = 0;
 
             // Find out the type if it is an edge or corner
             if ((x == 0 && y == 0) || (x == 0 && y == cubeSize - 1) || (x == cubeSize - 1 && y == 0) || (x == cubeSize - 1 && y == x)) {
                 if (z == 0 || z == cubeSize - 1) {
-                    type = CubieType.Corner;
+                    type = CUBIE_TYPE.Corner;
                 } else {
-                    type = CubieType.Edge;
+                    type = CUBIE_TYPE.Edge;
                 }
             } else if ((x == 0 && z == 0) || (x == 0 && z == cubeSize - 1) || (x == cubeSize - 1 && z == 0) || (x == cubeSize - 1 && z == x) ||
                 (z == 0 && y == 0) || (z == 0 && y == cubeSize - 1) || (z == cubeSize - 1 && y == 0) || (z == cubeSize - 1 && y == z)) {
-                type = CubieType.Edge;
+                type = CUBIE_TYPE.Edge;
             }
 
             var dataPerCube = cubeSize ** 3 - (cubeSize - 2) ** 3;
             return new Cubie(type, [], data.getData(index + cubeNumber * dataPerCube));
-        } else if (storageFormat == CubeDataType.Surface || storageFormat == CubeDataType.Fast) {
+        } else if (storageFormat == CUBE_DATA_TYPE.Surface || storageFormat == CUBE_DATA_TYPE.Fast) {
             // We will calculate the indexes of each face, then get the data for each face and then return the cubie
             // Calculate face size, cube data size, and touching faces
             const FaceSize = cubeSize ** 2;
@@ -392,7 +392,7 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
         }
     }
 
-    this.convertStorageFormat = function (toFormat = CubeDataType.Surface) {
+    this.convertStorageFormat = function (toFormat = CUBE_DATA_TYPE.Surface) {
         // Converts from one storage to another. Returns true upon success
 
         // Clears the error log
@@ -405,11 +405,11 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
 
         switch (storageFormat) {
-            case (CubeDataType.Fast):
+            case (CUBE_DATA_TYPE.Fast):
             // Fall through
-            case (CubeDataType.Surface): {
+            case (CUBE_DATA_TYPE.Surface): {
                 switch (toFormat) {
-                    case (CubeDataType.Piece): {
+                    case (CUBE_DATA_TYPE.Piece): {
                         // We are going to loop through all cubie indexes, use getCubieFacesFromSurfaceIndex to get the information we need from the data
                         // and create a new data based on the indexes we got
                         var newIndexCount = cubeSize ** 3 - (cubeSize - 2) ** 3;
@@ -451,11 +451,11 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
                 }
                 break;
             }
-            case (CubeDataType.Piece): {
+            case (CUBE_DATA_TYPE.Piece): {
                 switch (toFormat) {
-                    case (CubeDataType.Fast):
+                    case (CUBE_DATA_TYPE.Fast):
                     // Fall through
-                    case (CubeDataType.Surface): {
+                    case (CUBE_DATA_TYPE.Surface): {
                         // TODO
                         var newIndexCount = cubeSize ** 2 * 6;
                         var totalCount = newIndexCount * cubeCount;
@@ -518,13 +518,13 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
         var result = "CBDTA:"
 
         switch (storageFormat) {
-            case CubeDataType.Surface:
+            case CUBE_DATA_TYPE.Surface:
                 result += "S:";
                 break;
-            case CubeDataType.Fast:
+            case CUBE_DATA_TYPE.Fast:
                 result += "F:";
                 break;
-            case CubeDataType.Piece:
+            case CUBE_DATA_TYPE.Piece:
                 result += "P:";
                 break;
             default:
@@ -554,7 +554,7 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 
         if (data.getDataFlag() == -1) {
             // If the flag was set to -1, imply it was surface data
-            storageFormat = CubeDataType.Surface;
+            storageFormat = CUBE_DATA_TYPE.Surface;
         } else {
             // Else, use the flag given on the data
             storageFormat = data.getDataFlag();
@@ -573,15 +573,15 @@ function CubeData(cubeSize = 3, cubeCount = 1, storageFormat = CubeDataType.Surf
 CubeData.getFaceCoordinates = function (faceId = 0, x = 0, y = 0, z = 0) {
     // Turns 3D coordinates to relative face coordinates
     switch (faceId) {
-        case (CubeFace.Left):
+        case (CUBE_FACE.Left):
         //Fall through
-        case (CubeFace.Right): {
+        case (CUBE_FACE.Right): {
             return { x: z, y: y };
             break;
         }
-        case (CubeFace.Down):
+        case (CUBE_FACE.Down):
         //Fall through
-        case (CubeFace.Up): {
+        case (CUBE_FACE.Up): {
             return { x: x, y: z };
             break;
         }
@@ -597,22 +597,22 @@ CubeData.getTouchingFaces = function (x = 0, y = 0, z = 0, cubeSize = 3) {
     var touchingFaces = [];
 
     if (x == 0) {
-        touchingFaces.push(CubeFace.Left);
+        touchingFaces.push(CUBE_FACE.Left);
     }
     if (y == 0) {
-        touchingFaces.push(CubeFace.Down);
+        touchingFaces.push(CUBE_FACE.Down);
     }
     if (z == 0) {
-        touchingFaces.push(CubeFace.Back);
+        touchingFaces.push(CUBE_FACE.Back);
     }
     if (z == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Front);
+        touchingFaces.push(CUBE_FACE.Front);
     }
     if (y == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Up);
+        touchingFaces.push(CUBE_FACE.Up);
     }
     if (x == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Right);
+        touchingFaces.push(CUBE_FACE.Right);
     }
 
     return touchingFaces;
@@ -624,31 +624,31 @@ CubeData.getTouchingFacesClockwise = function (x = 0, y = 0, z = 0, cubeSize = 3
     var isCW = true;
 
     if (x == 0) {
-        touchingFaces.push(CubeFace.Left);
+        touchingFaces.push(CUBE_FACE.Left);
     }
     if (y == 0) {
-        touchingFaces.push(CubeFace.Down);
+        touchingFaces.push(CUBE_FACE.Down);
         if (x == 0 && z == cubeSize - 1) {
             isCW = false;
         }
     }
     if (z == 0) {
-        touchingFaces.push(CubeFace.Back);
+        touchingFaces.push(CUBE_FACE.Back);
         if (x == cubeSize - 1) {
             isCW = false;
         }
     }
     if (z == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Front);
+        touchingFaces.push(CUBE_FACE.Front);
     }
     if (y == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Up);
+        touchingFaces.push(CUBE_FACE.Up);
         if (x == 0 && z == cubeSize - 1) {
             isCW = false;
         }
     }
     if (x == cubeSize - 1) {
-        touchingFaces.push(CubeFace.Right);
+        touchingFaces.push(CUBE_FACE.Right);
     }
 
     if (isCW || touchingFaces.length < 3) {
@@ -726,37 +726,37 @@ CubeData.get3DCoordinates = function (faceId = 0, x = 0, y = 0, cubeSize = 3) {
     // Inverse of getFaceCoordinates
     var cx, cy, cz; //  stands for cubie x, cubie y...
     switch (faceId) {
-        case (CubeFace.Left): {
+        case (CUBE_FACE.Left): {
             cx = 0;
             cy = y;
             cz = x;
             break;
         }
-        case (CubeFace.Down): {
+        case (CUBE_FACE.Down): {
             cx = x;
             cy = 0;
             cz = y;
             break;
         }
-        case (CubeFace.Back): {
+        case (CUBE_FACE.Back): {
             cx = x;
             cy = y;
             cz = 0;
             break;
         }
-        case (CubeFace.Front): {
+        case (CUBE_FACE.Front): {
             cx = x;
             cy = y;
             cz = cubeSize - 1;
             break;
         }
-        case (CubeFace.Up): {
+        case (CUBE_FACE.Up): {
             cx = x;
             cy = cubeSize - 1;
             cz = y;
             break;
         }
-        case (CubeFace.Right): {
+        case (CUBE_FACE.Right): {
             cx = cubeSize - 1;
             cy = y;
             cz = x;
@@ -831,13 +831,13 @@ CubeData.parseCubeString = function (value = "") {
 
     switch (parts[1]) {
         case "S":
-            format = CubeDataType.Surface;
+            format = CUBE_DATA_TYPE.Surface;
             break;
         case "F":
-            format = CubeDataType.Fast;
+            format = CUBE_DATA_TYPE.Fast;
             break;
         case "P":
-            format = CubeDataType.Piece;
+            format = CUBE_DATA_TYPE.Piece;
             break;
         default:
             console.info("Invalid format '" + parts[1] + "' for cube");
@@ -997,7 +997,7 @@ CubeData.verifyCube = function (cubeData, cubeNumber = 0) {
     // First convert the given cube to a piece type
     // If the conversion fails, return why
     var cubeSize = cubeData.getCubeSize();
-    var testData = new CubeData(cubeSize, 1, CubeDataType.Piece, cubeData.getCubeData(cubeNumber));
+    var testData = new CubeData(cubeSize, 1, CUBE_DATA_TYPE.Piece, cubeData.getCubeData(cubeNumber));
     var testErrorLog = testData.getErrorLog();
     const isOdd = cubeSize % 2 == 1;
     const FaceSize = cubeSize ** 2;
@@ -1134,9 +1134,9 @@ class Cubie
 - faces:[int, int, int]
 - cubieCode:int
 - valid:bool
-- type:CubieType
+- type:CUBIE_TYPE
 ------------------
-Cubie(type:CubieType, faces:[int, int, int]):Cubie
+Cubie(type:CUBIE_TYPE, faces:[int, int, int]):Cubie
 getFace(face:int):int
 getFaces():[int]
 setFace(face:int, value:int):bool
@@ -1149,9 +1149,9 @@ isValid():bool
 getType():int
 */
 
-function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
+function Cubie(type=CUBIE_TYPE.Center, faces=[0, 0, 0], cubieCode=255) {
 
-    this.getFace = function (face = 0) {
+    this.getFace = function (face=0) {
         if (face > type) {
             // 255 is our error value
             return 255;
@@ -1164,7 +1164,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         return faces.slice(0);
     }
 
-    this.setFace = function (face = 0, value = 0) {
+    this.setFace = function (face=0, value=0) {
         // Verify both the face and value are valid, if they are, set the face to value
         // Returns true if it was successful false otherwise.
         if (face > type || face < 0 || face % 1 != 0) {
@@ -1188,7 +1188,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         return true;
     }
 
-    this.setFaces = function (values = [0, 0, 0]) {
+    this.setFaces = function (values=[0, 0, 0]) {
         // Verify we have enough values and all faces are within the valid range
         if (values.length < type) {
             if (shouldLogErrors) {
@@ -1227,10 +1227,10 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         return cubieCode;
     }
 
-    this.setCode = function (code = 0) {
+    this.setCode = function (code=0) {
         // Decodes the code
         if (code < 24 && code >= 0 && code % 1 === 0) {
-            if (type === CubieType.Center) {
+            if (type === CUBIE_TYPE.Center) {
                 faces = [code % 6];
                 code %= 6;
             } else {
@@ -1238,7 +1238,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
                 var face2Index = code % 4;
                 var possibleFaces = getPossiblePartnerValues(face1);
                 var face2 = possibleFaces[face2Index];
-                if (type === CubieType.Edge) {
+                if (type === CUBIE_TYPE.Edge) {
                     faces = [face1, face2];
                 } else {
                     var face3 = getLastFace(face1, face2);
@@ -1266,11 +1266,11 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
             return 255;
         }
 
-        if (type == CubieType.Center) {
+        if (type == CUBIE_TYPE.Center) {
             return cubieCode;
         }
 
-        if (type == CubieType.Edge) {
+        if (type == CUBIE_TYPE.Edge) {
 
             var pFaces = [faces[0], faces[1]];
             // p indcates pusdo face, we pass it to get get the code.
@@ -1290,7 +1290,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
             return pFaces[0] * 4 + partnerFaceIndex;
         }
 
-        if (type == CubieType.Corner) {
+        if (type == CUBIE_TYPE.Corner) {
 
             var pFaces = faces.slice(0);
             // p indcates pusdo face, we pass it to get get the code.
@@ -1316,20 +1316,19 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         }
     }
 
-    this.rotate = function (times = 1) {
+    this.rotate = function (times=1) {
         // Rotates the cubie Clockwise
         if (times < 0) {
-            console.log("Please only rotate in the positve direction");
-            return false;
+            throw "You can only rotate cubies in the positve direction!";
         }
         switch (type) {
-            case CubieType.Edge: {
+            case CUBIE_TYPE.Edge: {
                 if (times % 2 == 1)
                     faces = [faces[1], faces[0]];
                 validate();
                 return true;
             }
-            case CubieType.Corner: {
+            case CUBIE_TYPE.Corner: {
                 if (times % 3 == 1) {
                     faces = [faces[2], faces[0], faces[1]];
                 } else if (times % 3 == 2) {
@@ -1339,6 +1338,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
                 return true;
             }
             default: {
+                // Centers can't really be rotated (yet...)
                 return true;
                 break;
             }
@@ -1356,12 +1356,12 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         // For corners, this is the 'home' (LBD) face * 4 + a value from 0 to 3 reperesenting possible other face codes for the next
         // Clockwise adjecent face to the home. The third face can only have 1 valid possiblity after we know those 2 values
         // Note if we add a rotation to the center, we get 24 possible values for all types of pieces. (Currently filtered out for now)
-        if (type == CubieType.Center) {
+        if (type == CUBIE_TYPE.Center) {
             // Centers are always valid as long as faces stay with in the needed range
             valid = true;
             cubieCode = faces[0];
         }
-        else if (type == CubieType.Edge) {
+        else if (type == CUBIE_TYPE.Edge) {
             // See if the two faces can go together
             var partnerFaceIndex = -1;
             var possibleFaces = getPossiblePartnerValues(faces[0]);
@@ -1381,7 +1381,7 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
             }
 
         }
-        else if (type == CubieType.Corner) {
+        else if (type == CUBIE_TYPE.Corner) {
             // See if the first two faces can go together
             var partnerFaceIndex = -1;
             var possibleFaces = getPossiblePartnerValues(faces[0]);
@@ -1403,25 +1403,25 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         }
     }
 
-    function getPossiblePartnerValues(value = 0) {
+    function getPossiblePartnerValues(value=CUBE_FACE.Left) {
         // Returns possible adjacent sides given a face id
         switch (value) {
-            case (CubeFace.Right):
+            case (CUBE_FACE.Right):
             // Fall through
-            case (CubeFace.Left): {
-                return [CubeFace.Down, CubeFace.Back, CubeFace.Front, CubeFace.Up];
+            case (CUBE_FACE.Left): {
+                return [CUBE_FACE.Down, CUBE_FACE.Back, CUBE_FACE.Front, CUBE_FACE.Up];
                 break;
             }
-            case (CubeFace.Up):
+            case (CUBE_FACE.Up):
             // Fall through
-            case (CubeFace.Down): {
-                return [CubeFace.Left, CubeFace.Back, CubeFace.Front, CubeFace.Right];
+            case (CUBE_FACE.Down): {
+                return [CUBE_FACE.Left, CUBE_FACE.Back, CUBE_FACE.Front, CUBE_FACE.Right];
                 break;
             }
-            case (CubeFace.Front):
+            case (CUBE_FACE.Front):
             // Fall through
-            case (CubeFace.Back): {
-                return [CubeFace.Left, CubeFace.Down, CubeFace.Up, CubeFace.Right];
+            case (CUBE_FACE.Back): {
+                return [CUBE_FACE.Left, CUBE_FACE.Down, CUBE_FACE.Up, CUBE_FACE.Right];
                 break;
             }
             default: {
@@ -1431,19 +1431,19 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         }
     }
 
-    function getLastFace(value1 = 0, value2 = 0) {
+    function getLastFace(value1=0, value2=0) {
         // Given two face values, it will give the 3rd face's value for a corner
         // We first create a list of valid combinations of of faces, then we see if value 1 and value 2
         // Match up in any of them and return the 3rd value. Order matters, these arrays "wrap"
         const VALID_COMBOS = [
-            [CubeFace.Left, CubeFace.Down, CubeFace.Back],
-            [CubeFace.Left, CubeFace.Front, CubeFace.Down],
-            [CubeFace.Left, CubeFace.Back, CubeFace.Up],
-            [CubeFace.Left, CubeFace.Up, CubeFace.Front],
-            [CubeFace.Down, CubeFace.Right, CubeFace.Back],
-            [CubeFace.Down, CubeFace.Front, CubeFace.Right],
-            [CubeFace.Back, CubeFace.Right, CubeFace.Up],
-            [CubeFace.Front, CubeFace.Up, CubeFace.Right]];
+            [CUBE_FACE.Left, CUBE_FACE.Down, CUBE_FACE.Back],
+            [CUBE_FACE.Left, CUBE_FACE.Front, CUBE_FACE.Down],
+            [CUBE_FACE.Left, CUBE_FACE.Back, CUBE_FACE.Up],
+            [CUBE_FACE.Left, CUBE_FACE.Up, CUBE_FACE.Front],
+            [CUBE_FACE.Down, CUBE_FACE.Right, CUBE_FACE.Back],
+            [CUBE_FACE.Down, CUBE_FACE.Front, CUBE_FACE.Right],
+            [CUBE_FACE.Back, CUBE_FACE.Right, CUBE_FACE.Up],
+            [CUBE_FACE.Front, CUBE_FACE.Up, CUBE_FACE.Right]];
 
         for (var i = 0; i < 8; i++) {
             for (var j = 0; j < 3; j++) {
@@ -1500,10 +1500,10 @@ function Cubie(type = CubieType.Center, faces = [0, 0, 0], cubieCode = 255) {
         affectedFaces:[bool, bool, bool]
         errorType:string
         ----------------
-        CubeError(userReadableError:str, affectedCube:CubeData, affectedCubie:int, affectedFaces:[bool, bool, bool], errorType:str):CubeError
+        CubeError(userReadableError:str, affectedCube:CubeData, affectedCubie:int, affectedFaces:[bool, bool, bool, bool], errorType:str):CubeError
         */
 
-function CubeError(userReadableError = "", affectedCube = -1, affectedCubie = -1, affectedFaces = [false, false, false, false], errorType = "") {
+function CubeError(userReadableError="", affectedCube=-1, affectedCubie=-1, affectedFaces=[false, false, false, false], errorType="") {
     this.userReadableError = userReadableError;
     this.affectedCube = affectedCube;
     this.affectedCubie = affectedCubie;
@@ -1526,7 +1526,7 @@ function inverseTriNum(y) {
 }
 
 
-function generateSolvedCubeBinaryData(size = 3, count = 1) {
+function generateSolvedCubeBinaryData(size=3, count=1) {
     // Generates Solved Binary data for Surface Type cubes. Since the data
     // is flagged as Surface type, if is given to any other format of cube data, it will
     // automatically be converted as the flag will be detected
@@ -1537,7 +1537,7 @@ function generateSolvedCubeBinaryData(size = 3, count = 1) {
         }
     }
     var dataCountPerCube = dataArray.length;
-    var binData = new BinaryData(5, [], dataCountPerCube * count, CubeDataType.Surface)
+    var binData = new BinaryData(5, [], dataCountPerCube * count, CUBE_DATA_TYPE.Surface)
     for (var i = 0; i < count; i++) {
 
         binData.setArray(dataCountPerCube * i, dataArray);

@@ -2,7 +2,7 @@
 //import('./cubeSolverV3.2.js').then(m => module = m)
 import {BinaryData} from "./modules/binarydata.js"
 import {AlgorithmStorage, Filter} from "./modules/algorithmstorage.js"
-import {CubeDataType, CubieType, CubieStyle, CubeFace} from "./modules/cubeconsts.js"
+import {CUBE_DATA_TYPE, CUBIE_TYPE,CUBIE_STYLE, CUBE_FACE} from "./modules/cubeconsts.js"
 import {CubeData, CubeError, Cubie} from "./modules/cubedata.js"
 import {Matrix} from "./modules/matrix.js"
 /*
@@ -1650,12 +1650,12 @@ import {Matrix} from "./modules/matrix.js"
 
 			var agCount = all3MoveAlgs.getAlgCount();
 			for(var i = 0; i < agCount; i ++){
-				all3MoveFilters.push(all3MoveAlgs.getFilter(i, CubeDataType.Surface));
+				all3MoveFilters.push(all3MoveAlgs.getFilter(i, CUBE_DATA_TYPE.Surface));
 			}
 
 			agCount = all1MoveAlgs.getAlgCount();
 			for(var i = 0; i < agCount; i ++){
-				all1MoveFilters.push(all1MoveAlgs.getFilter(i, CubeDataType.Surface));
+				all1MoveFilters.push(all1MoveAlgs.getFilter(i, CUBE_DATA_TYPE.Surface));
 			}
 
 			// Set up our mass storage object
@@ -1663,10 +1663,10 @@ import {Matrix} from "./modules/matrix.js"
 			const MOVE_WEIGHT = 2;
 			var totalCubeCount = 1;
 			var activeCubeCount = 1;
-			var cubeStorage = new CubeData(cubeSize, MAX_CUBE_COUNT, CubeDataType.Surface);
+			var cubeStorage = new CubeData(cubeSize, MAX_CUBE_COUNT, CUBE_DATA_TYPE.Surface);
 
 			// Calculate the max score a cube can have without being solved
-			var tmpCube = new CubeData(cubeSize, 1, CubeDataType.Surface);
+			var tmpCube = new CubeData(cubeSize, 1, CUBE_DATA_TYPE.Surface);
 			all1MoveFilters[0].applyFilter(tmpCube);
 			var maximumUnsolvedScore = scoreCube(new CubeNode(tmpCube, 0, all1MoveAlgs, [0]));
 			
@@ -2033,7 +2033,7 @@ import {Matrix} from "./modules/matrix.js"
 
 
 				// size, dataStorageFormat, cubeData, cubeNumber, selectable, scale, pos, style 
-		function VCube(size=3, dataStorageFormat=0, cubeData=new CubeData(size, 1, dataStorageFormat), cubeNumber=0, selectable=true, scale=1, pos={x:0,y:0,z:-2*scale}, style=CubieStyle.Plain) {
+		function VCube(size=3, dataStorageFormat=0, cubeData=new CubeData(size, 1, dataStorageFormat), cubeNumber=0, selectable=true, scale=1, pos={x:0,y:0,z:-2*scale}, style=CUBIE_STYLE.Plain) {
 			this.size = size;//the number of cubies on the cube
 			this.format = dataStorageFormat;
 			this.style = style;
@@ -2137,22 +2137,22 @@ import {Matrix} from "./modules/matrix.js"
 				//id is what color to change the sticker to
 				//override allows the function to automatically change the format of the cube to surface type if possible to change a single sticker
 				//returns true or false to tell if it was a success or not
-				if (dataStorageFormat == CubeDataType.Surface && !recording && edit) {
+				if (dataStorageFormat == CUBE_DATA_TYPE.Surface && !recording && edit) {
 					
 					cubeData.setStickerByIndex(stickerIndex, stickerValue, cubeNumber);
 
 					updateColors();
 					return true;
-				} else if (dataStorageFormat == CubeDataType.Piece && override && !recording && edit) {
+				} else if (dataStorageFormat == CUBE_DATA_TYPE.Piece && override && !recording && edit) {
 					
-					cubeData.convertStorageFormat(CubeDataType.Surface);
-					dataStorageFormat = CubeDataType.Surface;
+					cubeData.convertStorageFormat(CUBE_DATA_TYPE.Surface);
+					dataStorageFormat = CUBE_DATA_TYPE.Surface;
 					changeSticker(stickerIndex, stickerValue);
 					return true;
 				} else {
-					if (dataStorageFormat == CubeDataType.Piece && !override) {
+					if (dataStorageFormat == CUBE_DATA_TYPE.Piece && !override) {
 						throw "Cannot change data type of cube without override enabled!";
-					} else if (dataStorageFormat == CubeDataType.Compact) {
+					} else if (dataStorageFormat == CUBE_DATA_TYPE.Compact) {
 						throw "Cannot change data type of cube from compact data!";
 					} else if (!(!recording && edit)) {
 						throw "Cannot edit data, cube does not have editing enabled!";
@@ -2270,21 +2270,21 @@ import {Matrix} from "./modules/matrix.js"
 					modMat = modMat.multiply(translation);
 					modMat = modMat.multiply(baseMatrix);
 					switch(homeFace){
-						case CubeFace.Left:{
+						case CUBE_FACE.Left:{
 							switch(secondaryFace){
-								case CubeFace.Back:{
+								case CUBE_FACE.Back:{
 									modMat = modMat.multiply(rxm3);
 									break;
 								}
-								case CubeFace.Up:{
+								case CUBE_FACE.Up:{
 									modMat = modMat.multiply(rxm2);
 									break;
 								}
-								case CubeFace.Front:{
+								case CUBE_FACE.Front:{
 									modMat = modMat.multiply(rxm);
 									break;
 								}
-								case CubeFace.Down:
+								case CUBE_FACE.Down:
 									// Fall through
 								default:{
 									// Nothing is Needed
@@ -2293,20 +2293,20 @@ import {Matrix} from "./modules/matrix.js"
 							}
 							break;
 						}
-						case CubeFace.Down:{
+						case CUBE_FACE.Down:{
 							switch(secondaryFace){
 								
-								case CubeFace.Front:{
+								case CUBE_FACE.Front:{
 									modMat = modMat.multiply(rzm);
 									modMat = modMat.multiply(rxm);
 									break;
 								}
-								case CubeFace.Back:{
+								case CUBE_FACE.Back:{
 									modMat = modMat.multiply(rzm);
 									modMat = modMat.multiply(rxm3);
 									break;
 								}
-								case CubeFace.Right:
+								case CUBE_FACE.Right:
 									// Fall through;
 								default:{
 									modMat = modMat.multiply(rzm);
@@ -2315,14 +2315,14 @@ import {Matrix} from "./modules/matrix.js"
 							}
 							break;
 						}
-						case CubeFace.Back:{
+						case CUBE_FACE.Back:{
 							switch(secondaryFace){
-								case CubeFace.Up:{
+								case CUBE_FACE.Up:{
 									modMat = modMat.multiply(rym);
 									modMat = modMat.multiply(rxm2);
 									break;
 								}
-								case CubeFace.Right:{
+								case CUBE_FACE.Right:{
 									modMat = modMat.multiply(rym);
 									modMat = modMat.multiply(rxm3);
 									break;
@@ -2335,14 +2335,14 @@ import {Matrix} from "./modules/matrix.js"
 							break;
 						}
 						
-						case CubeFace.Front:{
+						case CUBE_FACE.Front:{
 							switch(secondaryFace){
-								case CubeFace.Up:{
+								case CUBE_FACE.Up:{
 									modMat = modMat.multiply(rym3);
 									modMat = modMat.multiply(rxm2);
 									break;
 								}
-								case CubeFace.Right:{
+								case CUBE_FACE.Right:{
 									modMat = modMat.multiply(rym3);
 									modMat = modMat.multiply(rxm);
 									break;
@@ -2355,9 +2355,9 @@ import {Matrix} from "./modules/matrix.js"
 							break;
 						}
 
-						case CubeFace.Up:{
+						case CUBE_FACE.Up:{
 							switch(secondaryFace){
-								case CubeFace.Right:{
+								case CUBE_FACE.Right:{
 									modMat = modMat.multiply(rym2);
 									modMat = modMat.multiply(rzm3);
 									break;
@@ -2411,7 +2411,7 @@ import {Matrix} from "./modules/matrix.js"
 				// TODO, allow this to accept an algorthm and an id
 				var algStorage = new AlgorithmStorage(size, 1, 1);
 				algStorage.addAlgorithm([move]);
-				var filter = algStorage.getFilter(0, CubeDataType.Piece);
+				var filter = algStorage.getFilter(0, CUBE_DATA_TYPE.Piece);
 				var filterData = filter.getFilterData();
 				var destinationList;
 
@@ -2744,7 +2744,7 @@ import {Matrix} from "./modules/matrix.js"
 
 		function start() {
 			Controls.SetUp();
-			testCube = new VCube(3, CubeDataType.Piece);
+			testCube = new VCube(3, CUBE_DATA_TYPE.Piece);
 			document.getElementById("solve_cube").addEventListener("click", function(){solveCube(testCube.getCubeData(), 0);});
 			draw();
 		}
@@ -3048,7 +3048,7 @@ import {Matrix} from "./modules/matrix.js"
 			var filters = []
 
 			for(var i = 0; i < numberOfAlgs; i++){
-				filters.push(all3MoveAlgs.getFilter(i, CubeDataType.Surface))
+				filters.push(all3MoveAlgs.getFilter(i, CUBE_DATA_TYPE.Surface))
 			}
 
 			var scoreFound = false;

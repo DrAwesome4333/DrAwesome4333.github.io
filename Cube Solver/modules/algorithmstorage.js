@@ -1,5 +1,5 @@
 //@ts-check
-import { CubeDataType, CubieType, CubieStyle, CubeFace } from "./cubeconsts.js";
+import { CUBE_DATA_TYPE, CUBIE_TYPE, CUBIE_STYLE, CUBE_FACE } from "./cubeconsts.js";
 import { BinaryData } from "./binarydata.js";
 import { CubeData } from "./cubedata.js"
 
@@ -27,9 +27,9 @@ var shouldLogErrors = true;
          * @param {number} cubeSize
          */
 
-function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
+function AlgorithmStorage(cubeSize, algLength=1, maxAlgs=1000000) {
 
-    this.getMoves = function (algId = 0) {
+    this.getMoves = function (algId=0) {
         // returns moves for a certain alg in number format
         var alg = [];
 
@@ -55,7 +55,7 @@ function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
         return alg;
     }
 
-    this.getMovesInPairs = function (algId = 0) {
+    this.getMovesInPairs = function (algId=0) {
         // retunrs moves for a certain alg in pair format
         var alg = this.getMoves(algId);
         var result = [];
@@ -67,7 +67,7 @@ function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
         return result;
     }
 
-    this.getMovesAsText = function (algId = 0) {
+    this.getMovesAsText = function (algId=0) {
         if(algLength == 0 || algCount == 0){
             return "(no algorithm)";
         }
@@ -93,7 +93,7 @@ function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
             // view a side as in reverse at times
             var shouldReverse = false;
 
-            if (face == CubeFace.Down || face == CubeFace.Front || face == CubeFace.Right)
+            if (face == CUBE_FACE.Down || face == CUBE_FACE.Front || face == CUBE_FACE.Right)
                 shouldReverse = true;
 
             if (shouldReverse)
@@ -150,7 +150,7 @@ function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
         return algLength;
     }
 
-    this.getFilter = function (algId = 0, cubeStorageFormat = CubeDataType.Surface) {
+    this.getFilter = function (algId=0, cubeStorageFormat=CUBE_DATA_TYPE.Surface) {
         if ((algId > algCount * 3 && usesAlgSaver) || (algId > algCount && !usesAlgSaver)) {
             if (shouldLogErrors) {
                 console.info("Could not get correct filter, invalid algId");
@@ -160,7 +160,7 @@ function AlgorithmStorage(cubeSize, algLength = 1, maxAlgs = 1000000) {
         return new Filter(cubeSize, cubeStorageFormat, this, algId);
     }
 
-    this.addAlgorithm = function (alg = [0]) {
+    this.addAlgorithm = function (alg=[0]) {
         // Adds an algorithm to the set
 
         // Check if we still accept new algs
@@ -549,7 +549,7 @@ AlgorithmStorage.checkNextMove = function (cubeSize, previousMoves, proposedNext
 /**
  * @param {number} cubeSize 
  */
-function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new AlgorithmStorage(cubeSize, 1, 1), algId = 0, fromScratch = false) {
+function Filter(cubeSize, storageFormat=CUBE_DATA_TYPE.Surface, algStorage=new AlgorithmStorage(cubeSize, 1, 1), algId=0, fromScratch=false) {
 
     var filterData = Filter.createNewFilterData(cubeSize, storageFormat);
 
@@ -592,7 +592,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
         }
 
         switch (storageFormat) {
-            case CubeDataType.Surface: {
+            case CUBE_DATA_TYPE.Surface: {
                 // This format is strait forward, use the index in filterData[i] to set the destination sticker[i] with the originalData[filterData[i]]
                 var originalData = cubeData.getCubeData(startCube, endCube);
                 const FaceSize = (cubeSize ** 2)
@@ -609,7 +609,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                 return true;
                 break;
             }
-            case CubeDataType.Piece: {
+            case CUBE_DATA_TYPE.Piece: {
                 // This format takes a bit more thinking but works out in the end.
                 // Similar to the last format, we will go though each index, but we will also check for cubie rotations
                 // when needed. Cubie rotations are coded into the filter by adding rotations * cubieCount + sourceIndex
@@ -658,7 +658,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
         }
 
         switch (storageFormat) {
-            case (CubeDataType.Surface): {
+            case (CUBE_DATA_TYPE.Surface): {
                 const FaceSize = cubeSize ** 2;
                 const Layer = algId % layerCount;
                 const Direction = Math.floor(algId / layerCount);
@@ -676,19 +676,19 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                             for (var i = 0; i < cubeSize; i++) {
                                 // Increment in the y+ in face space for each face, Up and Back need to be reversed to corespond to the correct sticker on the other faces
                                 // Up to Front
-                                destinationData[CubeFace.Front * FaceSize + i * cubeSize + slice] = sourceData[CubeFace.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
+                                destinationData[CUBE_FACE.Front * FaceSize + i * cubeSize + slice] = sourceData[CUBE_FACE.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
                                 // Front to Down
-                                destinationData[CubeFace.Down * FaceSize + i * cubeSize + slice] = sourceData[CubeFace.Front * FaceSize + i * cubeSize + slice];
+                                destinationData[CUBE_FACE.Down * FaceSize + i * cubeSize + slice] = sourceData[CUBE_FACE.Front * FaceSize + i * cubeSize + slice];
                                 // Down to Back
-                                destinationData[CubeFace.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CubeFace.Down * FaceSize + i * cubeSize + slice];
+                                destinationData[CUBE_FACE.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CUBE_FACE.Down * FaceSize + i * cubeSize + slice];
                                 // Back to Up
-                                destinationData[CubeFace.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CubeFace.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
+                                destinationData[CUBE_FACE.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CUBE_FACE.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
 
                                 if (slice == 0) {
                                     // We also need to rotate the Left side
                                     for (var j = 0; j < cubeSize; j++) {
                                         // ith column to cubeSize - 1 - ith row
-                                        destinationData[CubeFace.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CubeFace.Left * FaceSize + j * cubeSize + i];
+                                        destinationData[CUBE_FACE.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CUBE_FACE.Left * FaceSize + j * cubeSize + i];
                                     }
                                 }
 
@@ -696,7 +696,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                     // We also need to rotate the Right side
                                     for (var j = 0; j < cubeSize; j++) {
                                         // ith column to cubeSize - 1 - ith row
-                                        destinationData[CubeFace.Right * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CubeFace.Right * FaceSize + j * cubeSize + i];
+                                        destinationData[CUBE_FACE.Right * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CUBE_FACE.Right * FaceSize + j * cubeSize + i];
                                     }
                                 }
                             }
@@ -709,19 +709,19 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                             for (var i = 0; i < cubeSize; i++) {
                                 // Increment in the x+ in face space for each face, Back and Right need to be reversed to corespond to the correct sticker on the other faces
                                 // Left to Front
-                                destinationData[CubeFace.Front * FaceSize + slice * cubeSize + i] = sourceData[CubeFace.Left * FaceSize + slice * cubeSize + i];
+                                destinationData[CUBE_FACE.Front * FaceSize + slice * cubeSize + i] = sourceData[CUBE_FACE.Left * FaceSize + slice * cubeSize + i];
                                 // Front to Right
-                                destinationData[CubeFace.Right * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CubeFace.Front * FaceSize + slice * cubeSize + i];
+                                destinationData[CUBE_FACE.Right * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CUBE_FACE.Front * FaceSize + slice * cubeSize + i];
                                 // Right to Back
-                                destinationData[CubeFace.Back * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CubeFace.Right * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
+                                destinationData[CUBE_FACE.Back * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CUBE_FACE.Right * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
                                 // Back to Left
-                                destinationData[CubeFace.Left * FaceSize + slice * cubeSize + i] = sourceData[CubeFace.Back * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
+                                destinationData[CUBE_FACE.Left * FaceSize + slice * cubeSize + i] = sourceData[CUBE_FACE.Back * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
 
                                 if (slice == 0) {
                                     // We also need to rotate the Down side
                                     for (var j = 0; j < cubeSize; j++) {
                                         // ith column to cubeSize - 1 - ith row
-                                        destinationData[CubeFace.Down * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CubeFace.Down * FaceSize + j * cubeSize + i];
+                                        destinationData[CUBE_FACE.Down * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CUBE_FACE.Down * FaceSize + j * cubeSize + i];
                                     }
                                 }
 
@@ -729,7 +729,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                     // We also need to rotate the Up side
                                     for (var j = 0; j < cubeSize; j++) {
                                         // ith column to cubeSize - 1 - ith row
-                                        destinationData[CubeFace.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CubeFace.Up * FaceSize + j * cubeSize + i];
+                                        destinationData[CUBE_FACE.Up * FaceSize + (cubeSize - 1 - i) * cubeSize + j] = sourceData[CUBE_FACE.Up * FaceSize + j * cubeSize + i];
                                     }
                                 }
                             }
@@ -742,19 +742,19 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                             for (var i = 0; i < cubeSize; i++) {
                                 // Increment in y- for Left, x- for Up, y+ for Right, x+ for Down
                                 // Up to Left
-                                destinationData[CubeFace.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CubeFace.Up * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
+                                destinationData[CUBE_FACE.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + slice] = sourceData[CUBE_FACE.Up * FaceSize + slice * cubeSize + (cubeSize - 1 - i)];
                                 // Left to Down
-                                destinationData[CubeFace.Down * FaceSize + slice * cubeSize + i] = sourceData[CubeFace.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
+                                destinationData[CUBE_FACE.Down * FaceSize + slice * cubeSize + i] = sourceData[CUBE_FACE.Left * FaceSize + (cubeSize - 1 - i) * cubeSize + slice];
                                 // Down to Right
-                                destinationData[CubeFace.Right * FaceSize + i * cubeSize + slice] = sourceData[CubeFace.Down * FaceSize + slice * cubeSize + i];
+                                destinationData[CUBE_FACE.Right * FaceSize + i * cubeSize + slice] = sourceData[CUBE_FACE.Down * FaceSize + slice * cubeSize + i];
                                 // Right to Up
-                                destinationData[CubeFace.Up * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CubeFace.Right * FaceSize + i * cubeSize + slice];
+                                destinationData[CUBE_FACE.Up * FaceSize + slice * cubeSize + (cubeSize - 1 - i)] = sourceData[CUBE_FACE.Right * FaceSize + i * cubeSize + slice];
 
                                 if (slice == 0) {
                                     // We also need to rotate the Back side
                                     for (var j = 0; j < cubeSize; j++) {
 
-                                        destinationData[CubeFace.Back * FaceSize + j * cubeSize + i] = sourceData[CubeFace.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + j];
+                                        destinationData[CUBE_FACE.Back * FaceSize + j * cubeSize + i] = sourceData[CUBE_FACE.Back * FaceSize + (cubeSize - 1 - i) * cubeSize + j];
                                     }
                                 }
 
@@ -762,7 +762,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                     // We also need to rotate the Front side
                                     for (var j = 0; j < cubeSize; j++) {
                                         // cubeSize - 1 - ith column to ith row
-                                        destinationData[CubeFace.Front * FaceSize + j * cubeSize + i] = sourceData[CubeFace.Front * FaceSize + (cubeSize - 1 - i) * cubeSize + j];
+                                        destinationData[CUBE_FACE.Front * FaceSize + j * cubeSize + i] = sourceData[CUBE_FACE.Front * FaceSize + (cubeSize - 1 - i) * cubeSize + j];
                                     }
                                 }
                             }
@@ -776,7 +776,7 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
 
                 break;
             }
-            case (CubeDataType.Piece): {
+            case (CUBE_DATA_TYPE.Piece): {
                 const totalCubieCount = cubeSize ** 3 - (cubeSize - 2) ** 3;
                 const Layer = algId % layerCount;
                 const Direction = Math.floor(algId / layerCount);
@@ -831,15 +831,15 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                 if (slice > 0 && slice < cubeSize - 1 && destinationFaces.length > 1) {
                                     // We are on one of the middle layers
                                     // If the new LDB face is facing down, or to the front, the Home value has changed
-                                    if ((destinationFaces[0] == CubeFace.Down && sourceFaces[0] == CubeFace.Down) || destinationFaces[0] == CubeFace.Front) {
+                                    if ((destinationFaces[0] == CUBE_FACE.Down && sourceFaces[0] == CUBE_FACE.Down) || destinationFaces[0] == CUBE_FACE.Front) {
                                         homeRotation = 1;
                                     }
                                 } else if (slice == cubeSize - 1 && destinationFaces.length > 2) {
                                     // Only Corners are affected here on the right layer by home changes
                                     // If the new LDB face is facing down, or to the front, the Home value has changed
-                                    if (destinationFaces[0] == CubeFace.Down && sourceFaces[0] == CubeFace.Down) {
+                                    if (destinationFaces[0] == CUBE_FACE.Down && sourceFaces[0] == CUBE_FACE.Down) {
                                         homeRotation = 2;
-                                    } else if (destinationFaces[0] == CubeFace.Front) {
+                                    } else if (destinationFaces[0] == CUBE_FACE.Front) {
                                         homeRotation = 1;
                                     }
                                 }
@@ -875,24 +875,24 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                 var sourceFaces = CubeData.getTouchingFaces(indexTo3d[i].x, indexTo3d[i].y, indexTo3d[i].z, cubeSize);
                                 var destinationFaces = CubeData.getTouchingFaces(destinationCoords.x, destinationCoords.y, destinationCoords.z, cubeSize);
                                 if (slice == 0 && destinationFaces.length > 1) {
-                                    if (sourceFaces[0] == CubeFace.Left || destinationFaces[0] == CubeFace.Left) {
+                                    if (sourceFaces[0] == CUBE_FACE.Left || destinationFaces[0] == CUBE_FACE.Left) {
                                         // Same conditions apply for both corners and edges here
                                         homeRotation = 1;
                                     }
                                 } else if (slice > 0 && slice < cubeSize - 1 && destinationFaces.length > 1) {
                                     // We are on one of the middle layers
                                     // If the new LDB face is facing left, or to the Back, the Home value has changed
-                                    if ((destinationFaces[0] == CubeFace.Left && sourceFaces[0] == CubeFace.Left) || destinationFaces[0] == CubeFace.Back) {
+                                    if ((destinationFaces[0] == CUBE_FACE.Left && sourceFaces[0] == CUBE_FACE.Left) || destinationFaces[0] == CUBE_FACE.Back) {
                                         homeRotation = 1;
                                     }
                                 } else if (slice == cubeSize - 1 && destinationFaces.length > 1) {
                                     // If the new LDB face is facing up, or to the back, the Home value has changed for edges
-                                    if (destinationFaces.length == 2 && (destinationFaces[0] == CubeFace.Up || destinationFaces[0] == CubeFace.Back)) {
+                                    if (destinationFaces.length == 2 && (destinationFaces[0] == CUBE_FACE.Up || destinationFaces[0] == CUBE_FACE.Back)) {
                                         homeRotation = 1;
-                                    } else if (destinationFaces.length == 3 && (destinationFaces[0] == CubeFace.Back)) {
+                                    } else if (destinationFaces.length == 3 && (destinationFaces[0] == CUBE_FACE.Back)) {
                                         // If the new LDB face is facing the Back, the Home value has changed by 1
                                         homeRotation = 1;
-                                    } else if (destinationFaces.length == 3 && (destinationFaces[0] == CubeFace.Left && sourceFaces[0] == CubeFace.Left)) {
+                                    } else if (destinationFaces.length == 3 && (destinationFaces[0] == CUBE_FACE.Left && sourceFaces[0] == CUBE_FACE.Left)) {
                                         // If the new LDB face is facing the Front with a source from the left, the Home value has changed by 2
                                         homeRotation = 2;
                                     }
@@ -925,24 +925,24 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
                                 var destinationFaces = CubeData.getTouchingFaces(destinationCoords.x, destinationCoords.y, destinationCoords.z, cubeSize);
 
                                 if (slice == 0 && destinationFaces.length > 1) {
-                                    if (destinationFaces.length == 2 && (sourceFaces[0] == CubeFace.Down || destinationFaces[0] == CubeFace.Left)) {
+                                    if (destinationFaces.length == 2 && (sourceFaces[0] == CUBE_FACE.Down || destinationFaces[0] == CUBE_FACE.Left)) {
                                         // If the edge ends up with source LDB on bottom or Destination on Left, it changes
                                         homeRotation = 1;
-                                    } else if (destinationFaces.length == 3 && !(destinationFaces[0] == CubeFace.Down)) {
+                                    } else if (destinationFaces.length == 3 && !(destinationFaces[0] == CUBE_FACE.Down)) {
                                         // All corners except for the down to right piece, have this rotation
                                         homeRotation = 1;
                                     }
                                 } else if (slice > 0 && slice < cubeSize - 1 && destinationFaces.length > 1) {
                                     // We are on one of the middle layers
                                     // If the new LDB face is facing left with a source from left, or if the destination is up, we have a homeChange
-                                    if ((destinationFaces[0] == CubeFace.Left && sourceFaces[0] == CubeFace.Left) || destinationFaces[0] == CubeFace.Up) {
+                                    if ((destinationFaces[0] == CUBE_FACE.Left && sourceFaces[0] == CUBE_FACE.Left) || destinationFaces[0] == CUBE_FACE.Up) {
                                         homeRotation = 1;
                                     }
                                 } else if (slice == cubeSize - 1 && destinationFaces.length > 1) {
                                     // If we have source down, or destination left, we have a home change in an edge
-                                    if (destinationFaces.length == 2 && (destinationFaces[0] == CubeFace.Left || sourceFaces[0] == CubeFace.Down)) {
+                                    if (destinationFaces.length == 2 && (destinationFaces[0] == CUBE_FACE.Left || sourceFaces[0] == CUBE_FACE.Down)) {
                                         homeRotation = 1;
-                                    } else if (destinationFaces.length == 3 && !(destinationFaces[0] == CubeFace.Down)) {
+                                    } else if (destinationFaces.length == 3 && !(destinationFaces[0] == CUBE_FACE.Down)) {
                                         // If the new LDB face is facing Down, there is no change, else we have a CCW change
                                         homeRotation = 2;
                                     }
@@ -980,13 +980,13 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
             const FLen = currentFilter.length;
             for (var j = 0; j < FLen; j++) {
                 switch (storageFormat) {
-                    case CubeDataType.Fast:
+                    case CUBE_DATA_TYPE.Fast:
                     // Fall thorugh
-                    case CubeDataType.Surface: {
+                    case CUBE_DATA_TYPE.Surface: {
                         destinationData[j] = sourceData[currentFilter[j]];
                         break;
                     }
-                    case CubeDataType.Piece: {
+                    case CUBE_DATA_TYPE.Piece: {
                         var rotation = Math.floor(currentFilter[j] / TotalCubieCount);
                         var sourceIndex = currentFilter[j] % TotalCubieCount;
                         var currentRotation = Math.floor(sourceData[sourceIndex] / TotalCubieCount);
@@ -1010,13 +1010,13 @@ function Filter(cubeSize, storageFormat = CubeDataType.Surface, algStorage = new
 /**
  * @param {number} cubeSize 
  */
-Filter.createNewFilterData = function (cubeSize, storageFormat = CubeDataType.Surface) {
+Filter.createNewFilterData = function (cubeSize, storageFormat = CUBE_DATA_TYPE.Surface) {
     // Returns an array that a filter can use to apply rotations or moves to cubes
     // Filters use the array to tell what index to pull from the starting cube to fill in the current index or
     // more simply, cubeArray[i] = cubeArray[filterArray[i]]. Variations on this are used for the different storage formats
     var result = [];
     switch (storageFormat) {
-        case CubeDataType.Surface: {
+        case CUBE_DATA_TYPE.Surface: {
             // All the indecies in these format literaly are just in order, so return an array with all
             // the indexes in order
             var totalCount = (cubeSize ** 2) * 6;
@@ -1025,7 +1025,7 @@ Filter.createNewFilterData = function (cubeSize, storageFormat = CubeDataType.Su
             }
             break;
         }
-        case CubeDataType.Piece: {
+        case CUBE_DATA_TYPE.Piece: {
             // All the indecies in these format literaly are just in order, so return an array with all
             // the indexes in order
             var totalCount = (cubeSize ** 3) - ((cubeSize - 2) ** 3);
@@ -1046,7 +1046,7 @@ Filter.createNewFilterData = function (cubeSize, storageFormat = CubeDataType.Su
 /**
  * @param {number} cubeSize 
  */
-Filter.buildBaseFilters = function (cubeSize, storageFormat = CubeDataType.Surface) {
+Filter.buildBaseFilters = function (cubeSize, storageFormat = CUBE_DATA_TYPE.Surface) {
     // Builds the basic filters that are used to create larger ones. This will build all the single move filters and save them in the cache
     // Retuns the index of the filter
     //	Check if filters for this size are already made

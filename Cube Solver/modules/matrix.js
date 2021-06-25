@@ -1,9 +1,32 @@
 // @ts-check
+/*
+Matrix
+-----------
+Matrix(matrixArray:number[]|number[][], columnMajor?:boolean):Matrix // Creates a new matrix based on the data given
+* dot(matA:number[][], matB:number[][], row:int, col:int):number // Calculates the dot product between the row of matA and the column of matB, used in matrix multiplication
+multiply(other:Matrix):Matrix // Returns the result of the matrix multiplied by the other matrix.
+add(other:Matrix):Matrix // Returns the result of the matrix added with the other matrix.
+scale(value:int):Matrix // Returns a new matrix with each of its values scaled by value from the original
+determinant():number|null // Calculates and returns the determinant if possible, used by the inverse method
+inverse():Matrix|null // Calculates and returns the inverse of the matrix if one exists
+minors():Matrix // Calculates and returns the minor values of each location of the matrix
+cofactors():Matrix // Calculates and returns the cofactors of each location of the matrix
+getMultiArray(columnMajor?:boolean):number[][] // Returns the matrix as a 2D array
+getArray(columnMajor?:boolean):number[] // Returns the matrix as an array
+getDim():int // Returns the dimension of the matrix (since it is square, only 1 value is needed)
+-----------
+p matrixArray:number[]|number[][] // The values inside the matrix
+p columnMajor?:boolean // If false (default) matrixArray is assumed to be stored as [row][col] or [col * dim + row], if true: [col][row] or [row * dim + col]
+* dim:int // The dimension of the array, calculated based on what is given in matrixArray
+* mat:number[][] // A 2D array holding the values of our matrix as [row][col]
+* multiDim:boolean // Tells if the given array was multidimensional or not
+-----------
+*/
 /**
  * @param {number[]|number[][]} matrixArray 
  * @param {boolean} columnMajor 
  */
-function Matrix(matrixArray, columnMajor = false) {
+function Matrix(matrixArray, columnMajor=false) {
     // Must be a square matrix
 
     // Check if it is a multi dim array
@@ -195,7 +218,6 @@ function Matrix(matrixArray, columnMajor = false) {
                         subMat[subMatRow][subMatCol] = mat[subRow][subCol];
                     }
                 }
-                //var detSign = col % 2 == 0 ? 1 : -1;
                 result[row][col] = new Matrix(subMat).determinant();
             }
         }
@@ -227,7 +249,7 @@ function Matrix(matrixArray, columnMajor = false) {
         return new Matrix(result);
     }
 
-    this.getMultiArray = function (columnMajor = false) {
+    this.getMultiArray = function (columnMajor=false) {
         var result = [];
         if (columnMajor) {
             // row and column refer to mat's format
@@ -249,7 +271,7 @@ function Matrix(matrixArray, columnMajor = false) {
         return result;
     }
 
-    this.getArray = function (columnMajor = false) {
+    this.getArray = function (columnMajor=false) {
         var result = [];
         if (columnMajor) {
             // row and column refer to mat's format
