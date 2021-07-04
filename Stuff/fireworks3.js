@@ -363,7 +363,7 @@ out vec2 _pos;
 out float _intsy;
 out float _lum;
 void main(){
-    gl_Position = world * model * vec4(pos * lum, 0.0, 1.0);
+    gl_Position = world * model * vec4(pos * (lum * 10.0), 0.0, 1.0);
     _pos = pos;
     _lum = lum;
     _intsy = intsy;
@@ -448,12 +448,13 @@ function updateCanvasSize(){
     canvas.width = width;
     canvas.height = height;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    prepareCamera();
 }
 
 
 window.addEventListener("resize", updateCanvasSize);
 
-var gl = canvas.getContext("webgl2");
+var gl = canvas.getContext("webgl2", {alpha:false});
 if(gl == null || gl == undefined){
     throw "Could not start webgl2";
 }
@@ -667,7 +668,7 @@ function Spark(type, time, size, x, y, z, vx, vy, vz, r, g, b, lum, insty, tags,
                     var nx = Math.random() * 30 - 15;
                     var ny = Math.random() * 30 - 15;
                     var nz = Math.random() * 30 - 15;
-                    Spark.getNewSpark(Spark.types.EMBER, Math.random() * 2, 4, x, y, z, nx, ny, nz, sr, sg, sb, 5, 10, null);
+                    Spark.getNewSpark(Spark.types.EMBER, Math.random() * 2, 4, x, y, z, nx, ny, nz, sr, sg, sb, 0.9, 10, null);
                 }
                 
                 vy -= deltaTime * 10;
@@ -702,7 +703,7 @@ function Spark(type, time, size, x, y, z, vx, vy, vz, r, g, b, lum, insty, tags,
                         var nx = v1.vx;
                         var ny = v1.vy;
                         var nz = v1.vz;
-                        var nSpark = Spark.getNewSpark(Spark.types.SPARK, Math.random(), 10, x, y, z, nx, ny, nz, sr, sg, sb, 5, 15, null);
+                        var nSpark = Spark.getNewSpark(Spark.types.SPARK, Math.random(), 10, x, y, z, nx, ny, nz, sr, sg, sb, 1, 15, null);
                         if(nSpark == null){
                             break;
                         } 
@@ -717,7 +718,7 @@ function Spark(type, time, size, x, y, z, vx, vy, vz, r, g, b, lum, insty, tags,
                     var nx = Math.random() * 30 - 15;
                     var ny = Math.random() * 30 - 15;
                     var nz = Math.random() * 30 - 15;
-                    Spark.getNewSpark(Spark.types.EMBER, Math.random(), 4, x, y, z, nx, ny, nz, sr, sg, sb, 3, 5, null);
+                    Spark.getNewSpark(Spark.types.EMBER, Math.random(), 4, x, y, z, nx, ny, nz, sr, sg, sb, 0.9, 5, null);
                 }
                 vy -= deltaTime * 10;
                 if(time < 0.25){
@@ -960,7 +961,7 @@ function draw(time){
 
     gl.useProgram(solidProgram);
     gl.bindVertexArray(solidVAB);
-    
+
     gl.bindBuffer(gl.ARRAY_BUFFER, lightBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, lightArray);
 
@@ -970,7 +971,7 @@ function draw(time){
     if(Math.random() < 0.025){
         var color = getRandomVector(1);
         
-        Spark.getNewSpark(Spark.types.ROCKET, 5, 10, Math.random() * 100 - 50, -height / 2, Math.random() * 100 - 50, Math.random() * 50 - 25, Math.random() * 500 + 50, Math.random() * 50 - 25, color.vx, color.vy, color.vz, 20, 20, null);
+        Spark.getNewSpark(Spark.types.ROCKET, 5, 10, Math.random() * 100 - 50, -height / 2, Math.random() * 100 - 50, Math.random() * 50 - 25, Math.random() * 500 + 50, Math.random() * 50 - 25, color.vx, color.vy, color.vz, 3, 20, null);
 
     }
     oldTime = time;
