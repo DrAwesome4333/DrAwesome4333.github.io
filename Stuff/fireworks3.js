@@ -971,7 +971,7 @@ function draw(time){
     if(Math.random() < 0.025){
         var color = getRandomVector(1);
         
-        Spark.getNewSpark(Spark.types.ROCKET, 5, 10, Math.random() * 100 - 50, -height / 2, Math.random() * 100 - 50, Math.random() * 50 - 25, Math.random() * 500 + 50, Math.random() * 50 - 25, color.vx, color.vy, color.vz, 3, 20, null);
+        Spark.getNewSpark(Spark.types.ROCKET, 5, 10, Math.random() * 100 - 50, -height / 2, Math.random() * 100 - 50, Math.random() * 50 - 25, Math.random() * 500 + 50, Math.random() * 50 - 25, Math.abs(color.vx), Math.abs(color.vy), Math.abs(color.vz), 1, 20, null);
 
     }
     oldTime = time;
