@@ -1,5 +1,11 @@
 //@ts-check
+/**
+     * @type {HTMLSourceElement}
+     */
     var audioSrc = document.getElementById("src");
+    /**
+     * @type {HTMLAudioElement}
+     */
     var audioEle = document.getElementById("audio");
     var fileEle = document.getElementById("files");
     var playlistEle = document.getElementById("playlist");
@@ -101,16 +107,14 @@
     });
 
     function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.analyser.frequencyBinCount)) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.yOffset = 0;
-        this.ox = 0;//orbit point
-        this.oy = 0;
-        this.oz = -650;
-        this.power = 0;
-        this.oldPower = 0;
-        this.dp = 0; //difference in power.
+
+        var yOffset = 0;
+        var ox = 0;//orbit point
+        var oy = 0;
+        var oz = -650;
+        var power = 0;
+        var oldPower = 0;
+        var dp = 0; //difference in power.
         this.light = light;
         this.tilt = (Math.random() - 0.5) * 60;
         this.orbit = Math.random() * 360;
@@ -185,22 +189,22 @@
         }
         this.update = function () {
 
-            this.OldPower = this.power;
-            if (this.OldPower != 0) {
-                this.dp = this.power / this.OldPower / 1.5;
+            oldPower = power;
+            if (oldPower != 0) {
+                dp = power / oldPower / 1.5;
             }
-            if (this.power < Sound.data.frequency[musicSection] / 255) {
-                this.power = Sound.data.frequency[musicSection] / 255;
+            if (power < Sound.data.frequency[musicSection] / 255) {
+                power = Sound.data.frequency[musicSection] / 255;
             } else {
-                if (this.power > 0)
-                    this.power -= 0.1;
-                if (this.power < 0) {
-                    this.power = 0;
+                if (power > 0)
+                    power -= 0.1;
+                if (power < 0) {
+                    power = 0;
                 }
             }
 
 
-            this.beatPoints += this.dp;
+            this.beatPoints += dp;
             if(this.beatPoints < 0){
                 this.beatPoints = 0;
             }
@@ -209,13 +213,13 @@
                 this.color = Graphics.getNewLightColor();
             }
             
-            this.scale = this.power * 5;
-            this.orbit += this.power * 0.5 * (this.maxDistance / this.orbitDistance);
+            this.scale = power * 5;
+            this.orbit += power * 0.5 * (this.maxDistance / this.orbitDistance);
             this.orbit %= 360;
-            this.yOffset += this.power / 50;
-            this.orbitDistance += (this.power * this.power - 0.25) * 10 * (this.maxDistance / this.orbitDistance);
-            this.rotation[0] += this.power * 2;
-            this.rotation[1] += this.power * 2 + 0.1;
+            yOffset += power / 50;
+            this.orbitDistance += (power * power - 0.25) * 10 * (this.maxDistance / this.orbitDistance);
+            this.rotation[0] += power * 2;
+            this.rotation[1] += power * 2 + 0.1;
             if (this.orbitDistance > this.maxDistance) {
                 this.orbitDistance = this.maxDistance;
             } else if (this.orbitDistance < this.minDistance) {
@@ -224,30 +228,30 @@
             var orbit = this.orbit / 180 * Math.PI;
             var tilt = this.tilt / 180 * Math.PI;
 
-            this.oy = Math.sin(this.yOffset) * 1000 / (this.orbitDistance / 100);
+            oy = Math.sin(yOffset) * 1000 / (this.orbitDistance / 100);
             var oldX = 0;
             var oldY = 0;
             var oldZ = 0;
-            this.x = this.orbitDistance * Math.cos(orbit);
-            this.y = 0;
-            this.z = this.orbitDistance * Math.sin(orbit);
-            oldX = this.x;
-            oldY = this.y;
-            this.x = oldX * Math.cos(tilt) - oldY * Math.sin(tilt);
-            this.y = oldX * Math.sin(tilt) + oldY * Math.cos(tilt) + this.oy;
-            oldX = this.x;
-            oldZ = this.z;
-            this.x = oldX * Math.cos(this.tiltOffset) - oldZ * Math.sin(this.tiltOffset) + this.ox;
-            this.z = oldX * Math.sin(this.tiltOffset) + oldZ * Math.cos(this.tiltOffset) + this.oz;
+            x = this.orbitDistance * Math.cos(orbit);
+            y = 0;
+            z = this.orbitDistance * Math.sin(orbit);
+            oldX = x;
+            oldY = y;
+            x = oldX * Math.cos(tilt) - oldY * Math.sin(tilt);
+            y = oldX * Math.sin(tilt) + oldY * Math.cos(tilt) + oy;
+            oldX = x;
+            oldZ = z;
+            x = oldX * Math.cos(this.tiltOffset) - oldZ * Math.sin(this.tiltOffset) + ox;
+            z = oldX * Math.sin(this.tiltOffset) + oldZ * Math.cos(this.tiltOffset) + oz;
             this.buildModelMat();
             if (this.light > -1) {
-                Graphics.lightPos[this.light * 3] = this.x;
-                Graphics.lightPos[this.light * 3 + 1] = this.y;
-                Graphics.lightPos[this.light * 3 + 2] = this.z;
+                Graphics.lightPos[this.light * 3] = x;
+                Graphics.lightPos[this.light * 3 + 1] = y;
+                Graphics.lightPos[this.light * 3 + 2] = z;
 
-                Graphics.lightColor[this.light * 3] = this.color[0] * this.power + 0.1;
-                Graphics.lightColor[this.light * 3 + 1] = this.color[1] * this.power + 0.1;
-                Graphics.lightColor[this.light * 3 + 2] = this.color[2] * this.power + 0.1;
+                Graphics.lightColor[this.light * 3] = this.color[0] * power + 0.1;
+                Graphics.lightColor[this.light * 3 + 1] = this.color[1] * power + 0.1;
+                Graphics.lightColor[this.light * 3 + 2] = this.color[2] * power + 0.1;
             }
         }
         this.buildModelMat = function () {
@@ -281,7 +285,7 @@
                     1, 0, 0, 0,
                     0, 1, 0, 0,
                     0, 0, 1, 0,
-                    this.x, this.y, this.z, 1])
+                    x, y, z, 1])
 
         };
         this.buildVBO();
@@ -850,7 +854,7 @@
 
 
     }
-    
+
     function Song(fileElement, fileNumber, idNumber=Player.songs.length) {
         this.length = 0;
         this.id = idNumber;
