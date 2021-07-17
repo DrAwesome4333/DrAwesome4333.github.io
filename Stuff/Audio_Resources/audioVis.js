@@ -7,6 +7,9 @@
      * @type {HTMLAudioElement}
      */
     var audioEle = document.getElementById("audio");
+    /**
+     * @type {HTMLInputElement}
+     */
     var fileEle = document.getElementById("files");
     var playlistEle = document.getElementById("playlist");
     var placeHolder = document.createElement("Div");
@@ -16,8 +19,11 @@
     var op = document.getElementById("op");
     var hasStarted = false;
     var audioDevices = [];
-    var ct = document.getElementById("can").getContext("2d");
+    /**
+     * @type {HTMLCanvasElement}
+     */
     var canvas = document.getElementById("can");
+    var ct = canvas.getContext("2d");
     var movingSongId = -1;
     var ArrowTimer = 3;
 
@@ -115,25 +121,38 @@
         var power = 0;
         var oldPower = 0;
         var dp = 0; //difference in power.
-        this.light = light;
-        this.tilt = (Math.random() - 0.5) * 60;
-        this.orbit = Math.random() * 360;
-        this.tiltOffset = Math.random() * 360 / 180 * Math.PI;//so all the cubes don't make an x
-        this.maxDistance = 3000;
-        this.minDistance = 100;
-        this.orbitDistance = 300;
+        var tilt = (Math.random() - 0.5) * 60;
+        var orbit = Math.random() * 360;
+        var tiltOffset = Math.random() * 360 / 180 * Math.PI;//so all the cubes don't make an x
+        var maxDistance = 3000;
+        var minDistance = 100;
+        var orbitDistance = 300;
         this.musicSection = musicSection;
-        this.size = size;//the size of the model
-        this.scale = 1;//how the model is scaled
-        this.beatPoints = 0;
+        var scale = 1;//how the model is scaled
+        var beatPoints = 0;
 
-        this.color = color;
         this.bufferLength = 36;
-        this.rotation = [0, 0, 0];//in degs.
-        this.modelMat = Graphics.matrix.identity(4);
-        this.normalMat = Graphics.matrix.identity(3);
-        this.VBO = Graphics.gl.createBuffer();
-        this.IBO = Graphics.gl.createBuffer();
+        var rotation = [0, 0, 0];//in degs.
+        var modelMat = Graphics.matrix.identity(4);
+        var normalMat = Graphics.matrix.identity(3);
+        var VBO = Graphics.gl.createBuffer();
+        var IBO = Graphics.gl.createBuffer();
+
+        this.getVBO = function(){
+            return VBO;
+        }
+
+        this.getIBO = function(){
+            return IBO;
+        }
+
+        this.getModelMat = function(){
+            return modelMat;
+        }
+
+        this.getNormalMat = function(){
+            return normalMat;
+        }
 
         var lazyArray = [];
         for (var i = 0; i < 6; i++) {
@@ -141,16 +160,16 @@
             lazyArray.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 3, i * 4 + 1)
         }
 
-        Graphics.gl.bindBuffer(Graphics.gl.ELEMENT_ARRAY_BUFFER, this.IBO);
+        Graphics.gl.bindBuffer(Graphics.gl.ELEMENT_ARRAY_BUFFER, IBO);
         Graphics.gl.bufferData(Graphics.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lazyArray), Graphics.gl.STATIC_DRAW);
         //[x, y, z, r, g, b, nx, ny, nz, tx, ty]
         //used to update the VBO on a size or color (not scale) change
-        this.buildVBO = function () {
+        function buildVBO() {
             //half size
-            var hs = this.size / 2;
-            var c = this.color;
+            var hs = size / 2;
+            var c = color;
             var f = 1;
-            if (this.light > -1) {
+            if (light > -1) {
                 f = -1;
             }
             var anotherArray = [
@@ -184,12 +203,12 @@
                 -hs,  hs, -hs, c[0], c[1], c[2], 0, 0, -1 * f, 1, 0,
                     hs, -hs, -hs, c[0], c[1], c[2], 0, 0, -1 * f, 0, 1];
 
-            Graphics.gl.bindBuffer(Graphics.gl.ARRAY_BUFFER, this.VBO);
+            Graphics.gl.bindBuffer(Graphics.gl.ARRAY_BUFFER, VBO);
             Graphics.gl.bufferData(Graphics.gl.ARRAY_BUFFER, new Float32Array(anotherArray), Graphics.gl.STATIC_DRAW);
         }
+
         this.update = function () {
 
-            oldPower = power;
             if (oldPower != 0) {
                 dp = power / oldPower / 1.5;
             }
@@ -204,60 +223,63 @@
             }
 
 
-            this.beatPoints += dp;
-            if(this.beatPoints < 0){
-                this.beatPoints = 0;
+            beatPoints += dp;
+            if(beatPoints < 0){
+                beatPoints = 0;
             }
-            if(this.beatPoints > 5){
-                this.beatPoints = 0;
-                this.color = Graphics.getNewLightColor();
+            if(beatPoints > 5){
+                beatPoints = 0;
+                color = Graphics.getNewLightColor();
             }
             
-            this.scale = power * 5;
-            this.orbit += power * 0.5 * (this.maxDistance / this.orbitDistance);
-            this.orbit %= 360;
+            scale = power * 5;
+            orbit += power * 0.5 * (maxDistance / orbitDistance);
+            orbit %= 360;
             yOffset += power / 50;
-            this.orbitDistance += (power * power - 0.25) * 10 * (this.maxDistance / this.orbitDistance);
-            this.rotation[0] += power * 2;
-            this.rotation[1] += power * 2 + 0.1;
-            if (this.orbitDistance > this.maxDistance) {
-                this.orbitDistance = this.maxDistance;
-            } else if (this.orbitDistance < this.minDistance) {
-                this.orbitDistance = this.minDistance;
+            orbitDistance += (power * power - 0.25) * 10 * (maxDistance / orbitDistance);
+            rotation[0] += power * 2;
+            rotation[1] += power * 2 + 0.1;
+            if (orbitDistance > maxDistance) {
+                orbitDistance = maxDistance;
+            } else if (orbitDistance < minDistance) {
+                orbitDistance = minDistance;
             }
-            var orbit = this.orbit / 180 * Math.PI;
-            var tilt = this.tilt / 180 * Math.PI;
+            var nOrbit = orbit / 180 * Math.PI;
+            var nTilt = tilt / 180 * Math.PI;
 
-            oy = Math.sin(yOffset) * 1000 / (this.orbitDistance / 100);
+            oy = Math.sin(yOffset) * 1000 / (orbitDistance / 100);
+           // debugger;
             var oldX = 0;
             var oldY = 0;
             var oldZ = 0;
-            x = this.orbitDistance * Math.cos(orbit);
+            x = orbitDistance * Math.cos(nOrbit);
             y = 0;
-            z = this.orbitDistance * Math.sin(orbit);
+            z = orbitDistance * Math.sin(nOrbit);
             oldX = x;
             oldY = y;
-            x = oldX * Math.cos(tilt) - oldY * Math.sin(tilt);
-            y = oldX * Math.sin(tilt) + oldY * Math.cos(tilt) + oy;
+            x = oldX * Math.cos(nTilt) - oldY * Math.sin(nTilt);
+            y = oldX * Math.sin(nTilt) + oldY * Math.cos(nTilt) + oy;
             oldX = x;
             oldZ = z;
-            x = oldX * Math.cos(this.tiltOffset) - oldZ * Math.sin(this.tiltOffset) + ox;
-            z = oldX * Math.sin(this.tiltOffset) + oldZ * Math.cos(this.tiltOffset) + oz;
-            this.buildModelMat();
-            if (this.light > -1) {
-                Graphics.lightPos[this.light * 3] = x;
-                Graphics.lightPos[this.light * 3 + 1] = y;
-                Graphics.lightPos[this.light * 3 + 2] = z;
+            x = oldX * Math.cos(tiltOffset) - oldZ * Math.sin(tiltOffset) + ox;
+            z = oldX * Math.sin(tiltOffset) + oldZ * Math.cos(tiltOffset) + oz;
+            buildModelMat();
+            if (light > -1) {
+                Graphics.lightPos[light * 3] = x;
+                Graphics.lightPos[light * 3 + 1] = y;
+                Graphics.lightPos[light * 3 + 2] = z;
 
-                Graphics.lightColor[this.light * 3] = this.color[0] * power + 0.1;
-                Graphics.lightColor[this.light * 3 + 1] = this.color[1] * power + 0.1;
-                Graphics.lightColor[this.light * 3 + 2] = this.color[2] * power + 0.1;
+                Graphics.lightColor[light * 3] = color[0] * power + 0.1;
+                Graphics.lightColor[light * 3 + 1] = color[1] * power + 0.1;
+                Graphics.lightColor[light * 3 + 2] = color[2] * power + 0.1;
             }
+            
+            oldPower = power;
         }
-        this.buildModelMat = function () {
-            var xr = this.rotation[0] * Math.PI / 180;
-            var yr = this.rotation[1] * Math.PI / 180;
-            var zr = this.rotation[2] * Math.PI / 180;
+        function buildModelMat() {
+            var xr = rotation[0] * Math.PI / 180;
+            var yr = rotation[1] * Math.PI / 180;
+            var zr = rotation[2] * Math.PI / 180;
             var xm = [
                 1, 0, 0,
                 0, Math.cos(xr), -Math.sin(xr),
@@ -270,16 +292,16 @@
                 Math.cos(zr), -Math.sin(zr), 0,
                 Math.sin(zr),  Math.cos(zr), 0,
                 0, 0, 1];
-            this.normalMat = Graphics.matrix.mult3x3([
-                this.scale, 0, 0,
-                0, this.scale, 0,
-                0, 0, this.scale], xm);
-            this.normalMat = Graphics.matrix.mult3x3(this.normalMat, ym);
-            this.normalMat = Graphics.matrix.mult3x3(this.normalMat, zm);
-            this.modelMat = Graphics.matrix.mult4x4([
-                this.normalMat[0], this.normalMat[1], this.normalMat[2], 0,
-                this.normalMat[3], this.normalMat[4], this.normalMat[5], 0,
-                this.normalMat[6], this.normalMat[7], this.normalMat[8], 0,
+            normalMat = Graphics.matrix.mult3x3([
+                scale, 0, 0,
+                0, scale, 0,
+                0, 0, scale], xm);
+            normalMat = Graphics.matrix.mult3x3(normalMat, ym);
+            normalMat = Graphics.matrix.mult3x3(normalMat, zm);
+            modelMat = Graphics.matrix.mult4x4([
+                normalMat[0], normalMat[1], normalMat[2], 0,
+                normalMat[3], normalMat[4], normalMat[5], 0,
+                normalMat[6], normalMat[7], normalMat[8], 0,
                 0, 0, 0, 1],
                 [
                     1, 0, 0, 0,
@@ -288,8 +310,8 @@
                     x, y, z, 1])
 
         };
-        this.buildVBO();
-        this.buildModelMat();
+        buildVBO();
+        buildModelMat();
     }
     var Graphics = {
         canvas: document.createElement("CANVAS"),
@@ -833,13 +855,16 @@
             this.gl.uniform3fv(this.uniforms.main.light_pos, this.lightPos)
             this.gl.uniform3fv(this.uniforms.main.ambient_color, [lAvg[0] / 8, lAvg[1] / 8, lAvg[2] / 8]);
             for (var i = 0; i < this.cubes.length; i++) {
+                /**
+                 * @type {Cube}
+                 */
                 var cc = this.cubes[i];
                 cc.update();
-                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, cc.VBO);
-                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, cc.IBO);
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, cc.getVBO());
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, cc.getIBO());
                 //[x, y, z, r, g, b, nx, ny, nz, tx, ty]
-                this.gl.uniformMatrix4fv(this.uniforms.main.model, false, cc.modelMat);
-                this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix, false, cc.normalMat);
+                this.gl.uniformMatrix4fv(this.uniforms.main.model, false, cc.getModelMat());
+                this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix, false, cc.getNormalMat());
 
                 this.gl.vertexAttribPointer(this.attributes.main.pos, 3, this.gl.FLOAT, false, 4 * (11), 0);
                 this.gl.vertexAttribPointer(this.attributes.main.color, 3, this.gl.FLOAT, false, 4 * (11), 3 * 4);
@@ -1221,7 +1246,7 @@
                     audioDevices.push(allDevices[i]);
                     var newChild = document.createElement("option");
                     newChild.innerHTML = allDevices[i].label;
-                    newChild.value = audioDevices.length - 1;
+                    newChild.value = (audioDevices.length - 1).toString();
                     inputSelectEle.appendChild(newChild);
                 }
             }
