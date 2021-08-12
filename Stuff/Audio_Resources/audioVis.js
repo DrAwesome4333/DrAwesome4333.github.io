@@ -1,117 +1,119 @@
 //@ts-check
-/** @type {HTMLSourceElement}*/
+///** @type {HTMLSourceElement}*/
 
 // @ts-ignore
-var audioSrc = document.getElementById("src");
-/** @type {HTMLAudioElement}*/
+// var audioSrc = document.getElementById("src");
+// /** @type {HTMLAudioElement}*/
 
-// @ts-ignore
-var audioEle = document.getElementById("audio");
-/** @type {HTMLInputElement}*/
+// // @ts-ignore
+// var audioEle = document.getElementById("audio");
+// /** @type {HTMLInputElement}*/
 
-// @ts-ignore
-var fileEle = document.getElementById("files");
-var playlistEle = document.getElementById("playlist");
-var placeHolder = document.createElement("Div");
-var addSongEle = document.getElementById("addSongs");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
-var inputSelectEle = document.getElementById("inputSelect");
-var sidePanelArrow = document.getElementById("sidePanelArrow");
+// var playlistEle = document.getElementById("playlist");
+// var placeHolder = document.createElement("Div");
+// var addSongEle = document.getElementById("addSongs");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
+// var inputSelectEle = document.getElementById("inputSelect");
+// var sidePanelArrow = document.getElementById("sidePanelArrow");
 var op = document.getElementById("op");
-var hasStarted = false;
+
 var audioDevices = [];
 /** @type {HTMLCanvasElement}*/
 // @ts-ignore
 var canvas = document.getElementById("can");
 var ct = canvas.getContext("2d");
-var movingSongId = -1;
-var ArrowTimer = 3;
+//var movingSongId = -1;
+//var ArrowTimer = 3;
 
-setInterval(
-    function () {
-        if (ArrowTimer > 0) {
-            ArrowTimer--;
-            if (ArrowTimer === 0) {
-                sidePanelArrow.style.opacity = "0";
-                sidePanelArrow.style.cursor = "none";
-            }
-        }
-    }, 1000);
+// setInterval(
+//     function () {
+//         if (ArrowTimer > 0) {
+//             ArrowTimer--;
+//             if (ArrowTimer === 0) {
+//                 sidePanelArrow.style.opacity = "0";
+//                 sidePanelArrow.style.cursor = "none";
+//             }
+//         }
+//     }, 1000);
 
-audioEle.addEventListener("error", function (e) {
-    console.log("An error was triggered");
-    console.log(e);
-});
+// audioEle.addEventListener("error", function (e) {
+//     console.log("An error was triggered");
+//     console.log(e);
+// });
 
-audioEle.addEventListener("progress", function (e) {
-    _Player.songs[_Player.songId].hasProgressed = true;
-});
+// audioEle.addEventListener("progress", function (e) {
+//     //_Player.songs[_Player.songId].hasProgressed = true;
 
-audioEle.addEventListener("stalled", function (e) {
-    console.log("A stalled event was triggered");
-    console.log(e);
-});
+//     //TODO
+//     // This causes the song to auto disable as it thinks the song can't play
+// });
 
-audioEle.addEventListener("ended", function (e) {
-    _Player.nextSong();
-});
+// audioEle.addEventListener("stalled", function (e) {
+//     console.log("A stalled event was triggered");
+//     console.log(e);
+// });
 
-placeHolder.classList.add("playlistItem");
-placeHolder.style.height = "0px";
-placeHolder.id = "placeHolder";
+// audioEle.addEventListener("ended", function (e) {
+//     //TODO , abstract it.
+//     testPlayer.nextTrack();
+// });
 
-addSongEle.addEventListener("dragover", function (e) {
-    e.preventDefault();
-});
+// placeHolder.classList.add("playlistItem");
+// placeHolder.style.height = "0px";
+// placeHolder.id = "placeHolder";
 
-addSongEle.addEventListener("drop", function (e) {
-    e.preventDefault();
+// addSongEle.addEventListener("dragover", function (e) {
+//     e.preventDefault();
+// });
 
-    var id = e.dataTransfer.getData("text");
-    var movedEle = document.getElementById(id);
-    playlistEle.insertBefore(movedEle, this);
-    var movedId = parseInt(movedEle.id.substring(5, 10), 10);
-    var oldIndex = -1;
-    var newIndex = 0;
+// addSongEle.addEventListener("drop", function (e) {
+//     e.preventDefault();
 
-    if (movingSongId === -1) {
-        placeHolder.style.height = "200px";
-        playlistEle.insertBefore(placeHolder, movedEle);
-        movedEle.style.height = "0px";
-        setTimeout(function () {
-            _Player.songs[movingSongId].playlistItem.removeAttribute("style");
-            placeHolder.style.height = "0px";
-            movingSongId = -1;
-        }, 1)
+//     var id = e.dataTransfer.getData("text");
+//     var movedEle = document.getElementById(id);
+//     playlistEle.insertBefore(movedEle, this);
+//     var movedId = parseInt(movedEle.id.substring(5, 10), 10);
+//     var oldIndex = -1;
+//     var newIndex = 0;
 
-        movingSongId = movedId;
-    }
+//     if (movingSongId === -1) {
+//         placeHolder.style.height = "200px";
+//         playlistEle.insertBefore(placeHolder, movedEle);
+//         movedEle.style.height = "0px";
+//         setTimeout(function () {
+//             _Player.songs[movingSongId].playlistItem.removeAttribute("style");
+//             placeHolder.style.height = "0px";
+//             movingSongId = -1;
+//         }, 1)
 
-    _Player.songOrder.push(_Player.songs[movedId]);
-    for (; newIndex < _Player.songOrder.length; newIndex++) {
-        //insert the song before the one that is reciving the drop
-        if (_Player.songOrder[newIndex].id == movedId) {
-            oldIndex = newIndex;
-            break;
-        }
-    }
+//         movingSongId = movedId;
+//     }
 
-    if (oldIndex >= 0) {
-        //remove old song if it was found
-        _Player.songOrder.splice(oldIndex, 1);
-    }
+//     _Player.songOrder.push(_Player.songs[movedId]);
+//     for (; newIndex < _Player.songOrder.length; newIndex++) {
+//         //insert the song before the one that is reciving the drop
+//         if (_Player.songOrder[newIndex].id == movedId) {
+//             oldIndex = newIndex;
+//             break;
+//         }
+//     }
 
-    if (_Player.songId >= 0) {
-        for (var i = 0; i < _Player.songOrder.length; i++) {
-            //Update the song number as the list changed
-            if (_Player.songOrder[i].id === _Player.songId) {
-                _Player.songNumber = i;
-                break;
-            }
-        }
-    }
-});
+//     if (oldIndex >= 0) {
+//         //remove old song if it was found
+//         _Player.songOrder.splice(oldIndex, 1);
+//     }
 
-function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.analyser.frequencyBinCount)) {
+//     if (_Player.songId >= 0) {
+//         for (var i = 0; i < _Player.songOrder.length; i++) {
+//             //Update the song number as the list changed
+//             if (_Player.songOrder[i].id === _Player.songId) {
+//                 _Player.songNumber = i;
+//                 break;
+//             }
+//         }
+//     }
+// });
+
+function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.data.fbc)) {
 
     var yOffset = 0;
     var ox = 0;//orbit point
@@ -313,7 +315,7 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
     buildModelMat();
 }
 var Graphics = {
-    canvas: document.createElement("CANVAS"),
+    canvas: document.createElement("canvas"),
     gl: null,
     canvas_settings: {
         width: 0,
@@ -749,7 +751,7 @@ var Graphics = {
         }
         for (var i = 0; i < numberOfCubes; i++) {
             //Music slection, selects a value in the frquency array for this cube to read
-            var ms = Math.floor(i / numberOfCubes * Sound.analyser.frequencyBinCount);
+            var ms = Math.floor(i / numberOfCubes * Sound.data.fbc);
             var x = Math.random() * 150 - 75;
             var y = Math.random() * 150 - 75;
             var z = -Math.random() * 150 - 75;
@@ -879,99 +881,91 @@ var Graphics = {
 
 }
 
-function Song(fileElement, fileNumber, idNumber = _Player.songs.length) {
+/**
+ * @param {HTMLInputElement} fileElement 
+ * @param {Number} fileNumber 
+ * @param {TrackPlayer} player
+ */
+function Track(fileElement, fileNumber, player=null) {
     this.length = 0;
-    this.id = idNumber;
-    this.title = "Unknown";
-    this.fileName = fileElement.files[fileNumber].name;
-    this.artist = "Unkown Artist";
-    this.album = "Unkown Album";
-    this.composer = "";
-    this.cover = new Image(100, 100);//cover image file if one exists
-    this.songTitleTag = document.createElement("div");
-    this.flagged = false;//if true this song has an error that wont allow it to play
-    this.format = "";
-    this.hasProgressed = false;//helps catch songs that will not load
-    this.fileElement = fileElement;//describes which file element holds this song's files
-    this.fileNumber = fileNumber;
-    this.URL = URL.createObjectURL(fileElement.files[fileNumber]);//used to store the URL created to pass song as a source to the audio player
-    this.active = true;//so user can deactivate a song
+    var trackTitle = "Unknown";
+    var fileName = fileElement.files[fileNumber].name;
+    var artist = "Unkown Artist";
+    var album = "Unkown Album";
+    var composer = "";
+    var cover = new Image(100, 100);//cover image file if one exists
+    var songTitleTag = document.createElement("div");
+    var hasProgressed = false;//helps catch songs that will not load
+    var fileURL = URL.createObjectURL(fileElement.files[fileNumber]);//used to store the URL created to pass song as a source to the audio player
+    var active = true;//so user can deactivate a song
+    var self = this;
+    var playlist = player.getPlaylist();
+    var audioElement = player.getAudioElement();
+    var sourceElement = player.getSourceElement();
+    
+    var self = this;
 
-    this.playlistItem = document.createElement("div");
-    this.songTitleTag.innerHTML = this.fileName;
+    var playlistItem = document.createElement("div");
+    songTitleTag.innerHTML = fileName;
 
-    this.playlistItem.classList.add("playlistItem");
-    this.songTitleTag.classList.add("songTitle");
-    this.cover.classList.add("songCover");
+    playlistItem.classList.add("playlistItem");
+    songTitleTag.classList.add("songTitle");
+    cover.classList.add("songCover");
+
+    function isDisabled(){
+        return !active;
+    }
 
     this.isDisabled = function () {
-        if (!this.active || this.flagged) {
-            return true;
-        }
-        return false;
+       return isDisabled();
     }
-    this.play = function () {//returns true if successful
-        start();//incase the code has not started yet
 
-        if (Sound.mic.playing) {
-            Sound.mic.playing = false;
-            Sound.mic.source.disconnect(Sound.analyser);
-            Sound.state.source = 0;
+    this.disable = function(reason, showBroken=false){
+        playlistItem.classList.remove("songInError", "songDisabled", "songPlaying");
+        if(showBroken){
+            cover.src = _Player.resources.errorCover.src;
+            playlistItem.classList.add("songInError");
+        }else{
+            playlistItem.classList.add("songDisabled");
         }
 
-        if (this.isDisabled()) {
-            return false;
-        }
-
-        if (_Player.songId >= 0) {
-            _Player.songs[_Player.songId].playlistItem.classList.remove("songPlaying");
-        }
-
-        _Player.songId = this.id;
-        Sound.gainNode.gain.setValueAtTime(_Player.volume, Sound.ctx.currentTime);
-        audioSrc.src = this.URL;
-        audioEle.load();
-        audioEle.play().then(function () {
-            _Player.songOrder[_Player.songNumber].playlistItem.classList.add("songPlaying");
-        }).catch(function (e) {
-            console.log(e);
-        });
-        setTimeout(function () {
-            var song = _Player.songs[_Player.songId];
-            if (!song.hasProgressed) {
-                song.flagged = true;
-                song.active = false;
-                song.checkBox.checked = false;
-                song.checkBox.title = "This song failed to load.";
-                song.checkBox.style.cursor = "not-allowed";
-                song.playlistItem.classList.add("songInError");
-                song.cover.src = _Player.resources.errorCover.src;
-                _Player.nextSong();
-            }
-        }, 1000)
-
-        for (var i = 0; i < _Player.songOrder.length; i++) {//find itself in the songOrder list to get the number so play can coninue from there if shuffeled
-            if (_Player.songOrder[i] === this) {
-                _Player.songNumber = i;
-                break;
-            }
-        }
-        return true;
+        checkBox.title = reason;
+        active = false;
+        checkBox.checked = false;
     }
-    //this.playlistItem.style.cursor = "grab";
-    this.playlistItem.addEventListener("click", function () {
-        var songId = parseInt(this.id.substring(5, 10), 10);
-        _Player.songs[songId].play();
-    });
 
-    this.playlistItem.draggable = true;
-    this.playlistItem.addEventListener("dragstart", function (e) {
+    this.enable = function(){
+        playlistItem.classList.remove("songInError", "songDisabled");
+        checkBox.title = "Disable song";
+        active = true;
+        checkBox.checked = true;
+    }
+
+    this.getTrackElement = function(){
+        return playlistItem;
+    }
+
+    this.play = function () {
+        playlist.playTrack(self);
+        return;
+    }
+
+    this.getAudioURL = function(){
+        return fileURL;
+    }
+    //playlistItem.style.cursor = "grab";
+
+
+    playlistItem.addEventListener("click", this.play);
+
+    playlistItem.draggable = true;
+    playlistItem.addEventListener("dragstart", function (e) {
         e.dataTransfer.setData("text", e.target.id);
     });
-    this.playlistItem.addEventListener("dragover", function (e) {
+    playlistItem.addEventListener("dragover", function (e) {
         e.preventDefault();
     });
-    this.playlistItem.addEventListener("drop", function (e) {
+    playlistItem.addEventListener("drop", function (e) {
         e.preventDefault();
         var id = e.dataTransfer.getData("text");
         var movedEle = document.getElementById(id);
@@ -1023,113 +1017,547 @@ function Song(fileElement, fileNumber, idNumber = _Player.songs.length) {
         idString = "0" + idString;
     }
 
-    this.playlistItem.id = "song" + idString;
-    this.checkBox = document.createElement("input");
-    this.checkBox.type = "checkbox";
-    this.checkBox.style.cursor = "pointer";
-    this.checkBox.checked = true;
-    this.checkBox.title = "Disable Song";
-    this.cover.src = _Player.resources.defaultCover.src;
-    this.checkBox.addEventListener("click", function (event) {
-        var songId = parseInt(this.parentElement.id.substring(5, 10), 10);
-        _Player.songs[songId].active = this.checked;
-        if (this.checked && !_Player.songs[songId].isDisabled()) {//checks if the song is Disabled for another reason before activating song.
-            _Player.songs[songId].playlistItem.classList.remove("songDisabled");
-        } else if (this.checked) {//if the last check failed but the check mark was checked, keep the song Disabled as it may be flagged.
-            this.checked = false;
-            _Player.songs[songId].active = false;
-            this.style.cursor = "not-allowed";
-            this.title = "An error occurred with this song file";
-            _Player.songs[songId].playlistItem.classList.remove("songDisabled");
-            _Player.songs[songId].playlistItem.classList.add("songInError");
-            _Player.songs[songId].cover.src = _Player.resources.errorCover.src;
-        } else {
-            _Player.songs[songId].playlistItem.classList.add("songDisabled");
-            this.title = "Enable Song";
-        }
-        event.stopPropagation();
-    });
+    playlistItem.id = "song" + idString;
 
-    this.playlistItem.appendChild(this.cover);
-    this.playlistItem.appendChild(this.songTitleTag);
-    this.playlistItem.appendChild(this.checkBox);
-    playlistEle.insertBefore(this.playlistItem, addSongEle);
+    var checkBox = document.createElement("input");
+    checkBox.type = "checkbox";
+    checkBox.style.cursor = "pointer";
+    checkBox.checked = true;
+    checkBox.title = "Disable track";
+
+    function handleCheckBox(e){
+        if(this.checked){
+            self.enable();
+        }else{
+            self.disable("You turned this track off, click to re-enable");
+        }
+        e.stopPropagation();
+    }
+    checkBox.onclick = handleCheckBox;
+    cover.src = _Player.resources.defaultCover.src;
+
+    playlistItem.appendChild(cover);
+    playlistItem.appendChild(songTitleTag);
+    playlistItem.appendChild(checkBox);
 }
+
 var Sound = {
-    ctx: null,
-    gainNode: null,
-    analyser: null,
-    state: {
-        volume: 0,
-        source: -1,//-1 for none, 0 for music, 1 for microphone
-    },
-    mic: {
-        source: null,//the aduio context source
-        playing: false//tells if the microphone is active or not
-    },
-    music: {
-        source: null//the html element that will play the music is linked here
-        //playing is not needed as this will not be controlled by the Sound object but the player object
-    },
     data: {
         frequenceyAndWaveform: new Uint8Array(1),
         frequency: new Uint8Array(1),
-        waveform: new Uint8Array(1)
+        waveform: new Uint8Array(1),
+        fft: 1024,
+        fbc: 512
     }
 
 }
 
-function Controller(){
+/**
+ * @param {TrackPlayer} player
+ * @param {Playlist} playlist
+ */
+function Controller(player, playlist=null){
+    var audioElement = player.getAudioElement();
+    var sourceElement = player.getSourceElement();
     var controlContainer = document.createElement("div");
-    var playButton = null;
+    var playButton = document.createElement("input");
     var timeLine = null;
     var timeLineBG = null;
     var timeDot = null;
-    var ffButton = null;
-    var rrButton = null;
-    var backTrack = null;
-    var skipTrack = null;
+    var ffButton = document.createElement("input");
+    var rrButton = document.createElement("input");
+    var backTrack = document.createElement("input");
+    var skipTrack = document.createElement("input");
     var volDot = null;
     var volLine = null;
     var volBack = null;
-    var repeatToggle = null;
-    var shuffleToggle = null;
-    var optionButton = null;
+    var repeatToggle = document.createElement("input");
+    var shuffleToggle = document.createElement("input");
+    var optionButton = document.createElement("input");
+    var self = this;
+
+    controlContainer.classList.add("player")
+
+    playButton.type = "Button";
+    playButton.value = "Play";
+    controlContainer.appendChild(playButton);
+
+    ffButton.type = "Button";
+    ffButton.value = "FF";
+    controlContainer.appendChild(ffButton);
+
+    rrButton.type = "Button";
+    rrButton.value = "RR";
+    controlContainer.appendChild(rrButton);
+
+    backTrack.type = "Button";
+    backTrack.value = "Back";
+    controlContainer.appendChild(backTrack);
+
+    skipTrack.type = "Button";
+    skipTrack.value = "Skip";
+    controlContainer.appendChild(skipTrack);
+
+    repeatToggle.type = "Button";
+    repeatToggle.value = "Repeat Button";
+    controlContainer.appendChild(repeatToggle);
+
+    shuffleToggle.type = "Button";
+    shuffleToggle.value = "Shuffle Button";
+    controlContainer.appendChild(shuffleToggle);
+
+    optionButton.type = "Button";
+    optionButton.value = "Options";
+    controlContainer.appendChild(optionButton);
+
+    this.getControlPanel = function(){
+        return controlContainer;
+    }
+
+    this.pause = function(){
+        playButton.value = "Play";
+        if(!audioElement.paused){
+            audioElement.pause();
+        }
+
+        // TODO, code to set the pause button to the pause state
+    }
+
+    this.play = function(){
+            
+        playButton.value = "Pause"
+        if(audioElement.paused){
+            return audioElement.play();
+        }
+    }
+
+    this.connectPlaylist = function(/** @type {Playlist} */ newPlaylist){
+        playlist = newPlaylist;
+    }
+
+    function handlePlayButton(){
+        if(audioElement.paused){
+            self.play();
+        }else{
+            self.pause();
+        }
+    }
+
+    playButton.onclick = handlePlayButton;
+
+
 }
 
-function Player() {
-    /**@type {Song[]}*/
-    var songList = [];
-    /**@type {Number[]}*/
-    var songOrder = [];
-    var playingSongId = -1;
-    var playingSongIndex = -1;
-    var playing = false;
-    var enabled = false;
-    var volume = 1;
-    var repeat = Player.MODE.REPEAT_NONE;
+/**@param {Event} ev  */
+function prevDef(ev){
+    ev.preventDefault();
+}
 
-    this.LoadSongs = function(fileList){
+/**
+ * @param {TrackPlayer} player 
+ * @param {Controller} controller
+ * @param {Track[]} tracksIn 
+ */
+function Playlist(player, controller, tracksIn=[]){
+    var playingTrackId = -1;
+    var audioElement = player.getAudioElement();
+    var sourceElement = player.getSourceElement();
+    var fileElement = document.createElement("input");
+    var self = this;
+    var prog;
+    fileElement.type = "file";
+    fileElement.accept = "audio/*";
+    fileElement.multiple = true;
+
+    function assertProgress (){
+        prog = true;
+    }
+
+    function assertFailure(){
+        if(!prog){
+            if (playingTrackId != -1){
+                trackList[playingTrackId].disable("This track failed to play, click to re-enable", true);
+            }
+        self.playNextTrack();
+        }
+    }
+
+    audioElement.addEventListener("progress", assertProgress);
+
+    function loadTracksFromFile(){
+        addTracks(fileElement.files);
+    }
+
+    fileElement.addEventListener("change", loadTracksFromFile);
+    
+    var repeat = Playlist.MODE.REPEAT_NONE;
+
+    var trackList = tracksIn.slice(0);
+    var PLContainer = document.createElement("div");
+    var addSongElement = document.createElement("div");
+
+    PLContainer.classList.add("playlist");
+
+    addSongElement.classList.add("playlistItem");
+    addSongElement.classList.add("addSong");
+    addSongElement.innerHTML = "<b>&#x2b</b><br>Add songs";
+
+    function clickFileElement() {
+        var eve = new MouseEvent('click');
+        player.enable();
+        fileElement.dispatchEvent(eve);
+    }
+
+    addSongElement.addEventListener('click', clickFileElement);
+
+    PLContainer.appendChild(addSongElement);
+
+    function recieveDrop(){
+        // TODO
+    }
+
+    addSongElement.addEventListener("dragover", prevDef);
+    addSongElement.addEventListener("drop", recieveDrop);
+
+    // This element is used for holding the spot of a song that's moving
+    var placeHolderElement = document.createElement("div");
+    placeHolderElement.classList.add("playlistItem");
+    placeHolderElement.style.height = "0px";
+
+
+    function shuffleList(inputList){
+        function randomInt(start, end){
+            // Generates random integer from start to end (exclusive)
+            return Math.floor(Math.random() * (end - start) + start);
+        }
+        // Shuffles a list in place;
+        var shuffledSectionEnd = 0;
+        var elementCount = inputList.length;
+        while(shuffledSectionEnd < elementCount){
+            var selectedElement = randomInt(shuffledSectionEnd, elementCount);
+            //swap selectedElement and suffledSection end;
+            var temp = inputList[shuffledSectionEnd];
+            inputList[shuffledSectionEnd] = inputList[selectedElement];
+            inputList[selectedElement] = temp;
+            shuffledSectionEnd ++;
+        }
 
     }
 
-    this.nextTrack = function(){
-
+    function updateOrder(){
+        // Updates the song list order
+        // TODO
     }
 
     this.shuffleTracks = function(){
+        shuffleList(trackList);
+        updateOrder();
+    }
+
+    this.getNextTrack = function(wrap=false){
+        var nextTrack =  playingTrackId + 1;
+        if(nextTrack >= trackList.length){
+            if(wrap){
+                nextTrack = 0;
+            }else{
+                return null;
+            }
+        }
+
+        return trackList[nextTrack];
+
+    }
+
+    this.playNextTrack = function(){
+        if(playingTrackId != -1){
+            trackList[playingTrackId].getTrackElement().classList.remove("songPlaying")
+        }
+        switch (repeat){
+            case Playlist.MODE.REPEAT_NONE:// Fall through
+            case Playlist.MODE.REPEAT_LIST:
+                playingTrackId++;
+                if(playingTrackId >= trackList.length){
+                    if(repeat == Playlist.MODE.REPEAT_NONE){
+                        
+                        // We have hit the end of the list, so revert the playing
+                        // index and return.
+                        playingTrackId --;
+                        return;
+                    }else{
+                        // go back to the begining
+                        playingTrackId = 0;
+                    }
+                }
+
+                trackList[playingTrackId].play()
+                break;
+            case Playlist.MODE.REPEAT_TRACK:
+                 if(trackList[playingTrackId].isDisabled()){
+                     // If the track is disabled, stop trying to play it :)
+                     return;
+                 }
+                 trackList[playingTrackId].play();
+
+            default:
+                return;
+                 
+
+        }
+    }
+
+    this.getCurrentTrack = function(){
+        if(playingTrackId == -1 || playingTrackId >= trackList.length){
+            return null;
+        }
+        return trackList[playingTrackId];
+    }
+
+    this.getIdOfTrack = function(/** @type {Track} */ track){
+        for(var i = 0; i < trackList.length; i ++){
+            if(trackList[i] == track){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    this.getPlayingTrackId = function(){
+        return playingTrackId;
+    }
+
+    /** @param {number} newId*/ 
+    this.setPlayingTrackId = function(newId){
+        // Check if value is valid
+        if(newId % 1 != 0 || newId < -1 || newId >= trackList.length){
+            return false;
+        }
+        playingTrackId = newId;
+    }
+
+    this.playTrack = function(/** @type {number | Track} */ newTrack){
+        var oldId = playingTrackId;
         
+        /** @type {Track} */
+        var track = null;
+        if(typeof(newTrack) == "number"){
+            if(newTrack % 1 != 0 || newTrack < -1 || newTrack >= trackList.length){
+                return false;
+            }
+            playingTrackId = newTrack;
+            track = trackList[newTrack];
+
+        }else{
+            var newId = self.getIdOfTrack(newTrack);
+            if(newId != -1){
+                playingTrackId = newId;
+                track = newTrack;
+            }else{
+                return false;
+            }
+        }
+
+        
+
+        if(track.isDisabled())
+            return false;
+        
+        if(oldId != -1)
+            trackList[oldId].getTrackElement().classList.remove("songPlaying");
+
+        if(!player.enabled()){
+            player.enable();
+        }
+
+        audioElement.src = track.getAudioURL();
+        audioElement.load();
+        controller.play().then(() => track.getTrackElement().classList.add("songPlaying")).catch(assertFailure);
+        prog = false;
+        //prog = setTimeout(assertFailure, 10 * 1000);// Wait 10 seconds to see if audio has started
+    }
+
+    /**@param {number} id */
+    this.getTrack = function(id){
+        if(id % 1 != 0 || id < 0 || id >= trackList.length){
+            return null;
+        }
+        
+        return trackList[id];
+    }
+
+    this.getCurrentTrack = function(){
+        if(playingTrackId != -1){
+            return trackList[playingTrackId];
+        }
+    }
+
+    this.getTrackCount = function(){
+        return trackList.length;
+    }
+
+    function addTracks(fileList){
+        var fileCount = fileList.length;
+        for(var fileNum = 0; fileNum < fileCount; fileNum ++){
+            var newTrack = new Track(fileElement, fileNum, player);
+            trackList.push(newTrack);
+            PLContainer.insertBefore(newTrack.getTrackElement(), addSongElement);
+        }
+    }
+
+    this.addTracks = function(fileList){
+        addTracks(fileList);
+    }
+
+    this.getPlaylistElement = function(){
+        return PLContainer;
     }
 
 
 }
 
-Player.MODE = {
+Playlist.MODE = {
     REPEAT_NONE : 0,
     REPEAT_LIST : 1,
     REPEAT_TRACK: 2,
     REPEAT_STOP: 3 // For just playing one song
 }
+
+Playlist.MODE_TEXT = [
+    "No Repeat",
+    "Repeat List",
+    "Repeat Track",
+    "Just One Track"
+]
+
+
+function TrackPlayer() {
+
+    this.getAudioElement = function(){
+        return audioElement;
+    }
+
+    this.getSourceElement = function(){
+        return sourceElement;
+    }
+
+    this.getPlayerElement = function(){
+        return playerContainer;
+    }
+
+    function startContext(){
+        // @ts-ignore
+        // It doesn't like the webkit prefix :/
+        
+        var context= new (window.AudioContext || window.webkitAudioContext)();
+        if(context != null){
+            if(gainNode != null){
+                throw "Cannot add a new context to player!"
+            }
+            audioCtx = context;
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = Sound.data.fft;
+            gainNode = audioCtx.createGain();
+            // Set the volume
+            gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+
+            mediaSource = audioCtx.createMediaElementSource(audioElement);
+            mediaSource.connect(analyser);
+            analyser.connect(gainNode);
+            if(enabled)
+                gainNode.connect(audioCtx.destination);
+        }
+    }
+
+    this.getOutputNode = function(){
+        return gainNode;
+    }
+    
+    this.getAnalyser = function(){
+        return analyser;
+    }
+
+    this.setVolume = function(/** @type {number} */ value){
+        if(Number.isFinite(value) && value >= 0 && value <= 1){
+            if(gainNode != null){
+                gainNode.gain.setValueAtTime(value, audioCtx.currentTime);
+            }
+            volume = value;
+        }
+    }
+
+    this.getVolume = function(){
+        return volume;
+    }
+
+    this.disable = function(){
+        if(enabled){
+            if(gainNode != null){
+                gainNode.disconnect(audioCtx.destination);
+            }
+        }
+        // TODO disable the interface
+        enabled = false;
+    }
+
+    this.enable = function(){
+        if(!enabled){
+            if(gainNode == null){
+                startContext();
+            }
+            gainNode.connect(audioCtx.destination);
+        }
+        enabled = true;
+    }
+
+    this.enabled = function(){
+        return enabled;
+    }
+
+    this.getPlaylist = function(){
+        return playlist;
+    }
+
+    this.hasContext = function(){
+        return gainNode != null;
+    }
+
+   
+
+    var prog;
+
+    var enabled = false;
+    var volume = 1;
+    var audioElement = document.createElement("audio");
+    var sourceElement = document.createElement("source");
+    var mediaSource = null;
+    sourceElement.type = "audio/mp3";
+    //audioElement.appendChild(sourceElement);
+    audioElement.addEventListener("error", (e) => {console.log("An Error occured\n", e)});
+    audioElement.addEventListener("ended", () => {playlist.playNextTrack()});
+    var controller = new Controller(this);
+    var playlist = new Playlist(this, controller);
+    
+    controller.connectPlaylist(playlist);
+    
+    
+    /** @type {AudioContext}*/
+    var audioCtx = null;
+
+    /** @type {AnalyserNode} */
+    var analyser = null;
+    
+    /** @type {GainNode} */
+    var gainNode = null;
+
+    // Build the HTML player
+    var playerContainer = document.createElement("div");
+    playerContainer.appendChild(controller.getControlPanel());
+    playerContainer.appendChild(playlist.getPlaylistElement());
+    playerContainer.appendChild(audioElement);
+
+
+
+}
+
 
 var _Player = {
     songs: [],
@@ -1190,149 +1618,81 @@ var _Player = {
         this.resources.repeatOne.src = "Audio_Resources/RepeatOne.png";
         this.resources.repeatNone.src = "Audio_Resources/RepeatNone.png";
         this.resources.options.src = "Audio_Resources/Options.png";
-    },
-    loadSongs: function (fileList) {
-        var fLength = fileList.length
-        for (var sc = 0; sc < fLength; sc++) {
-            var newSong = new Song(fileEle, sc);
-            _Player.songs.push(newSong);
-            _Player.songOrder.push(_Player.songs[_Player.songs.length - 1]);//add to the song order
-        }
-    },
-    nextSong: function () {
-        switch (_Player.repeat) {
-            case 0:
-                _Player.songNumber++;
-                if (_Player.songNumber >= _Player.songOrder.length) {//we have reached the end of the playlist
-                    _Player.songNumber = 0;
-                    return;
-                }
-                var suc = _Player.songOrder[_Player.songNumber].play();
-                if (!suc) {//the play failed
-                    _Player.nextSong();
-                }
-
-                break;
-            case 1:
-                _Player.songNumber++;
-                if (_Player.songNumber >= _Player.songOrder.length) {
-                    _Player.songNumber = 0;
-                }
-                var suc = _Player.songOrder[_Player.songNumber].play();
-                if (!suc) {//the play failed
-                    _Player.nextSong();
-                }
-
-                break;
-            case 2:
-                if (_Player.songOrder[_Player.songNumber].isDisabled())
-                    return;
-                _Player.songOrder[_Player.songNumber].play();
-
-                break;
-            case 3:
-                return;
-                break;
-            default:
-                return;
-
-
-        }
-    },
-    shuffleSongs: function () {
-        var remainingSongs = _Player.songOrder.slice(0);
-        for (var i = 0; remainingSongs.length > 0; i++) {
-            var numberOfSongs = remainingSongs.length;
-            var songSelected = Math.floor(Math.random() * numberOfSongs);
-            _Player.songOrder[i] = remainingSongs[songSelected];
-            playlistEle.insertBefore(_Player.songOrder[i].playlistItem, addSongEle);
-            remainingSongs.splice(songSelected, 1);
-        }
     }
 
 }
 
-var fileElements = [];//a list of file elements that can hold the music files
+var testPlayer = new TrackPlayer();
 
-function start() {
-    if (hasStarted)
-        return;
-    hasStarted = true;
-    Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    Sound.music.source = Sound.ctx.createMediaElementSource(audioEle);
-    Sound.analyser = Sound.ctx.createAnalyser();
-    Sound.gainNode = Sound.ctx.createGain();
-    Sound.music.source.connect(Sound.analyser);
-    Sound.analyser.connect(Sound.gainNode);
-    Sound.gainNode.connect(Sound.ctx.destination);
-    //Sound.analyser.smoothingTimeConstant = 0;
-    Sound.gainNode.gain.setValueAtTime(0, Sound.ctx.currentTime);//Mute audio so it doesn't create feedback
-    Sound.analyser.fftSize = 1024;
-    fileEle.addEventListener("change", function () {
-        Sound.gainNode.gain.setValueAtTime(1, Sound.ctx.currentTime);
-        if (Sound.mic.playing) {
-            Sound.mic.source.disconnect(Sound.analyser);
-            Sound.mic.playing = false;
-        }
-        _Player.loadSongs(fileEle.files);
-    })
+function startAudio() {
+        // TODO, code to disable mic
     //fEle.addEventListener("change",function(){audioSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Sound.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-    Sound.data.frequenceyAndWaveform = new Uint8Array(Sound.analyser.frequencyBinCount * 2);
-    Sound.data.frequency = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, 0, Sound.analyser.frequencyBinCount);
-    Sound.data.waveform = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, Sound.analyser.frequencyBinCount, Sound.analyser.frequencyBinCount);
+};
+
+function main(){
     _Player.loadResources();
+    document.body.appendChild(testPlayer.getPlayerElement());
+    Sound.data.frequenceyAndWaveform = new Uint8Array(Sound.data.fbc * 2);
+    Sound.data.frequency = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, 0, Sound.data.fbc);
+    Sound.data.waveform = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, Sound.data.fbc, Sound.data.fbc);
     Graphics.start();
     update();
-};
-async function requestMic() {
-    if (navigator.mediaDevices.getUserMedia) {
-        var allDevices = await navigator.mediaDevices.enumerateDevices();
-        let length = allDevices.length;
-        audioDevices = [];
-        while (inputSelectEle.firstChild) {
-            inputSelectEle.removeChild(inputSelectEle.firstChild);
-        }
-        for (let i = 0; i < length; i++) {
-            if (allDevices[i].kind == "audioinput") {
-                audioDevices.push(allDevices[i]);
-                var newChild = document.createElement("option");
-                newChild.innerHTML = allDevices[i].label;
-                newChild.value = (audioDevices.length - 1).toString();
-                inputSelectEle.appendChild(newChild);
-            }
-        }
-        if (audioDevices.length > 0) {
-            tryMic(0);
-        }
+}
 
-    } else {
-        alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
-    }
+async function requestMic() {
+    // if (navigator.mediaDevices.getUserMedia) {
+    //     var allDevices = await navigator.mediaDevices.enumerateDevices();
+    //     let length = allDevices.length;
+    //     audioDevices = [];
+    //     while (inputSelectEle.firstChild) {
+    //         inputSelectEle.removeChild(inputSelectEle.firstChild);
+    //     }
+    //     for (let i = 0; i < length; i++) {
+    //         if (allDevices[i].kind == "audioinput") {
+    //             audioDevices.push(allDevices[i]);
+    //             var newChild = document.createElement("option");
+    //             newChild.innerHTML = allDevices[i].label;
+    //             newChild.value = (audioDevices.length - 1).toString();
+    //             inputSelectEle.appendChild(newChild);
+    //         }
+    //     }
+    //     if (audioDevices.length > 0) {
+    //         tryMic(0);
+    //     }
+
+    // } else {
+    //     alert("***Could not obtain Microphone access***\nClick 'Load a File' to upload an audio file instead")
+    // }
 
 }
 function tryMic(index) {
-    if (index >= 0 && audioDevices.length) {
-        if (Sound.mic.playing) {
-            Sound.mic.source.disconnect(Sound.analyser);//disconnect if connected
-            Sound.mic.source = null;
-            Sound.mic.playing = false;
-        }
-        navigator.mediaDevices.getUserMedia({ audio: { deviceId: audioDevices[index].deviceId } }).then(function (stream) {
-            Sound.mic.source = Sound.ctx.createMediaStreamSource(stream);
-            Sound.mic.source.connect(Sound.analyser);
-            Sound.mic.playing = true;
-            Sound.state.source = 1;
-            Sound.gainNode.gain.setValueAtTime(0, Sound.ctx.currentTime);
-            audioEle.pause();
-            console.log(stream);
+    // if (index >= 0 && audioDevices.length) {
+    //     if (Sound.mic.playing) {
+    //         Sound.mic.source.disconnect(Sound.analyser);//disconnect if connected
+    //         Sound.mic.source = null;
+    //         Sound.mic.playing = false;
+    //     }
+    //     navigator.mediaDevices.getUserMedia({ audio: { deviceId: audioDevices[index].deviceId } }).then(function (stream) {
+    //         Sound.mic.source = Sound.ctx.createMediaStreamSource(stream);
+    //         Sound.mic.source.connect(Sound.analyser);
+    //         Sound.mic.playing = true;
+    //         Sound.state.source = 1;
+    //         Sound.gainNode.gain.setValueAtTime(0, Sound.ctx.currentTime);
+    //         audioEle.pause();
+    //         console.log(stream);
 
-        }).catch(errorCallback);
-    }
+    //     }).catch(errorCallback);
+    // }
+    // TODO, rewrite function
 }
+
 function update() {
     requestAnimationFrame(update);
-    Sound.analyser.getByteFrequencyData(Sound.data.frequency);
-    Sound.analyser.getByteTimeDomainData(Sound.data.waveform);
+    var analyser = testPlayer.getAnalyser();
+    if(analyser != null){
+        analyser.getByteFrequencyData(Sound.data.frequency);
+        analyser.getByteTimeDomainData(Sound.data.waveform);
+    }
 
     var width = window.innerWidth;
     var height = window.innerHeight;
