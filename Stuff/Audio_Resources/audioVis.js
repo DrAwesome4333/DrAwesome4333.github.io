@@ -1,19 +1,4 @@
 //@ts-check
-///** @type {HTMLSourceElement}*/
-
-// @ts-ignore
-// var audioSrc = document.getElementById("src");
-// /** @type {HTMLAudioElement}*/
-
-// // @ts-ignore
-// var audioEle = document.getElementById("audio");
-// /** @type {HTMLInputElement}*/
-
-// var playlistEle = document.getElementById("playlist");
-// var placeHolder = document.createElement("Div");
-// var addSongEle = document.getElementById("addSongs");//used as the "last playlist" item to allow drops into the final spot and allow shuffling
-// var inputSelectEle = document.getElementById("inputSelect");
-// var sidePanelArrow = document.getElementById("sidePanelArrow");
 var op = document.getElementById("op");
 
 var audioDevices = [];
@@ -21,7 +6,6 @@ var audioDevices = [];
 // @ts-ignore
 var canvas = document.getElementById("can");
 var ct = canvas.getContext("2d");
-//var movingSongId = -1;
 //var ArrowTimer = 3;
 
 // setInterval(
@@ -35,83 +19,6 @@ var ct = canvas.getContext("2d");
 //         }
 //     }, 1000);
 
-// audioEle.addEventListener("error", function (e) {
-//     console.log("An error was triggered");
-//     console.log(e);
-// });
-
-// audioEle.addEventListener("progress", function (e) {
-//     //_Player.songs[_Player.songId].hasProgressed = true;
-
-//     //TODO
-//     // This causes the song to auto disable as it thinks the song can't play
-// });
-
-// audioEle.addEventListener("stalled", function (e) {
-//     console.log("A stalled event was triggered");
-//     console.log(e);
-// });
-
-// audioEle.addEventListener("ended", function (e) {
-//     //TODO , abstract it.
-//     testPlayer.nextTrack();
-// });
-
-// placeHolder.classList.add("playlistItem");
-// placeHolder.style.height = "0px";
-// placeHolder.id = "placeHolder";
-
-// addSongEle.addEventListener("dragover", function (e) {
-//     e.preventDefault();
-// });
-
-// addSongEle.addEventListener("drop", function (e) {
-//     e.preventDefault();
-
-//     var id = e.dataTransfer.getData("text");
-//     var movedEle = document.getElementById(id);
-//     playlistEle.insertBefore(movedEle, this);
-//     var movedId = parseInt(movedEle.id.substring(5, 10), 10);
-//     var oldIndex = -1;
-//     var newIndex = 0;
-
-//     if (movingSongId === -1) {
-//         placeHolder.style.height = "200px";
-//         playlistEle.insertBefore(placeHolder, movedEle);
-//         movedEle.style.height = "0px";
-//         setTimeout(function () {
-//             _Player.songs[movingSongId].playlistItem.removeAttribute("style");
-//             placeHolder.style.height = "0px";
-//             movingSongId = -1;
-//         }, 1)
-
-//         movingSongId = movedId;
-//     }
-
-//     _Player.songOrder.push(_Player.songs[movedId]);
-//     for (; newIndex < _Player.songOrder.length; newIndex++) {
-//         //insert the song before the one that is reciving the drop
-//         if (_Player.songOrder[newIndex].id == movedId) {
-//             oldIndex = newIndex;
-//             break;
-//         }
-//     }
-
-//     if (oldIndex >= 0) {
-//         //remove old song if it was found
-//         _Player.songOrder.splice(oldIndex, 1);
-//     }
-
-//     if (_Player.songId >= 0) {
-//         for (var i = 0; i < _Player.songOrder.length; i++) {
-//             //Update the song number as the list changed
-//             if (_Player.songOrder[i].id === _Player.songId) {
-//                 _Player.songNumber = i;
-//                 break;
-//             }
-//         }
-//     }
-// });
 
 function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.data.fbc)) {
 
@@ -314,6 +221,7 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
     buildVBO();
     buildModelMat();
 }
+
 var Graphics = {
     canvas: document.createElement("canvas"),
     gl: null,
@@ -960,14 +868,13 @@ function Track(fileElement, fileNumber, player=null) {
     this.getId = function(){
         return trackId;
     }
-    //playlistItem.style.cursor = "grab";
-
 
     playlistItem.addEventListener("click", this.play);
 
     playlistItem.draggable = true;
 
     playlistItem.addEventListener("dragstart", function (e) {
+        //@ts-ignore
         e.dataTransfer.setData("text", e.target.id);
     });
 
@@ -1002,6 +909,7 @@ function Track(fileElement, fileNumber, player=null) {
         }
         e.stopPropagation();
     }
+    
     checkBox.onclick = handleCheckBox;
     cover.src = _Player.resources.defaultCover.src;
 
@@ -1024,7 +932,6 @@ var Sound = {
         fft: 1024,
         fbc: 512
     }
-
 }
 
 /**
@@ -1033,7 +940,6 @@ var Sound = {
  */
 function Controller(player, playlist=null){
     var audioElement = player.getAudioElement();
-    var sourceElement = player.getSourceElement();
     var controlContainer = document.createElement("div");
     var playButton = document.createElement("input");
     var timeLine = document.createElement("progress");
@@ -1104,7 +1010,9 @@ function Controller(player, playlist=null){
         if(audioElement.paused){
             return audioElement.play();
         }else{
-            return true;
+            return new Promise(function(resolve,reject){
+                resolve();
+            });
         }
     }
 
@@ -1192,7 +1100,6 @@ function prevDef(ev){
 function Playlist(player, controller, tracksIn=[]){
     var playingTrackPos = -1;
     var audioElement = player.getAudioElement();
-    var sourceElement = player.getSourceElement();
     var fileElement = document.createElement("input");
     var self = this;
     var prog;
@@ -1667,7 +1574,6 @@ function TrackPlayer() {
     var sourceElement = document.createElement("source");
     var mediaSource = null;
     sourceElement.type = "audio/mp3";
-    //audioElement.appendChild(sourceElement);
     audioElement.addEventListener("error", (e) => {console.log("An Error occured\n", e)});
     audioElement.addEventListener("ended", () => {playlist.playNextTrack()});
     var controller = new Controller(this);
@@ -1690,40 +1596,10 @@ function TrackPlayer() {
     playerContainer.appendChild(controller.getControlPanel());
     playerContainer.appendChild(playlist.getPlaylistElement());
     playerContainer.appendChild(audioElement);
-
-
-
 }
 
 
 var _Player = {
-    songs: [],
-    songOrder: [],
-    songId: -1,//Identifies the song in the songs list currently playing, this list can only be added to, cannot change order or the ID system breaks down
-    songNumber: -1,//Identifies the song in the songOrder list, which is a list of song ID's that correspond to the songs list.
-    paused: true,
-    playing: false,
-    shuffle: false,
-    volume: 1,
-    repeat: 0,//0 for no repeats, 1 for repeat playlist, 2 for repeat song, 3 for play one song
-    showPanel: true,
-    controls: {//List of HTML elements for the controls on screen
-        controlContainer: null,
-        playButton: null,//play and pause
-        timeLine: null,
-        timeBack: null,//background of the line
-        timeDot: null,
-        fastforwardButton: null,
-        rewindButton: null,
-        backButton: null,
-        skipButton: null,
-        volumeDot: null,
-        volumeLine: null,
-        volumeBack: null,
-        repeatButton: null,
-        shuffleButton: null,
-        optionButton: null
-    },
     resources: {//List of images
         pause: new Image(256, 256),
         play: new Image(256, 256),
@@ -1761,10 +1637,6 @@ var _Player = {
 
 var testPlayer = new TrackPlayer();
 
-function startAudio() {
-        // TODO, code to disable mic
-    //fEle.addEventListener("change",function(){audioSrc.src=URL.createObjectURL(fEle.files[0]);aEle.load();aEle.play();gainNode.gain.setValueAtTime(1,Sound.ctx.currentTime);if(mSource){mSource.disconnect(analyser)}})
-};
 
 function main(){
     _Player.loadResources();
@@ -1802,6 +1674,7 @@ async function requestMic() {
     // }
 
 }
+
 function tryMic(index) {
     // if (index >= 0 && audioDevices.length) {
     //     if (Sound.mic.playing) {
