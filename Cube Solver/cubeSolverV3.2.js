@@ -1289,6 +1289,7 @@ import {Matrix} from "./modules/matrix.js"
 			// Returns true if it was successful or
 			// returns false if either the node in the list or the node 
 			// we are inserting before it are null
+			
 			if(nodeInList == null || newNode == null){
 				// There was nothing to insert or there was nothing to insert into
 				return false;
@@ -1301,6 +1302,7 @@ import {Matrix} from "./modules/matrix.js"
 			if(tmpSave != null){
 				tmpSave.next = newNode;
 			}
+
 			return true;
 		}
 
@@ -1312,6 +1314,7 @@ import {Matrix} from "./modules/matrix.js"
 			// and updates the previous and next
 			// node's accordinglly
 			if(node == null){
+				debugger;
 				return;
 			}
 
@@ -1383,6 +1386,9 @@ import {Matrix} from "./modules/matrix.js"
 			/** @returns {CubeNode} **/
 			function getNewNode(canRetireLastNode=false){
 				// Returns a cube node to use if possible
+				if(endNode.last == null){
+					debugger;
+				}
 				if(inactiveNode == null){
 					// Check if there are no inactive nodes to try to create a new one
 					if(totalCubeCount < MAX_CUBE_COUNT){
@@ -1397,6 +1403,10 @@ import {Matrix} from "./modules/matrix.js"
 						// we need to retire the last node and use it
 						if(canRetireLastNode){
 							retireLastNode();
+							
+							if(inactiveNode == null){
+								debugger;
+							}
 							return getNewNode();
 						}
 						// If retiring is not allowed, we have nothing to return.
@@ -1413,16 +1423,34 @@ import {Matrix} from "./modules/matrix.js"
 				}
 			}
 
-			function removeNode(node=new CubeNode()){
+			/**
+			 * @param {CubeNode} node
+			 */
+			function removeNode(node){
 				// Removes a node from the active list and
 				// moves it to the inactive list
+
+				if(node == null){
+					debugger;
+				}
+
+				if(firstNode.next == null){
+					debugger;
+				}
+
 				if(node == firstNode){
 					// If this is the first node we are removing, we need to
 					// reassign wich node is the first node
+					if(firstNode.next == null){
+						debugger;
+					}
 					firstNode = node.next;
 				}
 
 				CubeNode.removeNode(node);
+				if(endNode.last == null){
+					debugger;
+				}
 				var isFirstInactiveNode = !CubeNode.insertAfter(inactiveNode, node);
 
 				if(isFirstInactiveNode){
@@ -1430,11 +1458,26 @@ import {Matrix} from "./modules/matrix.js"
 					// assign it as the first inactive node.
 					inactiveNode = node;
 				}
+				
+				
 				activeCubeCount --;
+
 			}
 
 			function retireLastNode(){
 				removeNode(endNode.last);
+				
+				// For testing reaons, see if our line is intact
+				
+
+				// nn = endNode;
+				// console.log("chain last")
+				// while(nn != firstNode){
+				// 	nn = nn.last;
+				// 	if(nn == null){
+				// 		debugger;
+				// 	}
+				// }
 			}
 
 			/** @param {CubeNode}cubeNode */
@@ -1444,24 +1487,39 @@ import {Matrix} from "./modules/matrix.js"
 					return false;
 				}
 
+				var nextNode = cubeNode.next;
+
+
 				var currentNode = endNode.last;
 				// This is out of the loop as it is a special
 				// case where we need to update firstNode's reference
 				if(cubeNode.totalPoints <= firstNode.totalPoints){
-					CubeNode.insertBefore(firstNode, cubeNode);
-					firstNode = cubeNode;
-					return true;
+					while(cubeNode != null){
+						nextNode = cubeNode.next;
+						CubeNode.removeNode(cubeNode);
+						CubeNode.insertBefore(firstNode, cubeNode);
+						firstNode = cubeNode;
+						cubeNode = nextNode;
+					}
 				}
-
+				if(cubeNode == null)
+						return true;
 				// check if we are at the end of the list already
 				// as if we are, then no need to look through the rest of the list
-				if(cubeNode.totalPoints > endNode.last.totalPoints){
-					CubeNode.insertAfter(endNode.last, cubeNode);
-					return true;
+				while(cubeNode.totalPoints > endNode.last.totalPoints){
+						nextNode = cubeNode.next;
+						CubeNode.removeNode(cubeNode);
+						CubeNode.insertBefore(endNode, cubeNode);
+						cubeNode = nextNode;
+					
+					if(cubeNode == null)
+						return true;
+
+					currentNode = endNode.last;
 				}
 
 				// Skip to the half node to save on loop iterations
-				if (halfNode != null && halfNode.next != null && cubeNode.totalPoints < halfNode.totalPoints){
+				if (halfNode != null && (halfNode.next != null || halfNode.next != endNode.last) && cubeNode.totalPoints < halfNode.totalPoints){
 					currentNode = halfNode;
 				}
 
@@ -1469,17 +1527,43 @@ import {Matrix} from "./modules/matrix.js"
 				// this node before it.
 				// Also make sure we don't go past the end node.
 				var i = activeCubeCount;
-				while(currentNode != null && cubeNode.totalPoints < currentNode.totalPoints){
+				while(currentNode != null && cubeNode != null){
 					if(i == Math.floor(activeCubeCount * 0.5)){
 						halfNode = currentNode;
 					}
+					
 					i--;
+
+					while(cubeNode != null && cubeNode.totalPoints > currentNode.totalPoints && cubeNode.totalPoints <= currentNode.next.totalPoints ){
+						
+						if(currentNode == firstNode){
+							firstNode = cubeNode;
+						}
+
+						nextNode = cubeNode.next;
+						CubeNode.removeNode(cubeNode);
+						CubeNode.insertAfter(currentNode, cubeNode);
+						cubeNode = nextNode;
+					}
+
 					currentNode = currentNode.last;
+					if(cubeNode != null && cubeNode.totalPoints <= firstNode.totalPoints){
+						while(cubeNode != null){
+							nextNode = cubeNode.next;
+							CubeNode.removeNode(cubeNode);
+							CubeNode.insertBefore(firstNode, cubeNode);
+							firstNode = cubeNode;
+							cubeNode = nextNode;
+						}
+					}
+					
 				}
-				if(currentNode == firstNode){
-					firstNode = cubeNode;
-				}
-				CubeNode.insertBefore(currentNode, cubeNode);
+
+				//if(cubeNode != null){
+				//	debugger;
+
+				//}
+				
 				return true;
 
 			}
@@ -1529,6 +1613,9 @@ import {Matrix} from "./modules/matrix.js"
 				}
 				cubeNode.cubeScore = cubeScore;
 				cubeNode.totalPoints = (solvedCubeScore - cubeScore) + MOVE_WEIGHT * (cubeNode.algIds.length * cubeNode.algorithmStorage.getAlgLength());
+				if (cubeNode.algIds[0] == -1){
+					cubeNode.totalPoints = Infinity;
+				}
 				return cubeScore;
 
 			}
@@ -1694,6 +1781,21 @@ import {Matrix} from "./modules/matrix.js"
 					return true;
 				}
 
+				// REMOVE
+				// var nn = firstNode;
+				// console.log(firstNode == endNode)
+				// console.log("Chain next")
+				// while(nn != endNode){
+				// 	console.log(nn.totalPoints);
+				// 	nn = nn.next;
+				// 	if(nn == null){
+				// 		debugger;
+				// 	}
+				// }
+
+				// debugger;
+				
+
 
 			
 
@@ -1736,20 +1838,39 @@ import {Matrix} from "./modules/matrix.js"
 
 				// Score all these nodes and save them
 				// TODO we will do something with the scores in the future
-				// @ts-ignore
+		
 				var nodeScores = scoreCubes(prospectiveNodes);
 				var nCount = prospectiveNodes.length;
 
 				var sortedScoreIndexes = sortList(nodeScores);
-
+				var nodeChain = null;
+				var fNode = null;
+				var listOfNodes = [];
+				//console.log("NEW")
 				for(var i = 0; i < nCount; i ++){
-					if(sortedScoreIndexes[i] <= maximumUnsolvedScore && i < 12){
-						insertCubeNodeInOrder(prospectiveNodes[sortedScoreIndexes[i]]);
+					if(sortedScoreIndexes[i] <= maximumUnsolvedScore && i < 12 ){
+						//insertCubeNodeInOrder(prospectiveNodes[sortedScoreIndexes[i]]);
+						listOfNodes.unshift(prospectiveNodes[sortedScoreIndexes[i]])
+						//console.log(prospectiveNodes[sortedScoreIndexes[i]].cubeScore)
+						
 					}else{
 						removeNode(prospectiveNodes[sortedScoreIndexes[i]]); 
 					}
 				}
 
+				for(var i = 0; i < listOfNodes.length; i++){
+					//insertCubeNodeInOrder(listOfNodes[i])
+					if(nodeChain == null){
+						nodeChain = listOfNodes[i];
+					}else{
+						CubeNode.insertAfter(fNode, listOfNodes[i])
+					}
+					
+					//console.log(listOfNodes[i].totalPoints);
+					fNode = listOfNodes[i];
+				}
+
+				insertCubeNodeInOrder(nodeChain);
 				// Remove our used node
 				removeNode(cNode);
 				// Start next cycle;
@@ -1788,6 +1909,7 @@ import {Matrix} from "./modules/matrix.js"
 					// We have solved the Cube or encountered an error
 					if(firstNode == null){
 						// It was an error so don't do anything
+						debugger;
 					}else{
 						var totalTime = performance.now() - startTime;
 						var alg = getAlgorithmFromNode(firstNode);
