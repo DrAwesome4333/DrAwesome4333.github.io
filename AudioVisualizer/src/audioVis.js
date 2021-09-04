@@ -957,6 +957,31 @@ function Controller(player, playlist=null){
     var optionButton = document.createElement("input");
     var self = this;
 
+    var hideButton = document.createElement("input");
+    hideButton.type="button";
+    hideButton.value="Hide"
+
+    function hidePlaylist(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var pLCont = player.getPlayerElement();
+        pLCont.style.opacity = '0';
+        pLCont.style.pointerEvents = 'none';
+    }
+
+    hideButton.addEventListener("click", hidePlaylist);
+    controlContainer.appendChild(hideButton);
+
+    function showPlaylist(e){
+        //TODO make this more proper/abstract
+        var pLCont = player.getPlayerElement();
+        pLCont.style.opacity = '1';
+        pLCont.style.pointerEvents = '';
+    }
+
+    document.body.addEventListener("click", showPlaylist);
+
+
     controlContainer.classList.add("player")
 
     playButton.type = "Button";
@@ -1593,6 +1618,7 @@ function TrackPlayer() {
 
     // Build the HTML player
     var playerContainer = document.createElement("div");
+    playerContainer.classList.add("playerContainer");
     playerContainer.appendChild(controller.getControlPanel());
     playerContainer.appendChild(playlist.getPlaylistElement());
     playerContainer.appendChild(audioElement);
