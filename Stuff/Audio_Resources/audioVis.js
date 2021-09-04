@@ -888,6 +888,9 @@ var Graphics = {
  */
 function Track(fileElement, fileNumber, player=null) {
     this.length = 0;
+    var trackId = Track.allTracks.length;
+    var idString = "Track" + trackId;
+    Track.allTracks.push(this);
     var trackTitle = "Unknown";
     var fileName = fileElement.files[fileNumber].name;
     var artist = "Unkown Artist";
@@ -953,71 +956,37 @@ function Track(fileElement, fileNumber, player=null) {
     this.getAudioURL = function(){
         return fileURL;
     }
+
+    this.getId = function(){
+        return trackId;
+    }
     //playlistItem.style.cursor = "grab";
 
 
     playlistItem.addEventListener("click", this.play);
 
     playlistItem.draggable = true;
+
     playlistItem.addEventListener("dragstart", function (e) {
         e.dataTransfer.setData("text", e.target.id);
     });
+
     playlistItem.addEventListener("dragover", function (e) {
         e.preventDefault();
     });
+
     playlistItem.addEventListener("drop", function (e) {
         e.preventDefault();
-        var id = e.dataTransfer.getData("text");
-        var movedEle = document.getElementById(id);
-        if (movingSongId === -1) {
-            placeHolder.style.height = "160px";
-            playlistEle.insertBefore(placeHolder, movedEle);
-            movedEle.style.height = "0px";
-            setTimeout(function () {
-                _Player.songs[movingSongId].playlistItem.removeAttribute("style");
-                placeHolder.style.height = "0px";
-                movingSongId = -1;
-            }, 1)
-        }
-        playlistEle.insertBefore(movedEle, this);
-
-        var songId = parseInt(this.id.substring(5, 10), 10);
-        var movedId = parseInt(movedEle.id.substring(5, 10), 10);
-        if (movingSongId === -1)
-            movingSongId = movedId;
-        var oldIndex = -1;
-        var newIndex = 0;
-
-        for (; newIndex < _Player.songOrder.length; newIndex++) {
-            if (_Player.songOrder[newIndex].id == songId) {
-                _Player.songOrder.splice(newIndex, 0, _Player.songs[movedId]);//insert the song before the one that is reciving the drop
-                newIndex++;
-            }
-            if (_Player.songOrder[newIndex].id == movedId) {
-                oldIndex = newIndex;
-            }
-        }
-        if (oldIndex >= 0) {
-            _Player.songOrder.splice(oldIndex, 1);//remove old song if it was found
-        }
-
-        if (_Player.songId >= 0) {
-            for (var i = 0; i < _Player.songOrder.length; i++) {//Update the song number as the list changed
-                if (_Player.songOrder[i].id === _Player.songId) {
-                    _Player.songNumber = i;
-                    break;
-                }
-            }
-        }
-    });
-
-    var idString = (_Player.songs.length).toString();
-
-    while (idString.length < 5) {
-        idString = "0" + idString;
+        var movingTrackId = parseInt(e.dataTransfer.getData("text").slice("Track".length), 10);
+        var movingTrack = Track.allTracks[movingTrackId];
+        var me = Track.allTracks[(parseInt(this.id.slice("Track".length), 10))];
+        if(movingTrackId != me.getId())
+            playlist.putTrackAfter(me, movingTrack);
+        
     }
+    );
 
-    playlistItem.id = "song" + idString;
+    playlistItem.id = idString;
 
     var checkBox = document.createElement("input");
     checkBox.type = "checkbox";
@@ -1041,6 +1010,12 @@ function Track(fileElement, fileNumber, player=null) {
     playlistItem.appendChild(checkBox);
 }
 
+
+/**
+ * @type {Track[]}
+ */
+ Track.allTracks = [];
+
 var Sound = {
     data: {
         frequenceyAndWaveform: new Uint8Array(1),
@@ -1061,7 +1036,7 @@ function Controller(player, playlist=null){
     var sourceElement = player.getSourceElement();
     var controlContainer = document.createElement("div");
     var playButton = document.createElement("input");
-    var timeLine = null;
+    var timeLine = document.createElement("progress");
     var timeLineBG = null;
     var timeDot = null;
     var ffButton = document.createElement("input");
@@ -1110,6 +1085,8 @@ function Controller(player, playlist=null){
     optionButton.value = "Options";
     controlContainer.appendChild(optionButton);
 
+    controlContainer.appendChild(timeLine);
+
     this.getControlPanel = function(){
         return controlContainer;
     }
@@ -1119,8 +1096,6 @@ function Controller(player, playlist=null){
         if(!audioElement.paused){
             audioElement.pause();
         }
-
-        // TODO, code to set the pause button to the pause state
     }
 
     this.play = function(){
@@ -1128,11 +1103,20 @@ function Controller(player, playlist=null){
         playButton.value = "Pause"
         if(audioElement.paused){
             return audioElement.play();
+        }else{
+            return true;
         }
     }
 
     this.connectPlaylist = function(/** @type {Playlist} */ newPlaylist){
         playlist = newPlaylist;
+        
+        skipTrack.onclick = () => {playlist.playNextTrack()};
+        backTrack.onclick = () => {playlist.playNextTrack(true)};
+        
+        repeatToggle.value = Playlist.MODE_TEXT[playlist.getRepatMode()];
+
+        shuffleToggle.onclick = playlist.shuffleTracks;
     }
 
     function handlePlayButton(){
@@ -1144,6 +1128,53 @@ function Controller(player, playlist=null){
     }
 
     playButton.onclick = handlePlayButton;
+
+    function fastForward(){
+        var playing = !audioElement.paused;
+        if(isFinite(audioElement.duration))
+        audioElement.currentTime = Math.min(audioElement.currentTime + 5, audioElement.duration);
+    }
+
+    function rewind(){
+        var playing = !audioElement.paused;
+        if(isFinite(audioElement.duration))
+        audioElement.currentTime = Math.max(audioElement.currentTime - 5, 0);
+    }
+
+    function resumePlayback(){
+        audioElement.playbackRate = 1;
+    }
+
+    ffButton.onmousedown = fastForward;
+    ffButton.onmouseup = resumePlayback;
+    ffButton.onmouseleave = resumePlayback;
+
+    rrButton.onmousedown = rewind;
+    rrButton.onmouseup = resumePlayback;
+    rrButton.onmouseleave = resumePlayback;
+
+    function updateProgress(){
+        if(isNaN(audioElement.duration)){
+            timeLine.max = 1;
+            timeLine.value = 0;
+        }else{
+            timeLine.max = audioElement.duration;
+            timeLine.value = audioElement.currentTime;
+        }
+    }
+
+    setInterval(updateProgress, 100);
+
+    function switchRepeatMode(){
+        var cMode = playlist.getRepatMode();
+        cMode ++;
+        cMode %= Playlist.MODES.length;
+        playlist.setRepeatMode(cMode);
+        repeatToggle.value = Playlist.MODE_TEXT[cMode];
+    }
+
+    repeatToggle.value = Playlist.MODE_TEXT[0];
+    repeatToggle.onclick = switchRepeatMode;
 
 
 }
@@ -1159,7 +1190,7 @@ function prevDef(ev){
  * @param {Track[]} tracksIn 
  */
 function Playlist(player, controller, tracksIn=[]){
-    var playingTrackId = -1;
+    var playingTrackPos = -1;
     var audioElement = player.getAudioElement();
     var sourceElement = player.getSourceElement();
     var fileElement = document.createElement("input");
@@ -1175,8 +1206,8 @@ function Playlist(player, controller, tracksIn=[]){
 
     function assertFailure(){
         if(!prog){
-            if (playingTrackId != -1){
-                trackList[playingTrackId].disable("This track failed to play, click to re-enable", true);
+            if (playingTrackPos != -1){
+                trackList[playingTrackPos].disable("This track failed to play, click to re-enable", true);
             }
         self.playNextTrack();
         }
@@ -1212,8 +1243,17 @@ function Playlist(player, controller, tracksIn=[]){
 
     PLContainer.appendChild(addSongElement);
 
-    function recieveDrop(){
-        // TODO
+    function recieveDrop(e){
+        e.preventDefault();
+        var movingTrackId = parseInt(e.dataTransfer.getData("text").slice("Track".length), 10);
+        var movingTrack = Track.allTracks[movingTrackId];
+        var lastTrackId = trackList.length - 1;
+        var lastTrack;
+        if(lastTrackId > -1){
+            lastTrack = trackList[lastTrackId];
+            if(lastTrack.getId() != movingTrackId)
+                self.putTrackAfter(lastTrack, movingTrack);
+        }
     }
 
     addSongElement.addEventListener("dragover", prevDef);
@@ -1244,18 +1284,50 @@ function Playlist(player, controller, tracksIn=[]){
 
     }
 
+    function updateE(i){
+        trackList[i].getTrackElement().style.top = "0px";
+    }
+
     function updateOrder(){
         // Updates the song list order
         // TODO
+
+        // Get current positions
+        var startPos = [];
+        for(var i = 0; i < trackList.length; i++){
+            startPos.push(trackList[i].getTrackElement().offsetTop);           
+        }
+
+        //Update order in DOM
+
+        for(var i = 0; i < trackList.length; i++){        
+            PLContainer.insertBefore(trackList[i].getTrackElement(), addSongElement);   
+        }
+
+        // calculate offset and animate
+        for(var i = 0; i < trackList.length; i++){
+            var newPos = trackList[i].getTrackElement().offsetTop;
+            trackList[i].getTrackElement().style.top = (startPos[i] - newPos) + "px";
+            // This triggers the instant movement of the element back to its original location (calculated above)
+            // the timeout then triggers the animation to the new location by removing the offset
+            PLContainer.insertBefore(trackList[i].getTrackElement(), trackList[i].getTrackElement());
+            setTimeout(updateE, 1, i);
+        }
+
+
     }
 
     this.shuffleTracks = function(){
+        var cTrack = self.getCurrentTrack();
         shuffleList(trackList);
+        if(cTrack != null){
+            playingTrackPos = self.getPosOfTrack(cTrack);
+        }
         updateOrder();
     }
 
     this.getNextTrack = function(wrap=false){
-        var nextTrack =  playingTrackId + 1;
+        var nextTrack =  playingTrackPos + 1;
         if(nextTrack >= trackList.length){
             if(wrap){
                 nextTrack = 0;
@@ -1268,35 +1340,56 @@ function Playlist(player, controller, tracksIn=[]){
 
     }
 
-    this.playNextTrack = function(){
-        if(playingTrackId != -1){
-            trackList[playingTrackId].getTrackElement().classList.remove("songPlaying")
+    this.playNextTrack = function(playPrevTrack=false){
+        if(playingTrackPos != -1){
+            trackList[playingTrackPos].getTrackElement().classList.remove("songPlaying");
+            audioElement.pause();
         }
         switch (repeat){
             case Playlist.MODE.REPEAT_NONE:// Fall through
             case Playlist.MODE.REPEAT_LIST:
-                playingTrackId++;
-                if(playingTrackId >= trackList.length){
+
+                
+                if(playPrevTrack){
+                    playingTrackPos--;
+                }else{
+                    playingTrackPos++;
+                }
+
+                if(playingTrackPos >= trackList.length || playingTrackPos == -1){
                     if(repeat == Playlist.MODE.REPEAT_NONE){
                         
                         // We have hit the end of the list, so revert the playing
                         // index and return.
-                        playingTrackId --;
+                        if(playPrevTrack){
+                            playingTrackPos++;
+                        }else{
+                            playingTrackPos--;
+                        }
                         return;
                     }else{
                         // go back to the begining
-                        playingTrackId = 0;
+                        if(playPrevTrack){
+                            playingTrackPos = trackList.length - 1;
+                        }else{
+                            playingTrackPos = 0;
+                        }
                     }
                 }
-
-                trackList[playingTrackId].play()
+                if(trackList[playingTrackPos].isDisabled()){
+                    // If the track is disabled, stop trying to play it and move on
+                    setTimeout(self.playNextTrack, 250);
+                    return;
+                }else{
+                    trackList[playingTrackPos].play()
+                }
                 break;
             case Playlist.MODE.REPEAT_TRACK:
-                 if(trackList[playingTrackId].isDisabled()){
+                 if(trackList[playingTrackPos].isDisabled()){
                      // If the track is disabled, stop trying to play it :)
                      return;
                  }
-                 trackList[playingTrackId].play();
+                 trackList[playingTrackPos].play();
 
             default:
                 return;
@@ -1306,13 +1399,13 @@ function Playlist(player, controller, tracksIn=[]){
     }
 
     this.getCurrentTrack = function(){
-        if(playingTrackId == -1 || playingTrackId >= trackList.length){
+        if(playingTrackPos == -1 || playingTrackPos >= trackList.length){
             return null;
         }
-        return trackList[playingTrackId];
+        return trackList[playingTrackPos];
     }
 
-    this.getIdOfTrack = function(/** @type {Track} */ track){
+    this.getPosOfTrack = function(/** @type {Track} */ track){
         for(var i = 0; i < trackList.length; i ++){
             if(trackList[i] == track){
                 return i;
@@ -1321,21 +1414,21 @@ function Playlist(player, controller, tracksIn=[]){
         return -1;
     }
 
-    this.getPlayingTrackId = function(){
-        return playingTrackId;
+    this.getPlayingTrackPos = function(){
+        return playingTrackPos;
     }
 
     /** @param {number} newId*/ 
-    this.setPlayingTrackId = function(newId){
+    this.setPlayingTrackPos = function(newId){
         // Check if value is valid
         if(newId % 1 != 0 || newId < -1 || newId >= trackList.length){
             return false;
         }
-        playingTrackId = newId;
+        playingTrackPos = newId;
     }
 
     this.playTrack = function(/** @type {number | Track} */ newTrack){
-        var oldId = playingTrackId;
+        var oldId = playingTrackPos;
         
         /** @type {Track} */
         var track = null;
@@ -1343,13 +1436,13 @@ function Playlist(player, controller, tracksIn=[]){
             if(newTrack % 1 != 0 || newTrack < -1 || newTrack >= trackList.length){
                 return false;
             }
-            playingTrackId = newTrack;
+            playingTrackPos = newTrack;
             track = trackList[newTrack];
 
         }else{
-            var newId = self.getIdOfTrack(newTrack);
+            var newId = self.getPosOfTrack(newTrack);
             if(newId != -1){
-                playingTrackId = newId;
+                playingTrackPos = newId;
                 track = newTrack;
             }else{
                 return false;
@@ -1385,8 +1478,8 @@ function Playlist(player, controller, tracksIn=[]){
     }
 
     this.getCurrentTrack = function(){
-        if(playingTrackId != -1){
-            return trackList[playingTrackId];
+        if(playingTrackPos != -1){
+            return trackList[playingTrackPos];
         }
     }
 
@@ -1411,6 +1504,48 @@ function Playlist(player, controller, tracksIn=[]){
         return PLContainer;
     }
 
+    this.setRepeatMode = function(/** @type {number} */ mode){
+        if(Playlist.MODES.includes(mode)){
+            repeat = mode;
+        }
+    }
+
+    this.getRepatMode = function(){
+        return repeat;
+    }
+
+    this.putTrackAfter = function(/** @type {Track} */ trackInList, /** @type {Track} */ movingTrack, before=false){
+        var tilLoc = self.getPosOfTrack(trackInList);
+        var mtLoc = self.getPosOfTrack(movingTrack);
+        if(tilLoc == -1 || mtLoc == -1 || tilLoc == mtLoc){
+            // Tracks are not in same list or are the same track
+            console.log("Error inserting track, reason(s):");
+            if(tilLoc == -1)
+                console.log("Could not find the trackInList's position in playlist");
+            if(mtLoc == -1)
+                console.log("Could not find the movingTrack's position in playlist, it may be in a different list");
+            if(tilLoc == mtLoc)
+                console.log("Both trackInList and movingTrack are the same");
+            
+            return;
+        }
+
+        trackList.splice(mtLoc, 1);
+        if(tilLoc > mtLoc){
+            tilLoc --;
+        }
+       
+        if(before){
+            // if this is true, we will actually insert the track before the current one
+            trackList.splice(tilLoc, 0, movingTrack);
+        }else{
+            // We want the track to go after the given element, so we add one
+            trackList.splice(tilLoc + 1, 0, movingTrack);
+        }
+        updateOrder();
+
+    }
+
 
 }
 
@@ -1421,12 +1556,14 @@ Playlist.MODE = {
     REPEAT_STOP: 3 // For just playing one song
 }
 
+Playlist.MODES = [Playlist.MODE.REPEAT_NONE, Playlist.MODE.REPEAT_LIST, Playlist.MODE.REPEAT_TRACK, Playlist.MODE.REPEAT_STOP];
+
 Playlist.MODE_TEXT = [
-    "No Repeat",
+    "Play List",
     "Repeat List",
     "Repeat Track",
     "Just One Track"
-]
+];
 
 
 function TrackPlayer() {

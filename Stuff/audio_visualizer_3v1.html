@@ -17,7 +17,7 @@
 		.playlistItem {
 			cursor: pointer;
 			border-bottom: 1pt black solid;
-			transition: all 0.5s ease-in-out;
+			transition: all 0.5s ease-in-out, top 1s ease-out;
 			position: relative;
 			top: 0px;
 			height: 150px;
@@ -40,7 +40,6 @@
 		.playlistItem:hover {
 			/*background-color:rgb(40, 40, 40);*/
 			background-image: linear-gradient(to right, rgba(40, 40, 40, 1), rgba(40, 40, 40, 0.7), rgba(0, 0, 0, 0));
-			height: 160px;
 		}
 
 		.playlistItem:-moz-dragover {
@@ -109,7 +108,9 @@
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			height: 90px;
 			text-align: center;
-
+			position: -webkit-sticky; /* Safari */
+  			position: sticky;
+			bottom: 0px;
 			transition: all 0.5s ease-in-out;
 			font-size: 20pt;
 			font-family: Verdana, Geneva, Tahoma, sans-serif;
