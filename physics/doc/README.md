@@ -1,0 +1,1 @@
+The is the source code for a basic, polygonal based 2d physics engine I wish to create. The goal is to have a fast, somewhat realistic engine that can take polygons of any shape and have them interact in a realistic manner with one another.
