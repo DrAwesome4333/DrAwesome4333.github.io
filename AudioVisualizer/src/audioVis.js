@@ -1625,12 +1625,12 @@ var _Player = {
 
     },
     loadResources: function () {
-        this.resources.defaultCover.src = "Audio_Resources/Disc.png";
-        this.resources.errorCover.src = "Audio_Resources/DiscBroken.png";
-        this.resources.repeatAll.src = "Audio_Resources/RepeatAll.png";
-        this.resources.repeatOne.src = "Audio_Resources/RepeatOne.png";
-        this.resources.repeatNone.src = "Audio_Resources/RepeatNone.png";
-        this.resources.options.src = "Audio_Resources/Options.png";
+        this.resources.defaultCover.src = "resources/Disc.png";
+        this.resources.errorCover.src = "resources/DiscBroken.png";
+        this.resources.repeatAll.src = "resources/RepeatAll.png";
+        this.resources.repeatOne.src = "resources/RepeatOne.png";
+        this.resources.repeatNone.src = "resources/RepeatNone.png";
+        this.resources.options.src = "resources/Options.png";
     }
 
 }

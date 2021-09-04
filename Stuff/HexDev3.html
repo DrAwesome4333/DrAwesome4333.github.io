@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Hex Dev 3</title>
+        <style>
+            #inDiv{
+                opacity: 1;
+                z-index: 1;
+                position: absolute;
+                top:1vh;
+                width: 98vw;
+                height: 99vh;
+                font-family:'Courier New', Courier, monospace;
+            }
+            #outDiv{
+                position: absolute;
+                z-index: 2;
+                pointer-events: none;
+                top:1vh;
+                width: 98vw;
+                height: 99vh;
+                font-family:'Courier New', Courier, monospace;
+            }
+            .rainbow{
+                animation-name: colorful;
+                animation-timing-function: linear;
+                animation-duration:1s;
+                animation-iteration-count: infinite;
+            }
+            @keyframes colorful {
+               0% {color:red;}
+               25% {color:yellow;}
+               50% {color:blue;}
+               75% {color:green;}
+               100% {color:red;}
+            }
+        </style>
+    </head>
+    <body>
+        <div id="inDiv" contenteditable="true" onkeydown="updateText()" onkeyup="updateText()">hello</div>
+        <div id="outDiv">hello</div>
+        <script>
+            var inDiv = document.getElementById("inDiv");
+            var outDiv = document.getElementById("outDiv");
+
+            function updateText(){
+                var inputText = inDiv.innerHTML;
+                var result = "";
+                var skipCount = 0;
+                // For this test we are going to highlight all vowels with red
+                for(var i = 0; i < inputText.length; i++){
+                    // Have we been asked to skip the next characters in checking?
+                    if(skipCount > 0){
+                        skipCount --;
+                        result += inputText[i];
+                        continue;
+                    }
+                     // Check for escape seqences
+                     if(inputText[i] == '\\'){
+                        skipCount = 1;
+                        result += inputText[i];
+                        console.log("Escape skipped over")
+                        continue;
+                    }
+
+                    // Skip html tags in the input (such as <br>)
+                    if(inputText[i] == "<"){
+                        var endOfTag = skipHTMLTag(i, inputText);
+                        // Found the end of the tag
+                        if(endOfTag != -1){
+                            skipCount = endOfTag - i;
+                        }
+                        result += inputText[i];
+                        continue;
+                    }
+
+                    if(inputText[i].toLowerCase() == "a" || inputText[i].toLowerCase() == "e" || inputText[i].toLowerCase() == "i" || inputText[i].toLowerCase() == "o"
+                    || inputText[i].toLowerCase() == "u"){
+                        result += `<font class="rainbow">${inputText[i]}</font>`
+                        continue;
+                    }
+
+                    result += inputText[i];
+
+                }
+
+                outDiv.innerHTML = result;
+                
+            }
+
+            function skipHTMLTag(start=0, string=""){
+                // goes from the start value of '<' to the next '>'
+                // returns the index of '>'
+                for(var i = start; i < string.length; i++){
+                    // Check for escape seqence for \>
+                    if(string[i] == '\\'){
+                        i += 2;
+                        continue;
+                    }
+
+                    if(string[i] == '>'){
+                        return i;
+                    }
+                }
+
+                return -1;
+                
+            }
+
+            
+        </script>
+    </body>
+</html>
