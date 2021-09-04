@@ -17,11 +17,11 @@
 		.playlistItem {
 			cursor: pointer;
 			border-bottom: 1pt black solid;
-			transition: all 0.5s ease-in-out;
+			transition: all 0.5s ease-in-out, top 1s ease-out;
 			position: relative;
 			top: 0px;
 			height: 150px;
-			width: 34vw;
+			width: 100%;
 			overflow: hidden;
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			direction: ltr;
@@ -40,7 +40,6 @@
 		.playlistItem:hover {
 			/*background-color:rgb(40, 40, 40);*/
 			background-image: linear-gradient(to right, rgba(40, 40, 40, 1), rgba(40, 40, 40, 0.7), rgba(0, 0, 0, 0));
-			height: 160px;
 		}
 
 		.playlistItem:-moz-dragover {
@@ -77,8 +76,12 @@
 			background-image: linear-gradient(to right, rgba(94, 94, 94, 1), rgba(94, 94, 94, 0.7), rgba(0, 0, 0, 0));
 		}
 
-		#playlist {
-			width: 34vw;
+		.playerContainer{
+			transition: all 0.5s ease-in-out;
+		}
+		.playlist {
+			
+			transition: all 0.5s ease-in-out;
 			height: calc(var(--true-height)*0.75);
 			overflow-y: scroll;
 			position: relative;
@@ -87,25 +90,37 @@
 			direction: rtl;
 		}
 
-		#player {
-			width: 34vw;
-			height: calc(var(--true-height)*0.25);
+		.player {
+			transition: all 0.5s ease-in-out;
+			position: absolute;
+			max-width: calc(var(--true-height) * 0.50);
+			min-width: fit-content;
+			width: 33vw;
+			left: 0;
+			right: 0;
+			margin-left: auto;
+			margin-right: auto;
+			/* Fix this to be always centered*/
+			text-align: center;
+			height: calc(var(--true-height)*0.20);
+			min-height: fit-content;
+			bottom: 0px;
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+			background-color: red;
 			border-bottom: 2pt black solid;
 		}
 
-		#addSongs {
+		.addSong {
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			height: 90px;
-			width: 34vw;
 			text-align: center;
-
+			position: -webkit-sticky; /* Safari */
+  			position: sticky;
+			bottom: 0px;
 			transition: all 0.5s ease-in-out;
 			font-size: 20pt;
 			font-family: Verdana, Geneva, Tahoma, sans-serif;
 			cursor: pointer;
-
-
 		}
 
 		#addSongs:hover {
@@ -184,9 +199,9 @@
 	</style>
 </head>
 
-<body onload="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px');"
+<body onload="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px');main()"
 	onresize="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px'); if(Graphics.gl){Graphics.resize();}">
-	<div id="sidePanel">
+	<!--<div id="sidePanel">
 		<div id="sidePanelArrow"
 			onclick="this.parentElement.classList.toggle('hideToLeft'); this.classList.toggle('hideToLeft')"
 			onmousemove="ArrowTimer = 3; this.style.opacity = 1;this.style.cursor='pointer';" ondblclick="Graphics.toggleFullScreen();"></div>
@@ -198,7 +213,8 @@
 			<br>
 			<input type="button" value="Start Listening" onclick="start(); requestMic();">
 			<select id="inputSelect" onchange="tryMic(parseInt(this.value));"></select>
-			<!-- <svg width=100 height=100 viewbox="0 0 100 100">
+		-->
+		<!-- <svg width=100 height=100 viewbox="0 0 100 100">
 				<defs>
 					<radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
 						<stop offset="0%" stop-color=rgb(255,255,255) style="stop-opacity:1">
@@ -212,20 +228,21 @@
 				<polygon id="play" points="100,50 0,0 0,100" style="stroke:url(#grad1);stroke-width:2">
 	
 				</polygon>
-			</svg> !-->
-		</div>
+			</svg> -->
+		<!--</div>
 		<div id="playlist">
 			<div id="addSongs" onclick="var eve=new MouseEvent('click'); start(); fileEle.dispatchEvent(eve);">
 				<b>&#x2b</b><br>
 				Add songs
 			</div>
 		</div>
+	
 
 		<input type="file" id="files" accept="audio/*;" multiple style="display: none;">
-		<p id="op"></p>
+		--><p id="op"></p>
 	</div>
 	<canvas id="can" width=1000 height=300></canvas>
-	<script src="Audio_Resources/audioVis.js"></script>
+	<script src="audioVis.js"></script>
 
 </body>
 
