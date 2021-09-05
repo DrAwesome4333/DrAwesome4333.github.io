@@ -18,10 +18,15 @@ canvas.height = 300;
 document.body.appendChild(canvas);
 
 var mouseLocation = new Point(0, 0);
-var mouseVec = new Vector(50, 0);
-var mouseLine = new Line(mouseLocation, mouseVec);
-var line2 = new Line(new Point(0, 0), mouseVec);
-var lines = [];
+var pointList = [];
+var secondaryList = [];
+for(var i =0; i < 30; i++){
+    pointList.push(new Point(Math.random() * 150, Math.random() * 150));
+    secondaryList.push(new Point(0,0))
+}
+var myPolygon = new Polygon(...pointList);
+var shape2 = new Polygon(...secondaryList);
+var oldShapes = [];
 
 
 /**
@@ -31,92 +36,109 @@ function updateMouse(event){
     var canvasRect = canvas.getBoundingClientRect();
     mouseLocation.x = event.clientX - canvasRect.left;
     mouseLocation.y = event.clientY - canvasRect.top;
-    mouseVec.x = Math.cos(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseVec.y = Math.sin(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseLine.v = mouseVec;// As v does not keep the object linked
+    myPolygon.center = mouseLocation;
 }
 
 canvas.onmousemove = updateMouse;
 
 var mouseDeg = 0;
-var mouseMag = 100;
 
 /**
  * @param {WheelEvent} event 
  */
  function updateRotation(event){
-    mouseDeg += event.deltaY / 10;
-    mouseVec.x = Math.cos(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseVec.y = Math.sin(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseLine.v = mouseVec;// As v does not keep the object linked
+    var deg = event.deltaY / 25;
+    var rad = deg * Math.PI / 180;
+    myPolygon.center = new Point(0, 0);
+
+    myPolygon.points.forEach((p)=>{
+        var ox = p.x;
+        var oy = p.y;
+        p.x = Math.cos(rad) * ox - Math.sin(rad) * oy;
+        p.y = Math.sin(rad) * ox + Math.cos(rad) * oy;
+    });
+
+    myPolygon.center = mouseLocation;
 }
 
 canvas.onwheel = updateRotation;
 
-function updateLine2(e){
-    var oldLine = new Line(new Point(line2.p1.x, line2.p1.y), line2.v);
-    lines.push(oldLine);
-    line2.p1.x = mouseLine.p1.x;
-    line2.p1.y = mouseLine.p1.y;
-    line2.v = mouseLine.v;
+function updateShape2(e){
+    var oldPoints = [];
+    for(var i = 0; i < myPolygon.points.length; i++){
+        oldPoints.push(
+            new Point(
+            shape2.points[i].x, 
+            shape2.points[i].y
+            )
+            
+        );
+        shape2.points[i].x = myPolygon.points[i].x;
+        shape2.points[i].y = myPolygon.points[i].y;
+    }
+    oldShapes.push(new Polygon(...oldPoints));
+
+
 }
 
-canvas.onclick = updateLine2;
+canvas.onclick = updateShape2;
 
 function draw(){
+    
     ctx.clearRect(0, 0, 300, 300);
-    ctx.beginPath();
-    ctx.moveTo(mouseLine.p1.x, mouseLine.p1.y);
-    ctx.lineTo(mouseLine.p2.x, mouseLine.p2.y);
-    ctx.strokeStyle="red";
-    ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(line2.p1.x, line2.p1.y);
-    ctx.lineTo(line2.p2.x, line2.p2.y);
-    ctx.strokeStyle="green";
-    ctx.stroke();
+    var colRes = Polygon.checkCollision(myPolygon, shape2);
     
-    var intr = Line.getIntersect(mouseLine, line2);
-    if(intr.t != NaN){
-        ctx.fillStyle="blue";
-        if(0 <= intr.t && intr.t <= 1){
-            // Check other line segment
-            var intr2 = Line.getIntersect(line2, mouseLine);
-            if(0 <= intr2.t && intr2.t <= 1)
-                ctx.fillStyle="green";
-        }
+    ctx.beginPath();
+    ctx.moveTo(myPolygon.points[0].x, myPolygon.points[0].y);
+    myPolygon.points.forEach((p) =>{
+        ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = "red";
+    ctx.stroke();
 
-        ctx.fillRect(intr.point.x, intr.point.y, 10, 10);
-    }
-
-    for(var i = 0; i < lines.length; i ++){
-        var ln = lines[i];
+    oldShapes.forEach((poly) =>{
         ctx.beginPath();
-        ctx.moveTo(ln.p1.x, ln.p1.y);
-        ctx.lineTo(ln.p2.x, ln.p2.y);
-        ctx.strokeStyle="blue";
-        ctx.stroke();
-        
-        var intr = Line.getIntersect(mouseLine, ln);
-        if(intr.t != NaN){
-            ctx.fillStyle="blue";
-            if(0 <= intr.t && intr.t <= 1){
-                // Check other line segment
-                var intr2 = Line.getIntersect(ln, mouseLine);
-                if(0 <= intr2.t && intr2.t <= 1)
-                    ctx.fillStyle="green";
-            }
-
-            ctx.fillRect(intr.point.x, intr.point.y, 10, 10);
-        }
-    }
-    mouseDeg ++;
-    mouseVec.x = Math.cos(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseVec.y = Math.sin(mouseDeg * Math.PI / 180) * mouseMag;
-    mouseLine.v = mouseVec;// As v does not keep the object linked
-
+        ctx.moveTo(poly.points[0].x, poly.points[0].y);
+        poly.points.forEach((p) =>{
+            ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.strokeStyle = "green";
+        var colRes2 = Polygon.checkCollision(myPolygon, poly);
+        if(colRes2.length > 0){
+            ctx.fillStyle="rgba(255, 0, 0, 0.5)";
+            ctx.fill();
     
+            ctx.fillStyle="blue";
+            colRes2.forEach((p) => {
+                ctx.fillRect(p.x, p.y, 10, 10);
+            })
+        }
+        ctx.stroke();
+    })
+
+    ctx.beginPath();
+    ctx.moveTo(shape2.points[0].x, shape2.points[0].y);
+    shape2.points.forEach((p) =>{
+        ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = "green";
+    
+    if(colRes.length > 0){
+        ctx.fillStyle="rgba(255, 0, 0, 0.5)";
+        ctx.fill();
+
+        ctx.fillStyle="blue";
+        colRes.forEach((p) => {
+            ctx.fillRect(p.x, p.y, 10, 10);
+        })
+    }
+    ctx.stroke();
+    
+
     requestAnimationFrame(draw);
 }
 draw();

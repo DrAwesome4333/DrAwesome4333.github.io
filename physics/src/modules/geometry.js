@@ -194,11 +194,38 @@ class Polygon {
     static checkCollision(poly1, poly2){
         var p1d = poly1.diagonal;
         var p2d = poly2.diagonal;
+        var result = 0;
 
+        
+
+        var intersections = [];
         // Check if max/min boxes overlap
         if(p1d.p1.x < p2d.p2.x && p1d.p2.x > p2d.p1.x && p1d.p1.y < p2d.p2.y && p1d.p2.y > p2d.p1.y){
+            result = 1;
+            for(var p1i = 0; p1i < poly1.points.length; p1i ++){
+                // Loop through each line of poly1 and see if it intersects with any lines on poly2
+                var nextPoint = (p1i + 1) % poly1.points.length;
+                var line1 = new Line(poly1.points[p1i], poly1.points[nextPoint]);
 
+                for(var p2i = 0; p2i < poly2.points.length; p2i ++){
+                    var nextPoint2 = (p2i + 1) % poly2.points.length;
+                    var line2 = new Line(poly2.points[p2i], poly2.points[nextPoint2]);
+                    var colRes = Line.getIntersect(line1, line2);
+
+                    if(isFinite(colRes.t) && 0 <= colRes.t && colRes.t <= 1){
+                        // We have to 2 this twice to make sure the intersection the lines
+                        // is actually on both segments instead of just on line1's segment
+                        var colRes2 = Line.getIntersect(line2, line1);
+                        if(0 <= colRes2.t && colRes2.t <= 1){
+                            intersections.push(colRes.point);
+                        }
+                    }
+                }
+            }
+            
         }
+
+        return intersections;
     }
 }
 
