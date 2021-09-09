@@ -5,19 +5,7 @@ import {AlgorithmStorage, Filter} from "./modules/algorithmstorage.js"
 import {CUBE_DATA_TYPE, CUBIE_TYPE,CUBIE_STYLE, CUBE_FACE} from "./modules/cubeconsts.js"
 import {CubeData, CubeError, Cubie} from "./modules/cubedata.js"
 import {Matrix} from "./modules/matrix.js"
-/*
-		* Plan for redoing stuff:
-		* ✔ Turn CubeData into a class 
-		* ✔ Create a BinaryData class to handle compressed arrays, in a way that can be used in a cleaner way 
-		* ✔ Create a Algorithm class to create a consitent way to interact with algorithms
-		* ✔ Create a Cube class (we kind of already have it)
-		* ✔ Create a CubieData class for piece data
-		* Re - Design the Cubie class to have methods only it uses with it.
-		* ✔ Create a Model class so models can be independent of the Render Object
-		* Re work tasks that may take a while to web workers and promises
-		* Clean up the code a ton
-		* Create a start webGl function that will only do the things required to start webGl and can be recalled in case of context loss
-		*/
+
 		const PR = Math.PI / 180;//(Pi ratio, use this to convert degrees to Radians)
 
 		const  VBO_FORMAT="vx,vy,vz,tu,tv,nx,ny,nz";
@@ -99,6 +87,7 @@ import {Matrix} from "./modules/matrix.js"
 		        gl_Position = perspective_matrix * model_matrix * vec4(point, 1.0);
 		    }
 		    `;
+
 		var mainAttributes = ["point", "main_uv", "normal"];
 		var mainUniforms = [
 			{
@@ -477,7 +466,6 @@ import {Matrix} from "./modules/matrix.js"
 			}
 
 			/**
-			 * 
 			 * @param {string} attrib 
 			 * @returns {number}
 			 */
@@ -485,8 +473,7 @@ import {Matrix} from "./modules/matrix.js"
 				return attributes[attrib];
 			}
 
-			/**
-			 * 
+			/** 
 			 * @param {string} uniform 
 			 * @returns {WebGLUniformLocation}
 			 */
@@ -720,10 +707,11 @@ import {Matrix} from "./modules/matrix.js"
 		const MAP_SIZE = 1024;
 
 		function Renderer(){
-			var canvas = document.createElement("canvas");
-			document.getElementById("canvas").appendChild(canvas);/*The div element with the id 
+			/*The div element with the id 
 				'canvas' is the holder that holds the canvas allowing
 				it to fit into the page like formating style with ease.*/
+			var canvas = document.createElement("canvas");
+			document.getElementById("canvas").appendChild(canvas);
 				
 			/**@type {WebGLRenderingContext} */
 			// @ts-ignore // it has a problem with this statement as getContext() can return a 2d context
@@ -1344,7 +1332,10 @@ import {Matrix} from "./modules/matrix.js"
 		
 		}
 
-		function basicFailureCallBack(errors=[new CubeError()]){
+		/**
+		 * @param {CubeError[]} errors 
+		 */
+		function basicFailureCallBack(errors=[]){
 			displayErrorsOnCube(errors);
 			//console.log("Failed to solve cube for the follwing reasons: ", errors)
 		}
@@ -1356,7 +1347,10 @@ import {Matrix} from "./modules/matrix.js"
 
 		}
 
-		function displayErrorsOnCube(errors=[new CubeError()]){
+		/**
+		 * @param {CubeError[]} errors 
+		 */
+		function displayErrorsOnCube(errors=[]){
 			// Clear previous errors if there were any
 
 			clearCubeErrors(testCube);
@@ -1372,7 +1366,10 @@ import {Matrix} from "./modules/matrix.js"
 
 		}
 
-		function clearCubeErrors(vcube=new VCube()){
+		/**
+		 * @param {VCube} vcube 
+		 */
+		function clearCubeErrors(vcube){
 			var cubies = vcube.getCubies();
 			cubies.forEach(cubie => {
 				cubie.inError = [false, false, false, false];
@@ -1418,6 +1415,7 @@ import {Matrix} from "./modules/matrix.js"
 					var theNode = inactiveNode;
 					inactiveNode = theNode.next;
 					activeCubeCount ++;
+					// Remove it from the inactive list
 					CubeNode.removeNode(theNode);
 					return theNode;
 				}
@@ -1431,10 +1429,12 @@ import {Matrix} from "./modules/matrix.js"
 				// moves it to the inactive list
 
 				if(node == null){
+					// We need to debug if we got here
 					debugger;
 				}
 
 				if(firstNode.next == null){
+					// We need to debug if we got here as well
 					debugger;
 				}
 
@@ -1561,7 +1561,6 @@ import {Matrix} from "./modules/matrix.js"
 
 				//if(cubeNode != null){
 				//	debugger;
-
 				//}
 				
 				return true;

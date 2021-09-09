@@ -330,6 +330,7 @@ var Graphics = {
                         total_light += base * (light_strength * light_color[i]);
                         total_light += base * (spec_strength * light_color[i]);
                     }
+
                     total_light += ambient_color * base;
                     float amount = smoothstep(900.0, 1000.0, gl_FragCoord.z);
                     gl_FragColor = vec4(mix(total_light,fog_color,amount),texture2D(texture,f_tex).a);
@@ -359,18 +360,45 @@ var Graphics = {
                     textPos.x = index - textPos.y * 32.0;
                     textPos.xy /= 32.0;
                     level = texture2D(freqData, textPos).r;
+                    
                     wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
                     fin = vec4(color.rgb * vec3(pow(level - abs(_pos.y * _pos.y + (wave * 2.0 - 1.0) * 0.1), 3.0) * 2.0), 0.5);
+
                     gl_FragColor = fin;
-                }`/*fin = vec4(vec3(1.0,1.0,1.0) - color.rgb , opacity);
-                    if (abs(_pos.y) < level){
-                        fin = vec4(color.rgb * vec3((level - abs(_pos.y)) * 5.0), opacity);
-                    }*/
-        //wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
-        /*
-        if(_pos.x > 0.0 && _pos.y > 0.0){
-            fin = texture2D(freqData, _pos);
-        }*/
+                }`,
+            altFadeFragmentShader: `
+            precision mediump float;
+            uniform sampler2D freqData;
+            uniform float opacity;
+            uniform vec3 color;
+            varying vec2 _pos;
+            vec4 fin;
+            float index;
+            vec2 textPos;
+            float level;
+            float wave;
+            const float PI = 3.1415926535897932384626433832795;
+            void main(void){
+                index = abs(_pos.x) * 512.0;
+                textPos.y = floor(index / 32.0);
+                textPos.x = index - textPos.y * 32.0;
+                textPos.xy /= 32.0;
+                level = texture2D(freqData, textPos).r;
+                
+                wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
+                fin = vec4(color.rgb * vec3(pow(level - abs(_pos.y * _pos.y + (wave * 2.0 - 1.0) * 0.1), 3.0) * 2.0), 0.5);
+
+                index = abs(_pos.y * cos(_pos.x * texture2D(freqData, vec2(0.0,0.0)).r)) * 512.0;
+                textPos.y = floor(index / 32.0);
+                textPos.x = index - textPos.y * 32.0;
+                textPos.xy /= 32.0;
+                level = texture2D(freqData, textPos).r;
+                
+                wave = texture2D(freqData, textPos + vec2(0.0, 0.5)).r;
+                fin += vec4(color.rgb * vec3(pow(level - abs(_pos.x * _pos.x + (wave * 2.0 - 1.0) * 0.1), 3.0) * 2.0), 0.5);
+                fin.rgb *= 0.5;
+                gl_FragColor = fin;
+            }`
     },
     uniforms: {
         main: {
@@ -543,7 +571,7 @@ var Graphics = {
         document.body.appendChild(this.canvas);
 
         this.shaders.vertexShaders.fade = this.buildShader(this.shaderSources.fadeVertexShader, this.gl.VERTEX_SHADER);
-        this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.fadeFragmentShader, this.gl.FRAGMENT_SHADER);
+        this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.altFadeFragmentShader, this.gl.FRAGMENT_SHADER);
         this.programs.fade = this.buildProgram(this.shaders.vertexShaders.fade, this.shaders.fragmentShaders.fade);
         this.gl.useProgram(this.programs.fade);
         this.attributes.fade.pos = this.gl.getAttribLocation(this.programs.fade, "pos");
