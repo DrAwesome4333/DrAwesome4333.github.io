@@ -6,18 +6,6 @@ var audioDevices = [];
 // @ts-ignore
 var canvas = document.getElementById("can");
 var ct = canvas.getContext("2d");
-//var ArrowTimer = 3;
-
-// setInterval(
-//     function () {
-//         if (ArrowTimer > 0) {
-//             ArrowTimer--;
-//             if (ArrowTimer === 0) {
-//                 sidePanelArrow.style.opacity = "0";
-//                 sidePanelArrow.style.cursor = "none";
-//             }
-//         }
-//     }, 1000);
 
 
 function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.data.fbc)) {
@@ -963,13 +951,84 @@ var Sound = {
 }
 
 /**
+ * @param {{ [x: string]: {normal:string, hover:string}; }} stateSVGMapping
+ */
+function DynamicButton(stateSVGMapping){
+    this.button = document.createElement("span");
+    var svgCollection = {};
+    var button = this.button;
+    button.style.textAlign = "center";
+    button.style.display = "inline-block";
+    var self = this;
+    
+    for(var map in stateSVGMapping){
+        var myImg = document.createElement("img");
+        var myImg2 = document.createElement("img");
+        myImg.src = stateSVGMapping[map].hover;
+        myImg2.src = stateSVGMapping[map].normal;
+        myImg.style.width = "100%";
+        myImg2.style.width = "100%";
+        svgCollection[map] = {
+            normal:myImg2,
+            hover:myImg
+        }
+    }
+
+    this.state = "";
+
+    function clearChildren(){
+        while (button.firstChild){
+            button.removeChild(button.firstChild);
+        }
+    }
+
+    function hover(){
+        if(stateSVGMapping[self.state]){
+            clearChildren();
+            button.appendChild(svgCollection[self.state].hover);
+        }
+    }
+
+    function out(){
+        if(stateSVGMapping[self.state]){
+            clearChildren();
+            button.appendChild(svgCollection[self.state].normal);
+        }
+    }
+    button.addEventListener("mouseover", hover);
+    button.addEventListener("mouseout", out);
+
+    this.setState = function(name=""){
+        
+        self.state = name;
+        if(stateSVGMapping[name]){
+            out()
+        }
+    }
+
+}
+
+/**
  * @param {TrackPlayer} player
  * @param {Playlist} playlist
  */
 function Controller(player, playlist=null){
     var audioElement = player.getAudioElement();
     var controlContainer = document.createElement("div");
-    var playButton = document.createElement("input");
+    var playButton = new DynamicButton({
+        "play":{
+            normal:Controller.resources.play,
+            hover:Controller.resources.play_hover
+        },
+        "play_disabled":{
+            normal:Controller.resources.play_disabled,
+            hover:Controller.resources.play_disabled
+        },
+        "pause":{
+            normal:Controller.resources.pause,
+            hover:Controller.resources.pause_hover
+        }
+        });//document.createElementNS("http://www.w3.org/2000/svg", "svg");
     var timeLine = document.createElement("progress");
     var timeLineBG = null;
     var timeDot = null;
@@ -983,9 +1042,13 @@ function Controller(player, playlist=null){
     var repeatToggle = document.createElement("input");
     var shuffleToggle = document.createElement("input");
     var optionButton = document.createElement("input");
+    var hideButton = document.createElement("input");
     var self = this;
 
-    var hideButton = document.createElement("input");
+    
+
+    controlContainer.classList.add("player")
+    
     hideButton.type="button";
     hideButton.value="Hide"
 
@@ -1006,43 +1069,52 @@ function Controller(player, playlist=null){
         pLCont.style.opacity = '1';
         pLCont.style.pointerEvents = '';
     }
+    
 
     document.body.addEventListener("click", showPlaylist);
 
 
-    controlContainer.classList.add("player")
+    
+    optionButton.type = "Button";
+    optionButton.value = "Options";
+    controlContainer.appendChild(optionButton);
 
-    playButton.type = "Button";
-    playButton.value = "Play";
-    controlContainer.appendChild(playButton);
+    
+    backTrack.type = "Button";
+    backTrack.value = "Back";
+    controlContainer.appendChild(backTrack);
+
+    
+    rrButton.type = "Button";
+    rrButton.value = "RR";
+    controlContainer.appendChild(rrButton);
+
+    // playButton.type = "Button";
+    // playButton.value = "Play";
+    playButton.button.style.width = "10%";
+    playButton.setState("play_disabled");
+    
+    controlContainer.appendChild(playButton.button);
 
     ffButton.type = "Button";
     ffButton.value = "FF";
     controlContainer.appendChild(ffButton);
 
-    rrButton.type = "Button";
-    rrButton.value = "RR";
-    controlContainer.appendChild(rrButton);
-
-    backTrack.type = "Button";
-    backTrack.value = "Back";
-    controlContainer.appendChild(backTrack);
-
     skipTrack.type = "Button";
     skipTrack.value = "Skip";
     controlContainer.appendChild(skipTrack);
 
-    repeatToggle.type = "Button";
-    repeatToggle.value = "Repeat Button";
-    controlContainer.appendChild(repeatToggle);
 
     shuffleToggle.type = "Button";
     shuffleToggle.value = "Shuffle Button";
     controlContainer.appendChild(shuffleToggle);
 
-    optionButton.type = "Button";
-    optionButton.value = "Options";
-    controlContainer.appendChild(optionButton);
+    repeatToggle.type = "Button";
+    repeatToggle.value = "Repeat Button";
+    controlContainer.appendChild(repeatToggle);
+
+    controlContainer.appendChild(document.createElement("br"));
+    controlContainer.appendChild(document.createElement("br"));
 
     controlContainer.appendChild(timeLine);
 
@@ -1051,15 +1123,17 @@ function Controller(player, playlist=null){
     }
 
     this.pause = function(){
-        playButton.value = "Play";
+        // Tell the play Button to show the play button
+        playButton.setState("play");
         if(!audioElement.paused){
             audioElement.pause();
         }
     }
 
     this.play = function(){
-            
-        playButton.value = "Pause"
+        
+        // Tell the play Button to show the pause button
+        playButton.setState("pause");
         if(audioElement.paused){
             return audioElement.play();
         }else{
@@ -1088,7 +1162,7 @@ function Controller(player, playlist=null){
         }
     }
 
-    playButton.onclick = handlePlayButton;
+    playButton.button.onclick = handlePlayButton;
 
     function fastForward(){
         var playing = !audioElement.paused;
@@ -1138,6 +1212,41 @@ function Controller(player, playlist=null){
     repeatToggle.onclick = switchRepeatMode;
 
 
+}
+
+Controller.resources = {
+    play_hover:"./resources/playHover.svg",
+    play:"./resources/play.svg",
+    play_disabled:"./resources/playDisabled.svg",
+    pause:"./resources/pause.svg",
+    pause_hover:"./resources/pauseHover.svg",
+    back:"",
+    back_disabled:"",
+    back_hover:"",
+    rewind:"",
+    rewind_disabled:"",
+    rewind_hover:"",
+    fastforward:"",
+    fastforward_disabled:"",
+    fastforward_hover:"",
+    skip:"",
+    skip_disabled:"",
+    skip_hover:"",
+    shuffle:"",
+    shuffle_disabled:"",
+    shuffle_hover:"",
+    repeat_track:"",
+    repeat_track_disabled:"",
+    repeat_track_hover:"",
+    repeat_list:"",
+    repeat_list_disabled:"",
+    repeat_list_hover:"",
+    repeat_one:"",
+    repeat_one_disabled:"",
+    repeat_one_hover:"",
+    repeat_none:"",
+    repeat_none_disabled:"",
+    repeat_none_hover:"",
 }
 
 /**@param {Event} ev  */
