@@ -1032,10 +1032,46 @@ function Controller(player, playlist=null){
     var timeLine = document.createElement("progress");
     var timeLineBG = null;
     var timeDot = null;
-    var ffButton = document.createElement("input");
-    var rrButton = document.createElement("input");
-    var backTrack = document.createElement("input");
-    var skipTrack = document.createElement("input");
+    var ffButton = new DynamicButton({
+        "fastforward":{
+            normal:Controller.resources.fastforward,
+            hover:Controller.resources.fastforward_hover
+        },
+        "fastforward_disabled":{
+            normal:Controller.resources.fastforward_disabled,
+            hover:Controller.resources.fastforward_disabled
+        }
+        });
+    var rrButton = new DynamicButton({
+        "rewind":{
+            normal:Controller.resources.rewind,
+            hover:Controller.resources.rewind_hover
+        },
+        "rewind_disabled":{
+            normal:Controller.resources.rewind_disabled,
+            hover:Controller.resources.rewind_disabled
+        }
+        });
+    var backTrack = new DynamicButton({
+        "back":{
+            normal:Controller.resources.back,
+            hover:Controller.resources.back_hover
+        },
+        "back_disabled":{
+            normal:Controller.resources.back_disabled,
+            hover:Controller.resources.back_disabled
+        }
+        });
+    var skipTrack = new DynamicButton({
+        "skip":{
+            normal:Controller.resources.skip,
+            hover:Controller.resources.skip_hover
+        },
+        "skip_disabled":{
+            normal:Controller.resources.skip_disabled,
+            hover:Controller.resources.skip_disabled
+        }
+        });
     var volDot = null;
     var volLine = null;
     var volBack = null;
@@ -1080,14 +1116,15 @@ function Controller(player, playlist=null){
     controlContainer.appendChild(optionButton);
 
     
-    backTrack.type = "Button";
-    backTrack.value = "Back";
-    controlContainer.appendChild(backTrack);
+    backTrack.button.style.width = "10%";
+    backTrack.setState("back");
+    controlContainer.appendChild(backTrack.button);
 
     
-    rrButton.type = "Button";
-    rrButton.value = "RR";
-    controlContainer.appendChild(rrButton);
+    
+    rrButton.button.style.width = "10%";
+    rrButton.setState("rewind");
+    controlContainer.appendChild(rrButton.button);
 
     // playButton.type = "Button";
     // playButton.value = "Play";
@@ -1096,13 +1133,14 @@ function Controller(player, playlist=null){
     
     controlContainer.appendChild(playButton.button);
 
-    ffButton.type = "Button";
-    ffButton.value = "FF";
-    controlContainer.appendChild(ffButton);
-
-    skipTrack.type = "Button";
-    skipTrack.value = "Skip";
-    controlContainer.appendChild(skipTrack);
+    
+    ffButton.button.style.width = "10%";
+    ffButton.setState("fastforward");
+    controlContainer.appendChild(ffButton.button);
+    
+    skipTrack.button.style.width = "10%";
+    skipTrack.setState("skip");
+    controlContainer.appendChild(skipTrack.button);
 
 
     shuffleToggle.type = "Button";
@@ -1146,8 +1184,8 @@ function Controller(player, playlist=null){
     this.connectPlaylist = function(/** @type {Playlist} */ newPlaylist){
         playlist = newPlaylist;
         
-        skipTrack.onclick = () => {playlist.playNextTrack()};
-        backTrack.onclick = () => {playlist.playNextTrack(true)};
+        skipTrack.button.onclick = () => {playlist.playNextTrack()};
+        backTrack.button.onclick = () => {playlist.playNextTrack(true)};
         
         repeatToggle.value = Playlist.MODE_TEXT[playlist.getRepatMode()];
 
@@ -1180,13 +1218,13 @@ function Controller(player, playlist=null){
         audioElement.playbackRate = 1;
     }
 
-    ffButton.onmousedown = fastForward;
-    ffButton.onmouseup = resumePlayback;
-    ffButton.onmouseleave = resumePlayback;
+    ffButton.button.onmousedown = fastForward;
+    ffButton.button.onmouseup = resumePlayback;
+    ffButton.button.onmouseleave = resumePlayback;
 
-    rrButton.onmousedown = rewind;
-    rrButton.onmouseup = resumePlayback;
-    rrButton.onmouseleave = resumePlayback;
+    rrButton.button.onmousedown = rewind;
+    rrButton.button.onmouseup = resumePlayback;
+    rrButton.button.onmouseleave = resumePlayback;
 
     function updateProgress(){
         if(isNaN(audioElement.duration)){
@@ -1220,18 +1258,18 @@ Controller.resources = {
     play_disabled:"./resources/playDisabled.svg",
     pause:"./resources/pause.svg",
     pause_hover:"./resources/pauseHover.svg",
-    back:"",
-    back_disabled:"",
-    back_hover:"",
-    rewind:"",
-    rewind_disabled:"",
-    rewind_hover:"",
-    fastforward:"",
-    fastforward_disabled:"",
-    fastforward_hover:"",
-    skip:"",
-    skip_disabled:"",
-    skip_hover:"",
+    back:"./resources/back.svg",
+    back_disabled:"./resources/backDisabled.svg",
+    back_hover:"./resources/backHover.svg",
+    rewind:"./resources/rr.svg",
+    rewind_disabled:"./resources/ffDisabled.svg",
+    rewind_hover:"./resources/rrHover.svg",
+    fastforward:"./resources/ff.svg",
+    fastforward_disabled:"./resources/ffDisabled.svg",
+    fastforward_hover:"./resources/ffHover.svg",
+    skip:"./resources/skip.svg",
+    skip_disabled:"./resources/skipDisabled.svg",
+    skip_hover:"./resources/skipHover.svg",
     shuffle:"",
     shuffle_disabled:"",
     shuffle_hover:"",
