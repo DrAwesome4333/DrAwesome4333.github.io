@@ -559,7 +559,7 @@ var Graphics = {
         document.body.appendChild(this.canvas);
 
         this.shaders.vertexShaders.fade = this.buildShader(this.shaderSources.fadeVertexShader, this.gl.VERTEX_SHADER);
-        this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.altFadeFragmentShader, this.gl.FRAGMENT_SHADER);
+        this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.fadeFragmentShader, this.gl.FRAGMENT_SHADER);
         this.programs.fade = this.buildProgram(this.shaders.vertexShaders.fade, this.shaders.fragmentShaders.fade);
         this.gl.useProgram(this.programs.fade);
         this.attributes.fade.pos = this.gl.getAttribLocation(this.programs.fade, "pos");
@@ -1030,7 +1030,7 @@ function Controller(player, playlist=null){
             normal:Controller.resources.pause,
             hover:Controller.resources.pause_hover
         }
-        });//document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        });
     var timeLine = document.createElement("progress");
     var timeLineBG = null;
     var timeDot = null;
