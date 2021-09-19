@@ -997,6 +997,7 @@ function DynamicButton(stateSVGMapping){
     }
     button.addEventListener("mouseover", hover);
     button.addEventListener("mouseout", out);
+    button.style.verticalAlign="middle";
 
     this.setState = function(name=""){
         
@@ -1075,18 +1076,50 @@ function Controller(player, playlist=null){
     var volDot = null;
     var volLine = null;
     var volBack = null;
-    var repeatToggle = document.createElement("input");
-    var shuffleToggle = document.createElement("input");
-    var optionButton = document.createElement("input");
-    var hideButton = document.createElement("input");
+    var repeatToggle = new DynamicButton({
+        "playList":{
+            normal:Controller.resources.repeat_none,
+            hover:Controller.resources.repeat_none_hover
+        },
+        "playTrack":{
+            normal:Controller.resources.repeat_one,
+            hover:Controller.resources.repeat_one_hover
+        },
+        "repeatTrack":{
+            normal:Controller.resources.repeat_track,
+            hover:Controller.resources.repeat_track_hover
+        },
+        "repeatList":{
+            normal:Controller.resources.repeat_list,
+            hover:Controller.resources.repeat_list_hover
+        }
+        });
+    var shuffleToggle = new DynamicButton({
+        "shuffle":{
+            normal:Controller.resources.shuffle,
+            hover:Controller.resources.shuffle_hover
+        }
+        });
+    var optionButton = new DynamicButton({
+        "option":{
+            normal:Controller.resources.option,
+            hover:Controller.resources.option_hover
+        }
+        });
+    var hideButton = new DynamicButton({
+        "hide":{
+            normal:Controller.resources.hide,
+            hover:Controller.resources.hide_hover
+        }
+        });
     var self = this;
 
     
 
     controlContainer.classList.add("player")
     
-    hideButton.type="button";
-    hideButton.value="Hide"
+    hideButton.button.style.width="5%";
+    hideButton.setState("hide");
 
     function hidePlaylist(e){
         e.preventDefault();
@@ -1096,8 +1129,8 @@ function Controller(player, playlist=null){
         pLCont.style.pointerEvents = 'none';
     }
 
-    hideButton.addEventListener("click", hidePlaylist);
-    controlContainer.appendChild(hideButton);
+    hideButton.button.addEventListener("click", hidePlaylist);
+    controlContainer.appendChild(hideButton.button);
 
     function showPlaylist(e){
         //TODO make this more proper/abstract
@@ -1111,9 +1144,9 @@ function Controller(player, playlist=null){
 
 
     
-    optionButton.type = "Button";
-    optionButton.value = "Options";
-    controlContainer.appendChild(optionButton);
+    optionButton.button.style.width = "5%";
+    optionButton.setState("option");
+    controlContainer.appendChild(optionButton.button);
 
     
     backTrack.button.style.width = "10%";
@@ -1143,13 +1176,13 @@ function Controller(player, playlist=null){
     controlContainer.appendChild(skipTrack.button);
 
 
-    shuffleToggle.type = "Button";
-    shuffleToggle.value = "Shuffle Button";
-    controlContainer.appendChild(shuffleToggle);
+    shuffleToggle.button.style.width="5%";
+    shuffleToggle.setState("shuffle");
+    controlContainer.appendChild(shuffleToggle.button);
 
-    repeatToggle.type = "Button";
-    repeatToggle.value = "Repeat Button";
-    controlContainer.appendChild(repeatToggle);
+    repeatToggle.button.style.width="5%";
+    repeatToggle.setState("playList");
+    controlContainer.appendChild(repeatToggle.button);
 
     controlContainer.appendChild(document.createElement("br"));
     controlContainer.appendChild(document.createElement("br"));
@@ -1187,9 +1220,9 @@ function Controller(player, playlist=null){
         skipTrack.button.onclick = () => {playlist.playNextTrack()};
         backTrack.button.onclick = () => {playlist.playNextTrack(true)};
         
-        repeatToggle.value = Playlist.MODE_TEXT[playlist.getRepatMode()];
-
-        shuffleToggle.onclick = playlist.shuffleTracks;
+        repeatToggle.setState(Playlist.MODE_STATE[playlist.getRepatMode()])
+        repeatToggle.button.title = Playlist.MODE_TEXT[playlist.getRepatMode()];
+        shuffleToggle.button.onclick = playlist.shuffleTracks;
     }
 
     function handlePlayButton(){
@@ -1243,11 +1276,12 @@ function Controller(player, playlist=null){
         cMode ++;
         cMode %= Playlist.MODES.length;
         playlist.setRepeatMode(cMode);
-        repeatToggle.value = Playlist.MODE_TEXT[cMode];
+        repeatToggle.setState(Playlist.MODE_STATE[cMode]);
+        repeatToggle.button.title = Playlist.MODE_TEXT[cMode];
     }
 
-    repeatToggle.value = Playlist.MODE_TEXT[0];
-    repeatToggle.onclick = switchRepeatMode;
+    repeatToggle.button.title = Playlist.MODE_TEXT[0];
+    repeatToggle.button.onclick = switchRepeatMode;
 
 
 }
@@ -1270,21 +1304,25 @@ Controller.resources = {
     skip:"./resources/skip.svg",
     skip_disabled:"./resources/skipDisabled.svg",
     skip_hover:"./resources/skipHover.svg",
-    shuffle:"",
+    shuffle:"./resources/shuffle.svg",
     shuffle_disabled:"",
-    shuffle_hover:"",
-    repeat_track:"",
+    shuffle_hover:"./resources/shuffleHover.svg",
+    repeat_track:"./resources/repeatTrack.svg",
     repeat_track_disabled:"",
-    repeat_track_hover:"",
-    repeat_list:"",
+    repeat_track_hover:"./resources/repeatTrackHover.svg",
+    repeat_list:"./resources/repeatList.svg",
     repeat_list_disabled:"",
-    repeat_list_hover:"",
-    repeat_one:"",
+    repeat_list_hover:"./resources/repeatListHover.svg",
+    repeat_one:"./resources/playTrack.svg",
     repeat_one_disabled:"",
-    repeat_one_hover:"",
-    repeat_none:"",
+    repeat_one_hover:"./resources/playTrackHover.svg",
+    repeat_none:"./resources/playList.svg",
     repeat_none_disabled:"",
-    repeat_none_hover:"",
+    repeat_none_hover:"./resources/playListHover.svg",
+    hide:"./resources/hide.svg",
+    hide_hover:"./resources/hideHover.svg",
+    option:"./resources/option.svg",
+    option_hover:"./resources/optionHover.svg"
 }
 
 /**@param {Event} ev  */
@@ -1672,6 +1710,13 @@ Playlist.MODE_TEXT = [
     "Just One Track"
 ];
 
+Playlist.MODE_STATE = [
+    "playList",
+    "repeatList",
+    "repeatTrack",
+    "playTrack"
+];
+
 
 function TrackPlayer() {
 
@@ -1801,37 +1846,14 @@ function TrackPlayer() {
 
 
 var _Player = {
-    resources: {//List of images
-        pause: new Image(256, 256),
-        play: new Image(256, 256),
-        repeatAll: new Image(256, 256),
-        repeatOne: new Image(256, 256),
-        repeatNone: new Image(256, 256),
-        shuffleOn: new Image(256, 256),
-        shuffleOff: new Image(256, 256),
-        fastforward: new Image(256, 256),
-        skip: new Image(256, 256),
-        back: new Image(256, 256),
-        rewind: new Image(256, 256),
-        dot: new Image(256, 256),
-        pauseDisabled: new Image(256, 256),
-        playDisabled: new Image(256, 256),
-        skipDisabled: new Image(256, 256),
-        backDisabled: new Image(256, 256),
-        rewindDisabled: new Image(256, 256),
-        fastforwardDisabled: new Image(256, 256),
+    resources: {
         defaultCover: new Image(256, 256),
-        errorCover: new Image(256, 256),
-        options: new Image(256, 256)
+        errorCover: new Image(256, 256)
 
     },
     loadResources: function () {
         this.resources.defaultCover.src = "resources/Disc.png";
         this.resources.errorCover.src = "resources/DiscBroken.png";
-        this.resources.repeatAll.src = "resources/RepeatAll.png";
-        this.resources.repeatOne.src = "resources/RepeatOne.png";
-        this.resources.repeatNone.src = "resources/RepeatNone.png";
-        this.resources.options.src = "resources/Options.png";
     }
 
 }
