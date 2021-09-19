@@ -997,7 +997,7 @@ function DynamicButton(stateSVGMapping){
     }
     button.addEventListener("mouseover", hover);
     button.addEventListener("mouseout", out);
-    button.style.verticalAlign="middle";
+    button.classList.add("DynamicButtonContainer");
 
     this.setState = function(name=""){
         
@@ -1016,6 +1016,7 @@ function DynamicButton(stateSVGMapping){
 function Controller(player, playlist=null){
     var audioElement = player.getAudioElement();
     var controlContainer = document.createElement("div");
+    var buttonContainer = document.createElement("div");
     var playButton = new DynamicButton({
         "play":{
             normal:Controller.resources.play,
@@ -1117,8 +1118,14 @@ function Controller(player, playlist=null){
     
 
     controlContainer.classList.add("player")
+    controlContainer.appendChild(buttonContainer);
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.width = "100%";
+    buttonContainer.style.height = "70%";
+    buttonContainer.style.alignItems = "center";
+    buttonContainer.style.justifyContent = "space-evenly";
     
-    hideButton.button.style.width="5%";
+    hideButton.button.style.flexGrow = "1";
     hideButton.setState("hide");
 
     function hidePlaylist(e){
@@ -1130,7 +1137,7 @@ function Controller(player, playlist=null){
     }
 
     hideButton.button.addEventListener("click", hidePlaylist);
-    controlContainer.appendChild(hideButton.button);
+    buttonContainer.appendChild(hideButton.button);
 
     function showPlaylist(e){
         //TODO make this more proper/abstract
@@ -1143,48 +1150,42 @@ function Controller(player, playlist=null){
     document.body.addEventListener("click", showPlaylist);
 
 
-    
-    optionButton.button.style.width = "5%";
+    optionButton.button.style.flexGrow = "1";
     optionButton.setState("option");
-    controlContainer.appendChild(optionButton.button);
+    buttonContainer.appendChild(optionButton.button);
 
-    
-    backTrack.button.style.width = "10%";
+    backTrack.button.style.flexGrow = "2";
     backTrack.setState("back");
-    controlContainer.appendChild(backTrack.button);
+    buttonContainer.appendChild(backTrack.button);
 
     
-    
-    rrButton.button.style.width = "10%";
+    rrButton.button.style.flexGrow = "2";
     rrButton.setState("rewind");
-    controlContainer.appendChild(rrButton.button);
+    buttonContainer.appendChild(rrButton.button);
 
     // playButton.type = "Button";
     // playButton.value = "Play";
-    playButton.button.style.width = "10%";
+    playButton.button.style.flexGrow = "2";
     playButton.setState("play_disabled");
     
-    controlContainer.appendChild(playButton.button);
+    buttonContainer.appendChild(playButton.button);
 
-    
-    ffButton.button.style.width = "10%";
+    ffButton.button.style.flexGrow = "2";
     ffButton.setState("fastforward");
-    controlContainer.appendChild(ffButton.button);
+    buttonContainer.appendChild(ffButton.button);
     
-    skipTrack.button.style.width = "10%";
+    skipTrack.button.style.flexGrow = "2";
     skipTrack.setState("skip");
-    controlContainer.appendChild(skipTrack.button);
+    buttonContainer.appendChild(skipTrack.button);
 
-
-    shuffleToggle.button.style.width="5%";
+    shuffleToggle.button.style.flexGrow = "1";
     shuffleToggle.setState("shuffle");
-    controlContainer.appendChild(shuffleToggle.button);
+    buttonContainer.appendChild(shuffleToggle.button);
 
-    repeatToggle.button.style.width="5%";
+    repeatToggle.button.style.flexGrow = "1";
     repeatToggle.setState("playList");
-    controlContainer.appendChild(repeatToggle.button);
+    buttonContainer.appendChild(repeatToggle.button);
 
-    controlContainer.appendChild(document.createElement("br"));
     controlContainer.appendChild(document.createElement("br"));
 
     controlContainer.appendChild(timeLine);

@@ -79,6 +79,12 @@
 		.playerContainer{
 			transition: all 0.5s ease-in-out;
 		}
+
+		.dynamicButtonContainer{
+			display: flex;
+			text-align: center;
+		}
+
 		.playlist {
 			
 			transition: all 0.5s ease-in-out;
@@ -93,9 +99,7 @@
 		.player {
 			transition: all 0.5s ease-in-out;
 			position: absolute;
-			max-width: calc(var(--true-height) * 0.50);
-			min-width: fit-content;
-			width: 33vw;
+			width: 100vw;
 			left: 0;
 			right: 0;
 			margin-left: auto;
@@ -103,7 +107,6 @@
 			/* Fix this to be always centered*/
 			text-align: center;
 			height: calc(var(--true-height)*0.20);
-			min-height: fit-content;
 			bottom: 0px;
 			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 			/*background-color: red;*/
@@ -126,45 +129,6 @@
 		#addSongs:hover {
 			/*background-color:rgb(40, 40, 40);*/
 			background-image: linear-gradient(to right, rgba(50, 50, 50, 1), rgba(0, 0, 0, 0));
-		}
-
-		#sidePanel {
-			position: fixed;
-			top: 0px;
-			left: 0px;
-			height: 100%;
-			width: 134vw;
-			background-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
-			transition: all 0.5s ease-in-out;
-		}
-
-		#sidePanel.hideToLeft {
-			left: -34vw !important;
-		}
-
-		#sidePanelArrow {
-			width: 100vw;
-			height: calc(var(--true-height));
-			float: right;
-			opacity: 1;
-			background-image: linear-gradient(to left, rgba(0, 0, 0, 0) 90%, rgba(0, 0, 0, 1) 99%, rgba(0, 0, 0, 0) 100%);
-			transition: all 0.5s ease-in-out;
-			font-size: 30pt;
-			vertical-align: middle;
-			line-height: calc(var(--true-height));
-			cursor:pointer;
-		}
-
-		#sidePanelArrow.hideToLeft {
-			width: 100vw;
-		}
-
-		#sidePanelArrow.hideToLeft:after {
-			content: '\25B6' !important;
-		}
-
-		#sidePanelArrow:after {
-			content: '\25C0';
 		}
 
 		canvas {
@@ -201,45 +165,7 @@
 
 <body onload="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px');main()"
 	onresize="document.documentElement.style.setProperty('--true-height', window.innerHeight + 'px'); if(Graphics.gl){Graphics.resize();}">
-	<!--<div id="sidePanel">
-		<div id="sidePanelArrow"
-			onclick="this.parentElement.classList.toggle('hideToLeft'); this.classList.toggle('hideToLeft')"
-			onmousemove="ArrowTimer = 3; this.style.opacity = 1;this.style.cursor='pointer';" ondblclick="Graphics.toggleFullScreen();"></div>
-		<div id="player">
-			<audio id="audio" controls>
-				<source id="src" type="audio/mp3">
-				HTML5 Audio element is not supported on your browser.
-			</audio>
-			<br>
-			<input type="button" value="Start Listening" onclick="start(); requestMic();">
-			<select id="inputSelect" onchange="tryMic(parseInt(this.value));"></select>
-		-->
-		<!-- <svg width=100 height=100 viewbox="0 0 100 100">
-				<defs>
-					<radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-						<stop offset="0%" stop-color=rgb(255,255,255) style="stop-opacity:1">
-							<animate attributeName="stop-color" attributeType="XML" dur="1s" repeatcount="indefinite" values="rgb(255,255,255);rgb(0,255,255);rgb(255,255,255);" />
-						</stop>
-						
-						<animate attributeName="cx" attributeType="XML" dur="1.5s" repeatcount="indefinite" values="0%;100%;0%" keyTimes="0;0.5;1" keySplines="0.18 0.73 0.87 0.24; 0.18 0.73 0.87 0.24"/>
-						<stop id ="ending" offset="100%" stop-color=rgb(0,0,255) style="stop-opacity:1" />
-					  </radialGradient>
-				</defs>
-				<polygon id="play" points="100,50 0,0 0,100" style="stroke:url(#grad1);stroke-width:2">
-	
-				</polygon>
-			</svg> -->
-		<!--</div>
-		<div id="playlist">
-			<div id="addSongs" onclick="var eve=new MouseEvent('click'); start(); fileEle.dispatchEvent(eve);">
-				<b>&#x2b</b><br>
-				Add songs
-			</div>
-		</div>
-	
-
-		<input type="file" id="files" accept="audio/*;" multiple style="display: none;">
-		--><p id="op"></p>
+	<p id="op"></p>
 	</div>
 	<canvas id="can" width=1000 height=300></canvas>
 	<script src="audioVis.js"></script>
