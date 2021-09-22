@@ -338,7 +338,7 @@ var Graphics = {
                 varying vec2 _pos;
                 vec4 fin;
                 float index;
-                vec2 textPos;
+                vec2 textPos; 
                 float level;
                 float wave;
                 const float PI = 3.1415926535897932384626433832795;
