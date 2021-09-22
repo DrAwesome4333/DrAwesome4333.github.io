@@ -8,7 +8,7 @@ var canvas = document.getElementById("can");
 var ct = canvas.getContext("2d");
 
 
-function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random() * Sound.data.fbc)) {
+function Cube(x, y, z, size, color, light,/**@type{Graphics} */ graphics, musicSection = Math.floor(Math.random() * Sound.data.fbc)) {
 
     var yOffset = 0;
     var ox = 0;//orbit point
@@ -31,8 +31,9 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
     var rotation = [0, 0, 0];//in degs.
     var modelMat = Graphics.matrix.identity(4);
     var normalMat = Graphics.matrix.identity(3);
-    var VBO = Graphics.gl.createBuffer();
-    var IBO = Graphics.gl.createBuffer();
+    var gl = graphics.getGL();
+    var VBO = gl.createBuffer();
+    var IBO = gl.createBuffer();
 
     this.getVBO = function () {
         return VBO;
@@ -56,8 +57,8 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
         lazyArray.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 3, i * 4 + 1)
     }
 
-    Graphics.gl.bindBuffer(Graphics.gl.ELEMENT_ARRAY_BUFFER, IBO);
-    Graphics.gl.bufferData(Graphics.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lazyArray), Graphics.gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, IBO);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(lazyArray), gl.STATIC_DRAW);
     //[x, y, z, r, g, b, nx, ny, nz, tx, ty]
     //used to update the VBO on a size or color (not scale) change
     function buildVBO() {
@@ -99,8 +100,8 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
             -hs, hs, -hs, c[0], c[1], c[2], 0, 0, -1 * f, 1, 0,
             hs, -hs, -hs, c[0], c[1], c[2], 0, 0, -1 * f, 0, 1];
 
-        Graphics.gl.bindBuffer(Graphics.gl.ARRAY_BUFFER, VBO);
-        Graphics.gl.bufferData(Graphics.gl.ARRAY_BUFFER, new Float32Array(anotherArray), Graphics.gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(anotherArray), gl.STATIC_DRAW);
     }
 
     this.update = function () {
@@ -161,13 +162,13 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
         z = oldX * Math.sin(tiltOffset) + oldZ * Math.cos(tiltOffset) + oz;
         buildModelMat();
         if (light > -1) {
-            Graphics.lightPos[light * 3] = x;
-            Graphics.lightPos[light * 3 + 1] = y;
-            Graphics.lightPos[light * 3 + 2] = z;
+            graphics.lightPos[light * 3] = x;
+            graphics.lightPos[light * 3 + 1] = y;
+            graphics.lightPos[light * 3 + 2] = z;
 
-            Graphics.lightColor[light * 3] = color[0] * power + 0.1;
-            Graphics.lightColor[light * 3 + 1] = color[1] * power + 0.1;
-            Graphics.lightColor[light * 3 + 2] = color[2] * power + 0.1;
+            graphics.lightColor[light * 3] = color[0] * power + 0.1;
+            graphics.lightColor[light * 3 + 1] = color[1] * power + 0.1;
+            graphics.lightColor[light * 3 + 2] = color[2] * power + 0.1;
         }
 
         oldPower = power;
@@ -210,48 +211,22 @@ function Cube(x, y, z, size, color, light, musicSection = Math.floor(Math.random
     buildModelMat();
 }
 
-var Graphics = {
-    canvas: document.createElement("canvas"),
-    gl: null,
-    canvas_settings: {
-        width: 0,
-        height: 0,
-        top: 0,
-        left: 0,
-        p_width: 0,
-        p_height: 0,//previous width/height, lets a function know if the view port needs to be updated
-        fullScreen: false,//if true the canvas will attempt to take up the whole screen
-        shouldShow: true
-    },
-    settings: {
-        backgroundColorSmoothing: 0.7, // to reduce strobe
-        backgroundOpacity: 1.0,
-        doBackgroundAnimation: true
-    },
-    particles: {
+function Graphics(){
+    var canvas = document.createElement("canvas");
+    var gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, alpha: false });
+    var mySelf = this;
 
-    },
-    lightPos: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    lightColor: [0.25, 0.25, 0.25, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 0.0, 0.5],
-    backgroundColor: [0, 0, 0],
-    lightScore: [0, 0, 0, 0, 0, 0, 0, 0, 0],// to tell when to change light colors
-    getNewLightColor: function () {
-        var newColor = [Math.random(), Math.random(), Math.random()];
-        // Normalize the color and divide it by 2
-        var magnitude = Math.sqrt(newColor[0] ** 2 + newColor[1] ** 2 + newColor[2] ** 2) * 2;
-        if (magnitude == 0) {
-            return [0, 0.5, 0];
-        } else {
-            return [newColor[0] / magnitude, newColor[1] / magnitude, newColor[2] / magnitude];
-        }
-    },
-    backgroundColorGoal: [0, 0, 0],
-    cubes: [],
-    state: {
-        mode: -1,//-2 is fatal error(IE no WebGL or Audioapi),-1 is not running, 0 is frequencyParticles, 1 is cubeField, 2 is cubeWaveForm
-        particles: true//wether or not to do particles on modes that don't require it
-    },
-    camera: {
+    var lightPos = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var lightColor = [0.25, 0.25, 0.25, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.5, 0.0, 0.5, 0.5, 0.0, 0.0, 0.5];
+    
+    this.lightPos = lightPos;
+    this.lightColor = lightColor;
+    var backgroundColor = [0, 0, 0];
+    var backgroundColorGoal = [1, 1, 1];
+    var lightScore = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var cubes = [];
+
+    var camera = {
         height: 0,
         target: {
             x: 0,
@@ -261,13 +236,15 @@ var Graphics = {
         matrix: null,
         angle: 0,
         direction: 1
-    },
-    textures: {
+    };
+
+    var textures = {
         plainWhite: null, // texture 0
         transparentBlack: null, // texture 0
         frequencyData: null // texture 1
-    },
-    shaderSources: {
+    }
+
+    var shaderSources= {
         mainVertexShader: `
                 attribute vec3 pos;
                 attribute vec3 color;
@@ -387,8 +364,9 @@ var Graphics = {
                 fin.rgb *= 0.5;
                 gl_FragColor = fin;
             }`
-    },
-    uniforms: {
+    }
+
+    var uniforms = {
         main: {
             world: null,
             model: null,
@@ -407,8 +385,9 @@ var Graphics = {
             freqData: null,
             freq: null
         }
-    },
-    attributes: {
+    };
+
+    var attributes = {
         main: {
             pos: null,
             color: null,
@@ -418,12 +397,14 @@ var Graphics = {
         fade: {
             pos: null
         }
-    },
-    programs: {
+    };
+
+    var programs = {
         main: null,
         fade: null
-    },
-    shaders: {
+    };
+
+    var shaders = {
         vertexShaders: {
             main: null,
             fade: null
@@ -432,85 +413,55 @@ var Graphics = {
             main: null,
             fade: null
         }
-    },
-    buffers: {
+    };
+
+    var buffers = {
         fadeCoverPoints: null,
         fadeCoverTriangles: null
-    },
-    matrix: {
-        mult4x4: function (matA, matB) {
-            return [
-                matA[0] * matB[0] + matA[1] * matB[4] + matA[2] * matB[8] + matA[3] * matB[12], matA[0] * matB[1] + matA[1] * matB[5] + matA[2] * matB[9] + matA[3] * matB[13], matA[0] * matB[2] + matA[1] * matB[6] + matA[2] * matB[10] + matA[3] * matB[14], matA[0] * matB[3] + matA[1] * matB[7] + matA[2] * matB[11] + matA[3] * matB[15],
-                matA[4] * matB[0] + matA[5] * matB[4] + matA[6] * matB[8] + matA[7] * matB[12], matA[4] * matB[1] + matA[5] * matB[5] + matA[6] * matB[9] + matA[7] * matB[13], matA[4] * matB[2] + matA[5] * matB[6] + matA[6] * matB[10] + matA[7] * matB[14], matA[4] * matB[3] + matA[5] * matB[7] + matA[6] * matB[11] + matA[7] * matB[15],
-                matA[8] * matB[0] + matA[9] * matB[4] + matA[10] * matB[8] + matA[11] * matB[12], matA[8] * matB[1] + matA[9] * matB[5] + matA[10] * matB[9] + matA[11] * matB[13], matA[8] * matB[2] + matA[9] * matB[6] + matA[10] * matB[10] + matA[11] * matB[14], matA[8] * matB[3] + matA[9] * matB[7] + matA[10] * matB[11] + matA[11] * matB[15],
-                matA[12] * matB[0] + matA[13] * matB[4] + matA[14] * matB[8] + matA[15] * matB[12], matA[12] * matB[1] + matA[13] * matB[5] + matA[14] * matB[9] + matA[15] * matB[13], matA[12] * matB[2] + matA[13] * matB[6] + matA[14] * matB[10] + matA[15] * matB[14], matA[12] * matB[3] + matA[13] * matB[7] + matA[14] * matB[11] + matA[15] * matB[15],
-            ];
-        },
-        mult3x3: function (matA, matB) {
-            return [
-                matA[0] * matB[0] + matA[1] * matB[3] + matA[2] * matB[6], matA[0] * matB[1] + matA[1] * matB[4] + matA[2] * matB[7], matA[0] * matB[2] + matA[1] * matB[5] + matA[2] * matB[8],
-                matA[3] * matB[0] + matA[4] * matB[3] + matA[5] * matB[6], matA[3] * matB[1] + matA[4] * matB[4] + matA[5] * matB[7], matA[3] * matB[2] + matA[4] * matB[5] + matA[5] * matB[8],
-                matA[6] * matB[0] + matA[7] * matB[3] + matA[8] * matB[6], matA[6] * matB[1] + matA[7] * matB[4] + matA[8] * matB[7], matA[6] * matB[2] + matA[7] * matB[5] + matA[8] * matB[8]
-            ];
-        },
-        identity: function (size) {
-            switch (size) {
-                case 2:
-                    return [
-                        1, 0,
-                        0, 1
-                    ];
-                    break;
-                case 3:
-                    return [
-                        1, 0, 0,
-                        0, 1, 0,
-                        0, 0, 1
-                    ];
-                    break;
-                case 4:
-                    return [
-                        1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 1, 0,
-                        0, 0, 0, 1
-                    ]
-                    break;
-                default: {
-                    var returnArray = [];
-                    for (var i = 0; i < size; i++) {
-                        for (var j = 0; j < size; j++) {
-                            if (j == i) {
-                                returnArray.push(1);
-                            } else {
-                                returnArray.push(0);
-                            }
-                        }
-                    }
-                    return returnArray;
-                    break;
-                }
-            }
-        }
-    },
-    buildShader(shaderSource, type) {
-        var shader = this.gl.createShader(type);
-        this.gl.shaderSource(shader, shaderSource);
-        this.gl.compileShader(shader);
-        console.log(this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS));
-        console.log(this.gl.getShaderInfoLog(shader));
+    };
+
+    function  buildShader(shaderSource, type) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, shaderSource);
+        gl.compileShader(shader);
+        console.log(gl.getShaderParameter(shader, gl.COMPILE_STATUS));
+        console.log(gl.getShaderInfoLog(shader));
         return shader;
-    },
-    buildProgram(vertexShader, fragmentShader) {
-        var program = this.gl.createProgram();
-        this.gl.attachShader(program, vertexShader);
-        this.gl.attachShader(program, fragmentShader);
-        this.gl.linkProgram(program);
+    }
+
+    function buildProgram(vertexShader, fragmentShader) {
+        var program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
         return program;
-    },
-    toggleFullScreen() {
-        if (Graphics.canvas_settings.fullScreen) {
-            Graphics.canvas_settings.fullScreen = false;
+    }
+
+
+    this.settings = {
+        canvas_settings:{
+            width: 0,
+            height: 0,
+            top: 0,
+            left: 0,
+            p_width: 0,
+            p_height: 0,//previous width/height, lets a function know if the view port needs to be updated
+            fullScreen: false,//if true the canvas will attempt to take up the whole screen
+            shouldShow: true
+            },
+        backgroundColorSmoothing: 0.7, // To reduce strobe
+        backgroundOpacity: 1.0,
+        doBackgroundAnimation:true
+    }
+
+    this.getGL = function(){
+        return gl;
+    }
+
+    this.toggleFullScreen = function(){
+        
+        if (mySelf.settings.canvas_settings.fullScreen) {
+            mySelf.settings.canvas_settings.fullScreen = false;
 
             if (document.exitFullscreen) {
                 document.exitFullscreen();
@@ -525,7 +476,7 @@ var Graphics = {
             }
         } else {
             var dEle = document.documentElement;
-            Graphics.canvas_settings.fullScreen = true
+            mySelf.settings.canvas_settings.fullScreen = true
             if (dEle.requestFullscreen) {
                 dEle.requestFullscreen();
                 //@ts-ignore
@@ -538,171 +489,15 @@ var Graphics = {
                 dEle.msRequestFullscreen();
             }
         }
-    },
-    start() {
-        if (this.mode >= 0) {
-            return;
-        }
-        this.gl = this.canvas.getContext("webgl" || "experimental-webgl", { preserveDrawingBuffer: true, alpha: false });
-        if (this.gl == undefined || this.gl == null) {
-            this.mode = -2;
-            console.log("Error: could not obtain WebGL context");
-            alert("Faild to start visualizer!\nMake sure your web browser is up to date!")
-            return;
-        }
-        this.canvas.style.zIndex = "-2";
-        this.canvas.style.width = "100%";
-        this.canvas.style.height = "100%";
-        this.canvas.style.top = "0px";
-        this.canvas.style.left = "0px";
-        this.canvas.style.position = "absolute";
-        document.body.appendChild(this.canvas);
+    };
 
-        this.shaders.vertexShaders.fade = this.buildShader(this.shaderSources.fadeVertexShader, this.gl.VERTEX_SHADER);
-        this.shaders.fragmentShaders.fade = this.buildShader(this.shaderSources.fadeFragmentShader, this.gl.FRAGMENT_SHADER);
-        this.programs.fade = this.buildProgram(this.shaders.vertexShaders.fade, this.shaders.fragmentShaders.fade);
-        this.gl.useProgram(this.programs.fade);
-        this.attributes.fade.pos = this.gl.getAttribLocation(this.programs.fade, "pos");
-
-        this.uniforms.fade.opacity = this.gl.getUniformLocation(this.programs.fade, "opacity");
-        this.uniforms.fade.color = this.gl.getUniformLocation(this.programs.fade, "color");
-        this.uniforms.fade.freqData = this.gl.getUniformLocation(this.programs.fade, "freqData");
-        this.gl.uniform1f(this.uniforms.fade.opacity, 1);
-        this.gl.enableVertexAttribArray(this.attributes.fade.pos);
-
-        this.buffers.fadeCoverPoints = this.gl.createBuffer();
-        this.buffers.fadeCoverTriangles = this.gl.createBuffer();
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers.fadeCoverPoints);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0]), this.gl.STATIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.buffers.fadeCoverTriangles);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), this.gl.STATIC_DRAW);
-
-        this.shaders.vertexShaders.main = this.buildShader(this.shaderSources.mainVertexShader, this.gl.VERTEX_SHADER);
-        this.shaders.fragmentShaders.main = this.buildShader(this.shaderSources.mainFragmentShader, this.gl.FRAGMENT_SHADER);
-        this.programs.main = this.buildProgram(this.shaders.vertexShaders.main, this.shaders.fragmentShaders.main);
-        this.gl.useProgram(this.programs.main);
-        this.attributes.main.pos = this.gl.getAttribLocation(this.programs.main, "pos");
-        this.attributes.main.color = this.gl.getAttribLocation(this.programs.main, "color");
-        this.attributes.main.normal = this.gl.getAttribLocation(this.programs.main, "normal");
-        this.attributes.main.tex = this.gl.getAttribLocation(this.programs.main, "tex");
-
-        this.uniforms.main.world = this.gl.getUniformLocation(this.programs.main, "world");
-        this.uniforms.main.perspective = this.gl.getUniformLocation(this.programs.main, "perspective");
-        this.uniforms.main.texture = this.gl.getUniformLocation(this.programs.main, "texture");
-        this.uniforms.main.ambient_color = this.gl.getUniformLocation(this.programs.main, "ambient_color");
-        this.uniforms.main.fog_color = this.gl.getUniformLocation(this.programs.main, "fog_color");
-        this.uniforms.main.light_color = this.gl.getUniformLocation(this.programs.main, "light_color");
-        this.uniforms.main.light_pos = this.gl.getUniformLocation(this.programs.main, "light_pos");
-        this.uniforms.main.normal_matrix = this.gl.getUniformLocation(this.programs.main, "normal_matrix");
-        this.uniforms.main.model = this.gl.getUniformLocation(this.programs.main, "model");
-
-        this.gl.enableVertexAttribArray(this.attributes.main.pos);
-        this.gl.enableVertexAttribArray(this.attributes.main.color);
-        this.gl.enableVertexAttribArray(this.attributes.main.normal);
-        this.gl.enableVertexAttribArray(this.attributes.main.tex);
-
-
-
-        this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.textures.transparentBlack = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.transparentBlack);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 25]));
-
-        this.textures.plainWhite = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
-
-        // Fill the texture with a 1x1 white pixel.
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
-        this.gl.uniform1i(this.uniforms.main.texture, 0);
-
-        this.gl.activeTexture(this.gl.TEXTURE1);
-        this.textures.frequencyData = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.frequencyData);
-        var myArray = new Uint8Array(32 * 32);
-        for (var i = 0; i < 32 * 32; i++) {
-            myArray[i] = i % 255;
-        }
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, myArray);
-
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-
-        this.gl.useProgram(this.programs.fade);
-        this.gl.uniform1i(this.uniforms.fade.freqData, 1);
-
-        this.gl.useProgram(this.programs.main);
-
-        let r = -30 * Math.PI / 180;
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.plainWhite);
-        this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix, false, this.matrix.identity(3));
-        this.gl.uniformMatrix4fv(this.uniforms.main.model, false, this.matrix.identity(4));
-        this.gl.uniformMatrix4fv(this.uniforms.main.world, false, [
-            1, 0, 0, 0,
-            0, Math.cos(r), -Math.sin(r), 0,
-            0, Math.sin(r), Math.cos(r), 0,
-            0, 0, 0, 1]);
-        this.gl.uniformMatrix4fv(this.uniforms.main.perspective, false, this.matrix.identity(4));
-        this.gl.uniform3fv(this.uniforms.main.ambient_color, [0.05, 0.05, 0.05]);
-        this.gl.uniform3fv(this.uniforms.main.light_color, this.lightColor);
-        this.gl.uniform3fv(this.uniforms.main.light_pos, this.lightPos)
-        this.resize();
-        this.gl.enable(this.gl.DEPTH_TEST);
-        this.gl.depthFunc(this.gl.LEQUAL);
-        this.gl.clearDepth(1.0);
-        this.gl.enable(this.gl.CULL_FACE);
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
-        // Start generating the cubes, TODO mabye seperate this into a different function?
-        var chosenLights = [];
-        var possibleList = [];
-        var numberOfCubes = 300;
-        this.cubes = [];
-        for (var i = 0; i < numberOfCubes; i++) {
-            possibleList.push(i);
-        }
-        for (var i = 0; i < 8; i++) {
-            var random = Math.floor(i / 8 * (numberOfCubes - 1));//Math.floor(Math.random()*possibleList.length);
-            chosenLights.push(possibleList[random]);
-            possibleList.splice(random, 1);
-        }
-        for (var i = 0; i < numberOfCubes; i++) {
-            //Music slection, selects a value in the frquency array for this cube to read
-            var ms = Math.floor(i / numberOfCubes * Sound.data.fbc);
-            var x = Math.random() * 150 - 75;
-            var y = Math.random() * 150 - 75;
-            var z = -Math.random() * 150 - 75;
-            var color = [Math.random(), Math.random(), Math.random()];
-            var l = -1;
-            for (var j = 0; j < 8; j++) {
-                if (chosenLights[j] == i) {
-                    l = j;
-                    var c = j % 3
-                    color = [0.0, 0.0, 0.0]
-                    color[c] = j / 8 * 0.5 + 0.5;
-
-                    break;
-                }
-            }
-            this.cubes.push(new Cube(x, y, z, Math.random() * 3 + 3, color, l, ms));
-
-        }
-
-    },
-    resize: function () {
-        var newWidth = this.canvas.getBoundingClientRect().width;
-        var newHeight = this.canvas.getBoundingClientRect().height;
-        this.canvas.width = newWidth;
-        this.canvas.height = newHeight;
-        if (this.gl) {
-            this.gl.viewport(0, 0, newWidth, newHeight);
+    this.resize = function(){
+        var newWidth = canvas.getBoundingClientRect().width;
+        var newHeight = canvas.getBoundingClientRect().height;
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        if (gl) {
+            gl.viewport(0, 0, newWidth, newHeight);
             var f = Math.tan(Math.PI * 0.5 - 0.5 * 90 * Math.PI / 180);
             var rangeInv = 1.0 / (1 - 10000);
             var aspect = newWidth / newHeight;
@@ -712,45 +507,45 @@ var Graphics = {
                 0, 0, (1 + 10000) * rangeInv, -1,
                 0, 0, 1 * 10000 * rangeInv * 2, 0
             ]
-            this.gl.uniformMatrix4fv(this.uniforms.main.perspective, false, perspectiveMatrix);
+            gl.uniformMatrix4fv(uniforms.main.perspective, false, perspectiveMatrix);
         }
-    },
-    render: function () {
+    };
 
+    this.render = function(){
         var totals = [0, 0, 0];
-        for (var i = 0; i < this.lightColor.length; i += 3) {
-            totals[0] += this.lightColor[i];
-            totals[1] += this.lightColor[i + 1];
-            totals[2] += this.lightColor[i + 2];
+        for (var i = 0; i < lightColor.length; i += 3) {
+            totals[0] += lightColor[i];
+            totals[1] += lightColor[i + 1];
+            totals[2] += lightColor[i + 2];
         }
         var spike = 2;
         lAvg = [Math.pow(totals[0] / 2, spike), Math.pow(totals[1] / 2, spike), Math.pow(totals[2] / 2, spike)]
-        this.backgroundColorGoal = lAvg;
+        backgroundColorGoal = lAvg;
 
         for (var i = 0; i < 3; i++) {
-            var colorDif = this.backgroundColorGoal[i] - this.backgroundColor[i];
-            this.backgroundColor[i] += colorDif * (1 - this.settings.backgroundColorSmoothing);
+            var colorDif = backgroundColorGoal[i] - backgroundColor[i];
+            backgroundColor[i] += colorDif * (1 - mySelf.settings.backgroundColorSmoothing);
         }
 
-        this.gl.useProgram(this.programs.fade)
-        this.gl.uniform3fv(this.uniforms.fade.color, this.backgroundColor);
+        gl.useProgram(programs.fade)
+        gl.uniform3fv(uniforms.fade.color, backgroundColor);
 
 
-        this.gl.activeTexture(this.gl.TEXTURE1)
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures.frequencyData);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.LUMINANCE, 32, 32, 0, this.gl.LUMINANCE, this.gl.UNSIGNED_BYTE, Sound.data.frequenceyAndWaveform);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, textures.frequencyData);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 32, 32, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, Sound.data.frequenceyAndWaveform);
         //this.gl.uniform1iv(this.uniforms.fade.freq, Sound.data.frequency);
 
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers.fadeCoverPoints);
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.buffers.fadeCoverTriangles);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.fadeCoverPoints);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.fadeCoverTriangles);
 
-        this.gl.vertexAttribPointer(this.attributes.fade.pos, 2, this.gl.FLOAT, false, 4 * (2), 0);
+        gl.vertexAttribPointer(attributes.fade.pos, 2, gl.FLOAT, false, 4 * (2), 0);
 
-        this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 
-        this.gl.useProgram(this.programs.main);
+        gl.useProgram(programs.main);
 
-        var camera = this.camera;
+        
         camera.angle += camera.direction;
         if (camera.angle > 90) {
             camera.direction = -0.1;
@@ -759,51 +554,273 @@ var Graphics = {
             camera.direction = 0.1;
         }
         camera.height = -Math.sin(camera.angle / 180 * Math.PI) * 500;
-        var r = Math.asin(camera.height / Math.sqrt(camera.height ** 2 + camera.target.z ** 2));
+        var rot = Math.asin(camera.height / Math.sqrt(camera.height ** 2 + camera.target.z ** 2));
         var camMatrix = [
             1, 0, 0, 0,
-            0, Math.cos(r), -Math.sin(r), 0,
-            0, Math.sin(r), Math.cos(r), 0,
+            0, Math.cos(rot), -Math.sin(rot), 0,
+            0, Math.sin(rot), Math.cos(rot), 0,
             0, 0, 0, 1];
-        camMatrix = this.matrix.mult4x4([
+        camMatrix = Graphics.matrix.mult4x4([
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             0, camera.height, 0, 1]
             , camMatrix);
-        this.gl.uniformMatrix4fv(this.uniforms.main.world, false, camMatrix);
+        gl.uniformMatrix4fv(uniforms.main.world, false, camMatrix);
 
-        this.gl.clearColor(lAvg[0], lAvg[1], lAvg[2], 1.0);
-        this.gl.clear(this.gl.DEPTH_BUFFER_BIT);// TODO Make this change based on settings
+        gl.clearColor(lAvg[0], lAvg[1], lAvg[2], 1.0);
+        gl.clear(gl.DEPTH_BUFFER_BIT);// TODO Make this change based on settings
 
-        this.gl.uniform3fv(this.uniforms.main.light_color, this.lightColor);
-        this.gl.uniform3fv(this.uniforms.main.light_pos, this.lightPos)
-        this.gl.uniform3fv(this.uniforms.main.ambient_color, [lAvg[0] / 8, lAvg[1] / 8, lAvg[2] / 8]);
-        for (var i = 0; i < this.cubes.length; i++) {
+        gl.uniform3fv(uniforms.main.light_color, lightColor);
+        gl.uniform3fv(uniforms.main.light_pos, lightPos)
+        gl.uniform3fv(uniforms.main.ambient_color, [lAvg[0] / 8, lAvg[1] / 8, lAvg[2] / 8]);
+        for (var i = 0; i < cubes.length; i++) {
             /**
              * @type {Cube}
              */
-            var cc = this.cubes[i];
+            var cc = cubes[i];
             cc.update();
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, cc.getVBO());
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, cc.getIBO());
+            gl.bindBuffer(gl.ARRAY_BUFFER, cc.getVBO());
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cc.getIBO());
             //[x, y, z, r, g, b, nx, ny, nz, tx, ty]
-            this.gl.uniformMatrix4fv(this.uniforms.main.model, false, cc.getModelMat());
-            this.gl.uniformMatrix3fv(this.uniforms.main.normal_matrix, false, cc.getNormalMat());
+            gl.uniformMatrix4fv(uniforms.main.model, false, cc.getModelMat());
+            gl.uniformMatrix3fv(uniforms.main.normal_matrix, false, cc.getNormalMat());
 
-            this.gl.vertexAttribPointer(this.attributes.main.pos, 3, this.gl.FLOAT, false, 4 * (11), 0);
-            this.gl.vertexAttribPointer(this.attributes.main.color, 3, this.gl.FLOAT, false, 4 * (11), 3 * 4);
-            this.gl.vertexAttribPointer(this.attributes.main.normal, 3, this.gl.FLOAT, false, 4 * (11), 6 * 4);
-            this.gl.vertexAttribPointer(this.attributes.main.tex, 2, this.gl.FLOAT, false, 4 * (11), 9 * 4);
+            gl.vertexAttribPointer(attributes.main.pos, 3, gl.FLOAT, false, 4 * (11), 0);
+            gl.vertexAttribPointer(attributes.main.color, 3, gl.FLOAT, false, 4 * (11), 3 * 4);
+            gl.vertexAttribPointer(attributes.main.normal, 3, gl.FLOAT, false, 4 * (11), 6 * 4);
+            gl.vertexAttribPointer(attributes.main.tex, 2, gl.FLOAT, false, 4 * (11), 9 * 4);
 
-            this.gl.drawElements(this.gl.TRIANGLES, cc.bufferLength, this.gl.UNSIGNED_SHORT, 0);
+            gl.drawElements(gl.TRIANGLES, cc.bufferLength, gl.UNSIGNED_SHORT, 0);
 
             //cc.buildModelMat();
         }
     }
 
+    // START
+    if (gl == undefined || gl == null) {
+        console.log("Error: could not obtain WebGL context");
+        alert("Faild to start visualizer!\nMake sure your web browser is up to date!")
+        return;
+    }
+    canvas.style.zIndex = "-2";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.top = "0px";
+    canvas.style.left = "0px";
+    canvas.style.position = "absolute";
+    document.body.appendChild(canvas);
+
+    shaders.vertexShaders.fade = buildShader(shaderSources.fadeVertexShader, gl.VERTEX_SHADER);
+    shaders.fragmentShaders.fade = buildShader(shaderSources.fadeFragmentShader, gl.FRAGMENT_SHADER);
+    programs.fade = buildProgram(shaders.vertexShaders.fade, shaders.fragmentShaders.fade);
+    gl.useProgram(programs.fade);
+    attributes.fade.pos = gl.getAttribLocation(programs.fade, "pos");
+
+    uniforms.fade.opacity = gl.getUniformLocation(programs.fade, "opacity");
+    uniforms.fade.color = gl.getUniformLocation(programs.fade, "color");
+    uniforms.fade.freqData = gl.getUniformLocation(programs.fade, "freqData");
+    gl.uniform1f(uniforms.fade.opacity, 1);
+    gl.enableVertexAttribArray(attributes.fade.pos);
+
+    buffers.fadeCoverPoints = gl.createBuffer();
+    buffers.fadeCoverTriangles = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.fadeCoverPoints);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0]), gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.fadeCoverTriangles);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
+
+    shaders.vertexShaders.main = buildShader(shaderSources.mainVertexShader, gl.VERTEX_SHADER);
+    shaders.fragmentShaders.main = buildShader(shaderSources.mainFragmentShader, gl.FRAGMENT_SHADER);
+    programs.main = buildProgram(shaders.vertexShaders.main, shaders.fragmentShaders.main);
+    gl.useProgram(programs.main);
+    attributes.main.pos = gl.getAttribLocation(programs.main, "pos");
+    attributes.main.color = gl.getAttribLocation(programs.main, "color");
+    attributes.main.normal = gl.getAttribLocation(programs.main, "normal");
+    attributes.main.tex = gl.getAttribLocation(programs.main, "tex");
+
+    uniforms.main.world = gl.getUniformLocation(programs.main, "world");
+    uniforms.main.perspective = gl.getUniformLocation(programs.main, "perspective");
+    uniforms.main.texture = gl.getUniformLocation(programs.main, "texture");
+    uniforms.main.ambient_color = gl.getUniformLocation(programs.main, "ambient_color");
+    uniforms.main.fog_color = gl.getUniformLocation(programs.main, "fog_color");
+    uniforms.main.light_color = gl.getUniformLocation(programs.main, "light_color");
+    uniforms.main.light_pos = gl.getUniformLocation(programs.main, "light_pos");
+    uniforms.main.normal_matrix = gl.getUniformLocation(programs.main, "normal_matrix");
+    uniforms.main.model = gl.getUniformLocation(programs.main, "model");
+
+    gl.enableVertexAttribArray(attributes.main.pos);
+    gl.enableVertexAttribArray(attributes.main.color);
+    gl.enableVertexAttribArray(attributes.main.normal);
+    gl.enableVertexAttribArray(attributes.main.tex);
+
+
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    gl.activeTexture(gl.TEXTURE0);
+    textures.transparentBlack = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, textures.transparentBlack);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 25]));
+
+    textures.plainWhite = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, textures.plainWhite);
+
+    // Fill the texture with a 1x1 white pixel.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    gl.uniform1i(uniforms.main.texture, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    textures.frequencyData = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, textures.frequencyData);
+    var myArray = new Uint8Array(32 * 32);
+    for (var i = 0; i < 32 * 32; i++) {
+        myArray[i] = i % 255;
+    }
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 32, 32, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, myArray);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.useProgram(programs.fade);
+    gl.uniform1i(uniforms.fade.freqData, 1);
+
+    gl.useProgram(programs.main);
+
+    let r = -30 * Math.PI / 180;
+    gl.bindTexture(gl.TEXTURE_2D, textures.plainWhite);
+    gl.uniformMatrix3fv(uniforms.main.normal_matrix, false, Graphics.matrix.identity(3));
+    gl.uniformMatrix4fv(uniforms.main.model, false, Graphics.matrix.identity(4));
+    gl.uniformMatrix4fv(uniforms.main.world, false, [
+        1, 0, 0, 0,
+        0, Math.cos(r), -Math.sin(r), 0,
+        0, Math.sin(r), Math.cos(r), 0,
+        0, 0, 0, 1]);
+    gl.uniformMatrix4fv(uniforms.main.perspective, false, Graphics.matrix.identity(4));
+    gl.uniform3fv(uniforms.main.ambient_color, [0.05, 0.05, 0.05]);
+    gl.uniform3fv(uniforms.main.light_color, lightColor);
+    gl.uniform3fv(uniforms.main.light_pos, lightPos)
+    mySelf.resize();
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clearDepth(1.0);
+    gl.enable(gl.CULL_FACE);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Start generating the cubes, TODO mabye seperate this into a different function?
+    var chosenLights = [];
+    var possibleList = [];
+    var numberOfCubes = 300;
+    cubes = [];
+    for (var i = 0; i < numberOfCubes; i++) {
+        possibleList.push(i);
+    }
+    for (var i = 0; i < 8; i++) {
+        var random = Math.floor(i / 8 * (numberOfCubes - 1));//Math.floor(Math.random()*possibleList.length);
+        chosenLights.push(possibleList[random]);
+        possibleList.splice(random, 1);
+    }
+    for (var i = 0; i < numberOfCubes; i++) {
+        //Music slection, selects a value in the frquency array for this cube to read
+        var ms = Math.floor(i / numberOfCubes * Sound.data.fbc);
+        var x = Math.random() * 150 - 75;
+        var y = Math.random() * 150 - 75;
+        var z = -Math.random() * 150 - 75;
+        var color = [Math.random(), Math.random(), Math.random()];
+        var l = -1;
+        for (var j = 0; j < 8; j++) {
+            if (chosenLights[j] == i) {
+                l = j;
+                var c = j % 3
+                color = [0.0, 0.0, 0.0]
+                color[c] = j / 8 * 0.5 + 0.5;
+
+                break;
+            }
+        }
+        cubes.push(new Cube(x, y, z, Math.random() * 3 + 3, color, l, mySelf, ms));
+
+    }
+
+
+
 
 }
+
+Graphics.getNewLightColor = function(){
+    var newColor = [Math.random(), Math.random(), Math.random()];
+    // Normalize the color and divide it by 2
+    var magnitude = Math.sqrt(newColor[0] ** 2 + newColor[1] ** 2 + newColor[2] ** 2) * 2;
+    if (magnitude == 0) {
+        return [0, 0.5, 0];
+    } else {
+        return [newColor[0] / magnitude, newColor[1] / magnitude, newColor[2] / magnitude];
+    }
+};
+
+Graphics.matrix = {
+    mult4x4: function (matA, matB) {
+        return [
+            matA[0] * matB[0] + matA[1] * matB[4] + matA[2] * matB[8] + matA[3] * matB[12], matA[0] * matB[1] + matA[1] * matB[5] + matA[2] * matB[9] + matA[3] * matB[13], matA[0] * matB[2] + matA[1] * matB[6] + matA[2] * matB[10] + matA[3] * matB[14], matA[0] * matB[3] + matA[1] * matB[7] + matA[2] * matB[11] + matA[3] * matB[15],
+            matA[4] * matB[0] + matA[5] * matB[4] + matA[6] * matB[8] + matA[7] * matB[12], matA[4] * matB[1] + matA[5] * matB[5] + matA[6] * matB[9] + matA[7] * matB[13], matA[4] * matB[2] + matA[5] * matB[6] + matA[6] * matB[10] + matA[7] * matB[14], matA[4] * matB[3] + matA[5] * matB[7] + matA[6] * matB[11] + matA[7] * matB[15],
+            matA[8] * matB[0] + matA[9] * matB[4] + matA[10] * matB[8] + matA[11] * matB[12], matA[8] * matB[1] + matA[9] * matB[5] + matA[10] * matB[9] + matA[11] * matB[13], matA[8] * matB[2] + matA[9] * matB[6] + matA[10] * matB[10] + matA[11] * matB[14], matA[8] * matB[3] + matA[9] * matB[7] + matA[10] * matB[11] + matA[11] * matB[15],
+            matA[12] * matB[0] + matA[13] * matB[4] + matA[14] * matB[8] + matA[15] * matB[12], matA[12] * matB[1] + matA[13] * matB[5] + matA[14] * matB[9] + matA[15] * matB[13], matA[12] * matB[2] + matA[13] * matB[6] + matA[14] * matB[10] + matA[15] * matB[14], matA[12] * matB[3] + matA[13] * matB[7] + matA[14] * matB[11] + matA[15] * matB[15],
+        ];
+    },
+    mult3x3: function (matA, matB) {
+        return [
+            matA[0] * matB[0] + matA[1] * matB[3] + matA[2] * matB[6], matA[0] * matB[1] + matA[1] * matB[4] + matA[2] * matB[7], matA[0] * matB[2] + matA[1] * matB[5] + matA[2] * matB[8],
+            matA[3] * matB[0] + matA[4] * matB[3] + matA[5] * matB[6], matA[3] * matB[1] + matA[4] * matB[4] + matA[5] * matB[7], matA[3] * matB[2] + matA[4] * matB[5] + matA[5] * matB[8],
+            matA[6] * matB[0] + matA[7] * matB[3] + matA[8] * matB[6], matA[6] * matB[1] + matA[7] * matB[4] + matA[8] * matB[7], matA[6] * matB[2] + matA[7] * matB[5] + matA[8] * matB[8]
+        ];
+    },
+    identity: function (size) {
+        switch (size) {
+            case 2:
+                return [
+                    1, 0,
+                    0, 1
+                ];
+                break;
+            case 3:
+                return [
+                    1, 0, 0,
+                    0, 1, 0,
+                    0, 0, 1
+                ];
+                break;
+            case 4:
+                return [
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ]
+                break;
+            default: {
+                var returnArray = [];
+                for (var i = 0; i < size; i++) {
+                    for (var j = 0; j < size; j++) {
+                        if (j == i) {
+                            returnArray.push(1);
+                        } else {
+                            returnArray.push(0);
+                        }
+                    }
+                }
+                return returnArray;
+                break;
+            }
+        }
+    }
+};
+
 
 /**
  * @param {HTMLInputElement} fileElement 
@@ -1860,6 +1877,7 @@ var _Player = {
 }
 
 var testPlayer = new TrackPlayer();
+var graphicPlayer = null;
 
 
 function main(){
@@ -1868,7 +1886,7 @@ function main(){
     Sound.data.frequenceyAndWaveform = new Uint8Array(Sound.data.fbc * 2);
     Sound.data.frequency = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, 0, Sound.data.fbc);
     Sound.data.waveform = new Uint8Array(Sound.data.frequenceyAndWaveform.buffer, Sound.data.fbc, Sound.data.fbc);
-    Graphics.start();
+    graphicPlayer = new Graphics();
     update();
 }
 
@@ -1955,7 +1973,7 @@ function update() {
     ct.strokeStyle = "rgba(255, 255, 0, 0.5)";
 
     //ct.stroke();
-    Graphics.render();
+    graphicPlayer.render();
 }
 
 var lAvg;
