@@ -821,6 +821,82 @@ Graphics.matrix = {
     }
 };
 
+function MetaDataRepsonse(trackTitle="", trackCover="", artist=""){
+    this.trackTitle = trackTitle;
+    this.trackCover = trackCover;// A URI
+    this.artist = artist;
+}
+
+
+function TrackMetaDataDecoder(){
+    var webWorkersAvail = false;
+    /**@type {Worker} */
+    var trackMetaWorker;
+    /**@type {{resolve:Function, id:Number}[]} */
+    var requests = [];
+
+    
+
+
+    function handleWorkerResponse(e){
+        if(typeof e.data[0] == "string"){
+            console.log(e.data);
+            return;
+        }
+        var reqId = e.data[0];
+        var title = e.data[1];
+        var imgSrc = e.data[2];
+        var artist = e.data[3];
+        requests[reqId].resolve(new MetaDataRepsonse(title, imgSrc, artist));
+    }
+
+    if(window.Worker){
+        webWorkersAvail = true;
+        trackMetaWorker = new Worker("./audioIdWorker.js");
+        trackMetaWorker.onmessage = handleWorkerResponse;
+    }else{
+        console.log("No web worker support");
+    }
+
+    /**
+     * @param {File} file 
+     * @returns {Promise<MetaDataRepsonse>}
+     */
+    this.requestMetaData = function(file){
+        var queData = {
+            resolve:null,
+            id:requests.length
+        }
+
+        requests.push(queData);
+
+        /**
+         * @param {ArrayBuffer} dataBuffer 
+         */
+        function sendToWorker(dataBuffer){
+            trackMetaWorker.postMessage([queData.id, dataBuffer], [dataBuffer]);
+        }
+
+        function catchError(e){
+            queData.resolve(new MetaDataRepsonse("", "", ""));
+        }
+
+        function promiseFunction(resolve, reject){
+            queData.resolve = resolve;
+            if(!webWorkersAvail){
+                resolve(new MetaDataRepsonse("", "", ""));
+                return;
+            }
+            file.arrayBuffer().then(sendToWorker).catch(catchError)
+
+        }
+
+        var thePromise = new Promise(promiseFunction);
+
+        return thePromise;
+    }
+    
+}
 
 /**
  * @param {HTMLInputElement} fileElement 
@@ -839,7 +915,6 @@ function Track(fileElement, fileNumber, player=null) {
     var composer = "";
     var cover = new Image(100, 100);//cover image file if one exists
     var songTitleTag = document.createElement("div");
-    var hasProgressed = false;//helps catch songs that will not load
     var fileURL = URL.createObjectURL(fileElement.files[fileNumber]);//used to store the URL created to pass song as a source to the audio player
     var active = true;//so user can deactivate a song
     var self = this;
@@ -949,6 +1024,16 @@ function Track(fileElement, fileNumber, player=null) {
     playlistItem.appendChild(cover);
     playlistItem.appendChild(songTitleTag);
     playlistItem.appendChild(checkBox);
+
+    // Request meta data
+    testDecoder.requestMetaData(fileElement.files[fileNumber]).then((response)=>{
+        trackTitle = response.trackTitle;
+        artist = response.artist;
+
+        if(trackTitle != ""){
+            songTitleTag.textContent = trackTitle;
+        }
+    }).catch(console.log)
 }
 
 
@@ -1877,6 +1962,7 @@ var _Player = {
 }
 
 var testPlayer = new TrackPlayer();
+var testDecoder = new TrackMetaDataDecoder();
 var graphicPlayer = null;
 
 
