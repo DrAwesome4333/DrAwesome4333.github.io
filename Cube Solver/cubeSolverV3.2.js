@@ -1303,7 +1303,7 @@ import {Matrix} from "./modules/matrix.js"
 			// node's accordinglly
 			if(node == null){
 				debugger;
-				return;
+			//	return;
 			}
 
 			var before = node.last;
@@ -1377,7 +1377,33 @@ import {Matrix} from "./modules/matrix.js"
 			});
 		}
 
+	
+		/**
+		 * @param {CubeNode} startNode 
+		 */
+		function logChain(startNode, title){
+			console.log("List " + title)
+			var lastVal = 0;
+			var count = 0;
+			var cNode = startNode;
+			while(cNode != null){
+				count++
+				console.log(count, cNode.cubeId, "("+cNode.totalPoints+")")
+				
+				cNode = cNode.next;
+			}
+			
+		}
 
+		function chainLen(startNode){
+			var count = 0;
+			var cNode = startNode;
+			while(cNode != null){
+				count++	
+				cNode = cNode.next;
+			}
+			return count;
+		}
 		async function solveCube(cubeData=new CubeData(), cubeNumber=0, startCallBack=basicStartCallBack, successCallBack=basicSuccesCallBack, failureCallBack=basicFailureCallBack){
 			// Functions we are going to use:
 			/** @returns {CubeNode} **/
@@ -1464,20 +1490,10 @@ import {Matrix} from "./modules/matrix.js"
 
 			}
 
+
+
 			function retireLastNode(){
 				removeNode(endNode.last);
-				
-				// For testing reaons, see if our line is intact
-				
-
-				// nn = endNode;
-				// console.log("chain last")
-				// while(nn != firstNode){
-				// 	nn = nn.last;
-				// 	if(nn == null){
-				// 		debugger;
-				// 	}
-				// }
 			}
 
 			/** @param {CubeNode}cubeNode */
@@ -1486,7 +1502,7 @@ import {Matrix} from "./modules/matrix.js"
 				if(cubeNode == null){
 					return false;
 				}
-
+				var log = [];
 				var nextNode = cubeNode.next;
 
 
@@ -1498,6 +1514,7 @@ import {Matrix} from "./modules/matrix.js"
 						nextNode = cubeNode.next;
 						CubeNode.removeNode(cubeNode);
 						CubeNode.insertBefore(firstNode, cubeNode);
+						log.push(`Inserted cube:${cubeNode.cubeId} before ${firstNode.cubeId} which was firstNode`)
 						firstNode = cubeNode;
 						cubeNode = nextNode;
 					}
@@ -1510,6 +1527,7 @@ import {Matrix} from "./modules/matrix.js"
 						nextNode = cubeNode.next;
 						CubeNode.removeNode(cubeNode);
 						CubeNode.insertBefore(endNode, cubeNode);
+						log.push(`Inserted cube:${cubeNode.cubeId} before ${endNode.cubeId} which was endNode`)
 						cubeNode = nextNode;
 					
 					if(cubeNode == null)
@@ -1537,32 +1555,42 @@ import {Matrix} from "./modules/matrix.js"
 					while(cubeNode != null && cubeNode.totalPoints > currentNode.totalPoints && cubeNode.totalPoints <= currentNode.next.totalPoints ){
 						
 						if(currentNode == firstNode){
-							firstNode = cubeNode;
+							//firstNode = cubeNode;
 						}
 
 						nextNode = cubeNode.next;
 						CubeNode.removeNode(cubeNode);
 						CubeNode.insertAfter(currentNode, cubeNode);
+						log.push(`Inserted cube:${cubeNode.cubeId} after ${currentNode.cubeId} next node is ${nextNode==null?null:nextNode.cubeId}`)
 						cubeNode = nextNode;
 					}
 
-					currentNode = currentNode.last;
+					
 					if(cubeNode != null && cubeNode.totalPoints <= firstNode.totalPoints){
 						while(cubeNode != null){
 							nextNode = cubeNode.next;
 							CubeNode.removeNode(cubeNode);
 							CubeNode.insertBefore(firstNode, cubeNode);
+							log.push(`Inserted cube:${cubeNode.cubeId} before ${firstNode.cubeId} which was firstNode (end version)`)
 							firstNode = cubeNode;
 							cubeNode = nextNode;
 						}
 					}
+					currentNode = currentNode.last;
 					
 				}
-
-				//if(cubeNode != null){
-				//	debugger;
-				//}
-				
+				//REMOVE
+				var act = chainLen(firstNode);
+				var inact = chainLen(inactiveNode);
+				if(act + inact - 1 != totalCubeCount){
+					console.log("MISSING NODE, printing log");
+					logChain(firstNode, "Active")
+					logChain(inactiveNode, "Inactive")
+					for(var i = 0; i < log.length; i++){
+						console.log(log[i])
+					}
+					debugger;
+				}
 				return true;
 
 			}
@@ -1734,6 +1762,7 @@ import {Matrix} from "./modules/matrix.js"
 			all3MoveAlgs.selfIndex();
 			all1MoveAlgs.selfIndex();
 
+
 			var agCount = all3MoveAlgs.getAlgCount();
 			for(var i = 0; i < agCount; i ++){
 				all3MoveFilters.push(all3MoveAlgs.getFilter(i, CUBE_DATA_TYPE.Surface));
@@ -1780,22 +1809,7 @@ import {Matrix} from "./modules/matrix.js"
 					return true;
 				}
 
-				// REMOVE
-				// var nn = firstNode;
-				// console.log(firstNode == endNode)
-				// console.log("Chain next")
-				// while(nn != endNode){
-				// 	console.log(nn.totalPoints);
-				// 	nn = nn.next;
-				// 	if(nn == null){
-				// 		debugger;
-				// 	}
-				// }
-
-				// debugger;
 				
-
-
 			
 
 				// Now lets get to solving:
@@ -1853,10 +1867,12 @@ import {Matrix} from "./modules/matrix.js"
 						//console.log(prospectiveNodes[sortedScoreIndexes[i]].cubeScore)
 						
 					}else{
-						removeNode(prospectiveNodes[sortedScoreIndexes[i]]); 
+						removeNode(prospectiveNodes[sortedScoreIndexes[i]]);
 					}
 				}
 
+				
+				
 				for(var i = 0; i < listOfNodes.length; i++){
 					//insertCubeNodeInOrder(listOfNodes[i])
 					if(nodeChain == null){
@@ -1872,6 +1888,9 @@ import {Matrix} from "./modules/matrix.js"
 				insertCubeNodeInOrder(nodeChain);
 				// Remove our used node
 				removeNode(cNode);
+
+				
+
 				// Start next cycle;
 				return false;
 			}
