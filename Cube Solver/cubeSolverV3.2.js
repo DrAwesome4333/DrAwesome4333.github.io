@@ -1553,10 +1553,6 @@ import {Matrix} from "./modules/matrix.js"
 					i--;
 
 					while(cubeNode != null && cubeNode.totalPoints > currentNode.totalPoints && cubeNode.totalPoints <= currentNode.next.totalPoints ){
-						
-						if(currentNode == firstNode){
-							//firstNode = cubeNode;
-						}
 
 						nextNode = cubeNode.next;
 						CubeNode.removeNode(cubeNode);
