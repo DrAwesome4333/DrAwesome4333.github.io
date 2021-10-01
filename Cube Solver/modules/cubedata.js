@@ -823,7 +823,7 @@ CubeData.parseCubeString = function (value = "") {
     var parts = value.split(":");
 
     if (parts.length != 4 || parts[0] != "CBDTA") {
-        console.info("Invalid string");
+        throw  "Invalid string";
         return null;
     }
 
