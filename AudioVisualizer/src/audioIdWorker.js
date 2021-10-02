@@ -47,7 +47,7 @@ onmessage = function(e){
                 }
                 imgSrc = info["PIC"][selPic].src;
             //postMessage(JSON.stringify(info["PIC"][0]))
-            title += `(${version},${info["PIC"][selPic].hv})`
+            //title += `(${version},${info["PIC"][selPic].hv})`
             }
             
             //postMessage(bytesToHexString(viewOfData, 0, headerSize + frameStart));
