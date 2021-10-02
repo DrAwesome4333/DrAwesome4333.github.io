@@ -1029,9 +1029,14 @@ function Track(fileElement, fileNumber, player=null) {
     testDecoder.requestMetaData(fileElement.files[fileNumber]).then((response)=>{
         trackTitle = response.trackTitle;
         artist = response.artist;
+        
 
         if(trackTitle != ""){
             songTitleTag.textContent = trackTitle;
+        }
+
+        if(response.trackCover != ""){
+            cover.src = response.trackCover;
         }
     }).catch(console.log)
 }

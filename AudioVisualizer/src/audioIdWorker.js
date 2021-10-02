@@ -33,7 +33,11 @@ onmessage = function(e){
             }else if(info["TOF"]){
                 title = info["TOF"].data;
             }
-            //postMessage(JSON.stringify(info))
+           
+            if(info["PIC"]){
+                imgSrc = info["PIC"][0].src;
+           // postMessage(JSON.stringify(info["PIC"][0]))
+            }
             
             //postMessage(bytesToHexString(viewOfData, 0, headerSize + frameStart));
         }
@@ -142,6 +146,17 @@ function decodeTextFrameData(data, start, length, usesUnSync){
     return result;
 }
 
+function getBasicText(data, start, length, nullTerminate=true){
+    var str = "";
+    for(var i = start; i < start + length; i++){
+        if(data[i] == 0x00 && nullTerminate){
+            break;
+        }
+        str += String.fromCharCode(data[i]);
+    }
+    return str;
+}
+
 function getByteAsHex(value) {
     var str = "";
 
@@ -157,14 +172,95 @@ function getByteAsHex(value) {
 }
 
 /**
+ * 
+ * @param {Uint8Array} data 
+ * @param {Number} frameStart 
+ * @param {Number} frameLength 
+ * @param {Number} tagVersion
+ * @param {Number} frameVersion 
+ */
+function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frameVersion){
+    // Returns image url as well as type
+    var frameHeaderSize = 10;
+    if(tagVersion == 2){
+        frameHeaderSize = 6;
+    }
+    if(frameVersion == 2 && tagVersion == 2){
+        var format = String.fromCharCode(data[frameStart + frameHeaderSize + 1], data[frameStart + frameHeaderSize + 2], data[frameStart + frameHeaderSize +3]);
+        var textEncoding = data[frameStart + frameHeaderSize];
+        var pictureType = data[frameStart + frameHeaderSize + 4];
+        var imageDataStart = frameStart + frameHeaderSize + 5;//Note this starts out pointing to Description, we will pass these bytes to get the true image data start
+
+        if(textEncoding == 0x00){
+            while(data[imageDataStart] != 0x00 && imageDataStart < frameStart + frameLength){
+                imageDataStart ++;
+            }
+            imageDataStart ++;
+        }else{
+            while(!(data[imageDataStart] == 0x00 && data[imageDataStart + 1] == 0x00) && imageDataStart + 1 < frameStart + frameLength){
+                imageDataStart += 2;
+            }
+            imageDataStart += 2;
+        }
+
+        if(format == "-->"){
+            // Image is external link
+            return {type:pictureType, src:getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false)};
+        }else if (format == "PNG"){
+            var base64Header = "data:image/png;base64,"
+            var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
+            var encodedData = base64Header + btoa(rawData);
+            return {type:pictureType, src:encodedData, hv:frameVersion};
+        } else if (format == "JPG"){
+            var base64Header = "data:image/jpeg;base64,"
+            var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
+            var encodedData = base64Header + btoa(rawData);
+            return {type:pictureType, src:encodedData, hv:frameVersion};
+        }
+        return {type:pictureType, src:"", hv:frameVersion};
+    } 
+    else if(frameVersion == 3 || frameVersion == 2){
+        // Despite only having a frame version 2 name, these tags are actually version 3 so yeah...
+        var textEncoding = data[frameStart + frameHeaderSize];
+        var format = getBasicText(data, frameStart + frameHeaderSize + 1, frameLength - (frameHeaderSize + 1));
+        var pictureType = data[frameStart + frameHeaderSize + 2 + format.length];
+        var imageDataStart = frameStart + frameHeaderSize + 3 + format.length;//Note this starts out pointing to Description, we will pass these bytes to get the true image data start
+
+        if(textEncoding == 0x00){
+            while(data[imageDataStart] != 0x00 && imageDataStart < frameStart + frameLength){
+                imageDataStart ++;
+            }
+            imageDataStart ++;
+        }else{
+            while(!(data[imageDataStart] == 0x00 && data[imageDataStart + 1] == 0x00) && imageDataStart + 1 < frameStart + frameLength){
+                imageDataStart += 2;
+            }
+            imageDataStart += 2;
+        }
+
+        if(format == "-->"){
+            // Image is external link
+            return {type:pictureType, src:getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false), hv:frameVersion};
+        }else{
+            var base64Header = `data:${format};base64,`
+            var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
+            var encodedData = base64Header + btoa(rawData);
+            return {type:pictureType, src:encodedData, hv:frameVersion};
+        }
+    }
+
+}
+
+/**
  * @param {Uint8Array} data
  * @param {number} start
  * @param {number} length
  */
-function getDataBytesAsString(data, start, length){
+function getDataBytesInString(data, start, length){
+    // Used to get image data to a string
     var result = "";
     for(var i = 0; i < length; i++){
-        result += data[i + start].toString(16) + " ";
+        result += String.fromCharCode(data[i + start]);
     }
     return result;
 }
@@ -185,20 +281,27 @@ function getAllFrameHeaders(data, frameStart, headerEnd, tagVersion, usesUnSync)
     while(offset < data.length && offset < headerEnd){
         var frameID = getFrameID(data, offset);
         var frameVersion = detectFrameVersion(frameID);
+
         if(frameVersion == 2){
             frameID = frameID.substring(0, 3);
         }
-        var frameTagSize = 10;
+        var frameHeaderSize = 10;
 
         if(tagVersion == 2){
-            frameTagSize = 6;
+            frameHeaderSize = 6;
         }
+
         var frameSize = getFrameSize(data, offset, tagVersion, usesUnSync);
         // Only Decode Text frames as text
         if (DESIRED_FRAMES.includes(frameID) && frameID[0] == "T"){
-            headers[frameID] = {start:offset, size:frameSize, data:decodeTextFrameData(data, offset + frameTagSize, frameSize, usesUnSync)};
+            headers[frameID] = {start:offset, size:frameSize, data:decodeTextFrameData(data, offset + frameHeaderSize, frameSize, usesUnSync)};
+        }else if(frameID == "APIC" || frameID == "PIC"){
+            if(!headers["PIC"]){
+                headers["PIC"] = [];
+            }
+            headers["PIC"].push(decodePictureFrameData(data, offset, frameSize + frameHeaderSize, tagVersion, frameVersion));
         }
-        offset += frameSize + frameTagSize;
+        offset += frameSize + frameHeaderSize;
     }
     return headers;
 
