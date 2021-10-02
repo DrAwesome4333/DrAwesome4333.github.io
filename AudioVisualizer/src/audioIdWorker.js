@@ -18,11 +18,12 @@ onmessage = function(e){
         let extendedHeader = (viewOfData[5] & 0b01000000) == 0b01000000;
 
         let headerSize = getTagSize(viewOfData);
+        let frameStart = 10;
         // We are currently decoding for id3v2.3.0 see https://id3.org/d3v2.3.0
         //title = version + " ";
-        if(version == 2 || version == 3){
+        if(version == 2 || version == 3 || version == 4){
             // TODO adjust for extended header size (though my sample of MP3's contains no extended headers)
-            let frameStart = 10;
+            
             var info = getAllFrameHeaders(viewOfData, frameStart, frameStart + headerSize, version, usesUnSync);
             if(info["TIT2"]){
                 title = info["TIT2"].data;
@@ -50,8 +51,9 @@ onmessage = function(e){
             //title += `(${version},${info["PIC"][selPic].hv})`
             }
             
-            postMessage(btoa(bytesToHexString(viewOfData, 0, headerSize + frameStart)));
+            
         }
+        postMessage(btoa(bytesToHexString(viewOfData, 0, headerSize + frameStart)));
     }
     
     postMessage([reqId, title, imgSrc, artist]);
@@ -230,7 +232,7 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
         }
         return {type:pictureType, src:"", hv:frameVersion};
     } 
-    else if(frameVersion == 3 || frameVersion == 2){
+    else if(frameVersion == 4 || frameVersion == 3 || frameVersion == 2){
         
         // Despite only having a frame version 2 name, these tags are actually version 3 so yeah...
         var textEncoding = data[frameStart + frameHeaderSize];
