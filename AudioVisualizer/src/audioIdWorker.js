@@ -35,8 +35,19 @@ onmessage = function(e){
             }
            
             if(info["PIC"]){
-                imgSrc = info["PIC"][0].src;
-           // postMessage(JSON.stringify(info["PIC"][0]))
+                //
+                var selPic = 0;
+                if(info["PIC"].length > 1){
+                    for(var i = 0; i < info["PIC"].length; i++){
+                        // Select a picture that matches its version, they vary less often when updated
+                        if(info["PIC"][i].hv == version){
+                            selPic = i;
+                        }
+                    }
+                }
+                imgSrc = info["PIC"][selPic].src;
+            //postMessage(JSON.stringify(info["PIC"][0]))
+            title += `(${version},${info["PIC"][selPic].hv})`
             }
             
             //postMessage(bytesToHexString(viewOfData, 0, headerSize + frameStart));
@@ -220,11 +231,13 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
         return {type:pictureType, src:"", hv:frameVersion};
     } 
     else if(frameVersion == 3 || frameVersion == 2){
+        
         // Despite only having a frame version 2 name, these tags are actually version 3 so yeah...
         var textEncoding = data[frameStart + frameHeaderSize];
         var format = getBasicText(data, frameStart + frameHeaderSize + 1, frameLength - (frameHeaderSize + 1));
         var pictureType = data[frameStart + frameHeaderSize + 2 + format.length];
         var imageDataStart = frameStart + frameHeaderSize + 3 + format.length;//Note this starts out pointing to Description, we will pass these bytes to get the true image data start
+       
 
         if(textEncoding == 0x00){
             while(data[imageDataStart] != 0x00 && imageDataStart < frameStart + frameLength){
@@ -237,6 +250,15 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
             }
             imageDataStart += 2;
         }
+
+       // var strRet = getBasicText(data, frameStart, imageDataStart - frameStart + 3, false);
+        
+        //postMessage(strRet);
+        // var hexResp = ""
+        // for(var i = frameStart; i < imageDataStart + 3; i ++){
+        //     hexResp += getByteAsHex(data[i]) + " ";
+        // }
+        // postMessage(hexResp);
 
         if(format == "-->"){
             // Image is external link

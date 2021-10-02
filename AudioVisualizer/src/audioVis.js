@@ -839,7 +839,7 @@ function TrackMetaDataDecoder(){
 
 
     function handleWorkerResponse(e){
-        if(typeof e.data[0] == "string"){
+        if(typeof e.data == "string"){
             console.log(e.data);
             return;
         }
