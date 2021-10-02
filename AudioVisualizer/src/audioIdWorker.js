@@ -50,7 +50,7 @@ onmessage = function(e){
             //title += `(${version},${info["PIC"][selPic].hv})`
             }
             
-            //postMessage(bytesToHexString(viewOfData, 0, headerSize + frameStart));
+            postMessage(btoa(bytesToHexString(viewOfData, 0, headerSize + frameStart)));
         }
     }
     
