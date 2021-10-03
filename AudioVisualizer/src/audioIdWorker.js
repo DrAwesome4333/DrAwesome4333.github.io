@@ -134,9 +134,18 @@ function getFrameSize(data, frameStart, frameVersion, usesUnSync){
  * @param {boolean} usesUnSync
  */
 function decodeTextFrameData(data, start, length, usesUnSync){
+    // var strRet = getBasicText(data, start, length, false);
+        
+    // postMessage(strRet);
+    // var hexResp = ""
+    // for(var i = start; i < start + length; i ++){
+    //     hexResp += getByteAsHex(data[i]) + " ";
+    // }
+    // postMessage(hexResp);
     var result = "";
-    var _16Bit = 0x01 == data[start];
-    if(!_16Bit){
+    var _16Bit = 0x01 == data[start] || 0x02 == data[start];
+    var utf8 = 0x03 == data[start];
+    if(!_16Bit && !utf8){
         for(var i = 1; i < length; i++){
             if(data[i + start] == 0x00){
                 // Break on Null character
@@ -144,10 +153,53 @@ function decodeTextFrameData(data, start, length, usesUnSync){
             }
             result += String.fromCharCode(data[i + start]);
         }
+    } else if(utf8){
+        for(var i = 1; i < length; i++){
+            if(data[i + start] == 0x00){
+                // Break on Null character
+                break;
+            }
+            
+            var codePoint = 0;
+            if(data[i + start] >= 0b11110000){
+                //4 byte character
+                codePoint = data[i + start] & 0b00000111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 1] & 0b00111111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 2] & 0b00111111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 3] & 0b00111111;
+                i += 3;
+            }else if(data[i + start] >= 0b11100000){
+                //3 byte character
+                codePoint = data[i + start] & 0b00001111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 1] & 0b00111111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 2] & 0b00111111;
+                i += 2;
+            }else if(data[i + start] >= 0b11000000){
+                //2 byte character
+                codePoint = data[i + start] & 0b00011111;
+                codePoint = codePoint << 6;
+                codePoint += data[i + start + 1] & 0b00111111;
+                i += 1;
+            }else{
+                // singlye byte character
+                codePoint = data[i + start];
+            }
+            result += String.fromCharCode(codePoint);
+        }
     }else{
-        var byteOrder = (data[start + 2] << 8) + data[start + 1]
+        var byteOrder = (data[start + 2] << 8) + data[start + 1];
+        var offset = 2;
+        if(0x02 == data[start]){
+            byteOrder = 0xFFFE;
+            offset = 0;
+        }
         if(byteOrder == 0xFEFF){
-            for(var i = 3; i + 1 < length; i += 2){
+            for(var i = offset + 1; i + 1 < length; i += 2){
                 if ((data[start + 1 + i] << 8) + data[start + i] == 0x0000){
                     // Break on Null character
                     break;
@@ -155,7 +207,7 @@ function decodeTextFrameData(data, start, length, usesUnSync){
                 result += String.fromCharCode((data[start + 1 + i] << 8) + data[start + i]);
             }
         }else if (byteOrder == 0xFFFE){
-            for(var i = 3; i + 1 < length; i += 2){
+            for(var i = offset + 1; i + 1 < length; i += 2){
                 if ((data[start + 1 + i] << 8) + data[start + i] == 0x0000){
                     // Break on Null character
                     break;
@@ -232,11 +284,13 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
             // Image is external link
             return {type:pictureType, src:getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false)};
         }else if (format == "PNG"){
+            // Image is a PNG file
             var base64Header = "data:image/png;base64,"
             var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
             var encodedData = base64Header + btoa(rawData);
             return {type:pictureType, src:encodedData, hv:frameVersion};
         } else if (format == "JPG"){
+             // Image is a JPG file
             var base64Header = "data:image/jpeg;base64,"
             var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
             var encodedData = base64Header + btoa(rawData);
@@ -252,20 +306,22 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
         var pictureType = data[frameStart + frameHeaderSize + 2 + format.length];
         var imageDataStart = frameStart + frameHeaderSize + 3 + format.length;//Note this starts out pointing to Description, we will pass these bytes to get the true image data start
        
-
+        // Forward through the description looking for the null terminated character. 
         if(textEncoding == 0x00  || textEncoding == 0x03){
+            // Text encodings 0 and 3 are single byte
             while(data[imageDataStart] != 0x00 && imageDataStart < frameStart + frameLength){
                 imageDataStart ++;
             }
             imageDataStart ++;
         }else{
+            // Text encodings 1 and 2 are double byte
             while(!(data[imageDataStart] == 0x00 && data[imageDataStart + 1] == 0x00) && imageDataStart + 1 < frameStart + frameLength){
                 imageDataStart += 2;
             }
             imageDataStart += 2;
         }
 
-       //var strRet = getBasicText(data, frameStart, imageDataStart - frameStart + 3, false);
+        //var strRet = getBasicText(data, frameStart, imageDataStart - frameStart + 3, false);
         
         // postMessage(strRet);
         //  var hexResp = ""
@@ -278,6 +334,7 @@ function decodePictureFrameData(data, frameStart, frameLength, tagVersion, frame
             // Image is external link
             return {type:pictureType, src:getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false), hv:frameVersion};
         }else{
+            // format should be the MIME type
             var base64Header = `data:${format};base64,`
             var rawData = getBasicText(data, imageDataStart, frameLength - (imageDataStart - frameStart), false);
             var encodedData = base64Header + btoa(rawData);
