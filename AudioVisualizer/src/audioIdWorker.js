@@ -3,6 +3,7 @@
 onmessage = function(e){
     var reqId = e.data[0];
     var viewOfData = new Uint8Array(e.data[1]);
+    //postMessage(getBasicText(viewOfData, 0, viewOfData.length, false))
     var title = "";
     var imgSrc = "";
     var artist = "";
@@ -53,7 +54,7 @@ onmessage = function(e){
             
             
         }
-        postMessage(btoa(bytesToHexString(viewOfData, 0, headerSize + frameStart)));
+        postMessage(btoa(getBasicText(viewOfData, 0, headerSize + frameStart)));
     }
     
     postMessage([reqId, title, imgSrc, artist]);

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <span>Input Text: <input type="text" id="in"/><br>
+            File name: <input type="text" id="name"><br><input type="button" value="Create File" onclick="createFile()"/><br>
+        <div id="output"></div></span>
+
+        <script>
+            var op = document.getElementById("output");
+            /**
+             * @param {Uint8Array} data
+             * @param {String} name
+             */
+            function genFile(data, name){
+                var blobby = new Blob([data],{type:"application/octet-stream"});
+                var element = document.createElement("a");
+                element.href = URL.createObjectURL(blobby);
+                element.download = name;
+                element.textContent = name;
+                op.appendChild(element);
+                op.appendChild(document.createElement("br"));
+            }
+
+            function base64ToByteArray(base64String){
+                var byteString = atob(base64String);
+                var byteArray = new Uint8Array(byteString.length);
+                for(var i = 0; i < byteArray.length; i++){
+                    byteArray[i] = byteString.charCodeAt(i);
+                }
+                return byteArray;
+            }
+
+            function createFile(){
+                var base64String = document.getElementById("in").value;
+                var byteArray = base64ToByteArray(base64String);
+                var name = document.getElementById("name").value;
+                genFile(byteArray, name);
+            }
+        </script>
+    </body>
+</html>
