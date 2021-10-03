@@ -54,7 +54,7 @@ onmessage = function(e){
             
             
         }
-        postMessage(btoa(getBasicText(viewOfData, 0, headerSize + frameStart)));
+        postMessage(btoa(getBasicText(viewOfData, 0, headerSize + frameStart, false)));
     }
     
     postMessage([reqId, title, imgSrc, artist]);
