@@ -543,7 +543,7 @@ function getAllFrameHeaders(data, startOfFrames, endOfFrames, tagVersion, usesUn
                headers["PIC"] = [];
             }
            headers["PIC"].push(decodePictureFrameData(data, currentFrameOffset, frameSize + frameHeaderSize, tagVersion, frameVersion));
-           postMessage("PICTURE")
+           //postMessage("PICTURE")
         }
         currentFrameOffset += frameSize + frameHeaderSize;
     }

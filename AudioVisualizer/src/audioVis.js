@@ -1066,6 +1066,7 @@ function DynamicButton(stateSVGMapping){
     var button = this.button;
     button.style.textAlign = "center";
     button.style.display = "inline-block";
+    button.style.height = "100%";
     var self = this;
     
     for(var map in stateSVGMapping){
@@ -1075,6 +1076,8 @@ function DynamicButton(stateSVGMapping){
         myImg2.src = stateSVGMapping[map].normal;
         myImg.style.width = "100%";
         myImg2.style.width = "100%";
+        myImg.style.maxHeight = "100%";
+        myImg2.style.maxHeight = "100%"
         svgCollection[map] = {
             normal:myImg2,
             hover:myImg
@@ -1230,9 +1233,9 @@ function Controller(player, playlist=null){
     buttonContainer.style.width = "100%";
     buttonContainer.style.height = "70%";
     buttonContainer.style.alignItems = "center";
-    buttonContainer.style.justifyContent = "space-evenly";
+    buttonContainer.style.justifyContent = "center";
     
-    hideButton.button.style.flexGrow = "1";
+    //hideButton.button.style.flexShrink = "2";
     hideButton.setState("hide");
 
     function hidePlaylist(e){
@@ -1257,39 +1260,39 @@ function Controller(player, playlist=null){
     document.body.addEventListener("click", showPlaylist);
 
 
-    optionButton.button.style.flexGrow = "1";
+    //optionButton.button.style.flexShrink = "2";
     optionButton.setState("option");
     buttonContainer.appendChild(optionButton.button);
 
-    backTrack.button.style.flexGrow = "2";
+    //backTrack.button.style.flexShrink = "1";
     backTrack.setState("back");
     buttonContainer.appendChild(backTrack.button);
 
     
-    rrButton.button.style.flexGrow = "2";
+    //rrButton.button.style.flexShrink = "1";
     rrButton.setState("rewind");
     buttonContainer.appendChild(rrButton.button);
 
     // playButton.type = "Button";
     // playButton.value = "Play";
-    playButton.button.style.flexGrow = "2";
+    //playButton.button.style.flexShrink = "1";
     playButton.setState("play_disabled");
     
     buttonContainer.appendChild(playButton.button);
 
-    ffButton.button.style.flexGrow = "2";
+    //ffButton.button.style.flexShrink = "1";
     ffButton.setState("fastforward");
     buttonContainer.appendChild(ffButton.button);
     
-    skipTrack.button.style.flexGrow = "2";
+    //skipTrack.button.style.flexShrink = "1";
     skipTrack.setState("skip");
     buttonContainer.appendChild(skipTrack.button);
 
-    shuffleToggle.button.style.flexGrow = "1";
+    //shuffleToggle.button.style.flexShrink = "2";
     shuffleToggle.setState("shuffle");
     buttonContainer.appendChild(shuffleToggle.button);
 
-    repeatToggle.button.style.flexGrow = "1";
+    //repeatToggle.button.style.flexShrink = "2";
     repeatToggle.setState("playList");
     buttonContainer.appendChild(repeatToggle.button);
 
