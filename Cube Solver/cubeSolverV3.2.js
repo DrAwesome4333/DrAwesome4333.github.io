@@ -2575,7 +2575,12 @@ import {solveCube, CubeNode} from "./modules/solver.js"
 
 		function ScoreAllXMoveCubes(cubeSize = 3, xNumber = 3) {
 			//Search to see if the _Algorithm was cached yet, if not request to start the run for it.
-
+			
+			/**
+			 * Calculates the score of a cube by counting how many stickers of the same color are next to each other
+			 * @param {CubeData} cubeData 
+			 * @returns {Number} Score of the given cube
+			 */
 			function scoreCube(cubeData){
 
 				var cubeScore = 0;
@@ -2650,6 +2655,11 @@ import {solveCube, CubeNode} from "./modules/solver.js"
 				}
 			}
 			XmoveScores.push({ "CubeSize": cubeSize, "AlgLength": xNumber, "Scores": scores })
+			debugger;
 		}
 
 		start();
+		// ScoreAllXMoveCubes(3, 2);
+		// ScoreAllXMoveCubes(3, 3);
+		// ScoreAllXMoveCubes(3, 4);
+		// ScoreAllXMoveCubes(3, 5);
