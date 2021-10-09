@@ -27,6 +27,7 @@ onmessage = function(e){
         var resp = {
             type:"sucs",
             alg:alg.getMoves(algNum),
+            algLength:alg.getMoves(algNum).length,
             time:time,
             cycles:cycles,
             cubeSize: cubeData.getCubeSize()
