@@ -103,10 +103,48 @@ void main(){
     color = texture(color_palette, vec2(float(iteration) / float(COLOR_COUNT), 0.0));
 }`
 
+var ship_frag_source = `#version 300 es
+precision highp float;
+
+const float PI = 3.1415926535897932384626433832795;
+const int COLOR_COUNT = 255;
+
+uniform sampler2D color_palette;
+in vec2 _pos;
+int iteration;
+out vec4 color;
+vec2 z;
+vec2 c;
+
+void next(inout vec2 z, in vec2 c){
+    // save old value
+    vec2 temp = z;
+    // calculate new ones
+    z.x = temp.x * temp.x - temp.y * temp.y;
+    z.y = 2.0 * abs(temp.x * temp.y);
+    z -= c;
+}
+
+void main(){
+    z = _pos;
+    c = vec2(-0.598, 0.9226);
+    iteration = COLOR_COUNT;
+
+    for(int i = 0; i < COLOR_COUNT; i += 1){
+        next(z, c);
+        if(z.x * z.x + z.y * z.y > 4.0){
+            iteration = i;
+            break;
+        }
+    }
+    
+    color = texture(color_palette, vec2(float(iteration) / float(COLOR_COUNT), 0.0));
+}`
+
 /**
  * 
  * @param {WebGL2RenderingContext} gl 
- * @param {*} shader 
+ * @param {WebGLProgram} shader 
  */
 function Fractal(gl, shader){
     var vArrayBuffer = gl.createVertexArray();
@@ -183,6 +221,7 @@ var DEFAULT_COORD_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1
 
 var mandelbrot = new Fractal(GL, buildProgram(GL, vertex_source, mandelbrot_frag_source));
 var julia = new Fractal(GL, buildProgram(GL, vertex_source, julia_frag_source));
+var ship = new Fractal(GL, buildProgram(GL, vertex_source, ship_frag_source));
 var currentFractal = mandelbrot;
 
 GL.activeTexture(GL.TEXTURE0)
@@ -223,6 +262,9 @@ function changeFractal(){
             break;
         case 'mandelbrot':
             currentFractal = mandelbrot;
+            break;
+        case 'ship':
+            currentFractal = ship;
             break;
     }
     drawWbgl()
