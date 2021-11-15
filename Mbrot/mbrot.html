@@ -4,12 +4,40 @@
         <style>
             canvas{
                 position: absolute;
+                
                 top:0px;
                 left:0px;
+                right: 0px;
+                margin: auto;
+                z-index: -1;
+
+            }
+            #inputPannel{
+                position: absolute;
+                bottom:0px;
+                left:0px;
+                right: 0px;
+                margin: auto;
+                text-align: center;
+                z-index: 1;
+
             }
         </style>
     </head>
     <body>
         <script src="mbrot.js"></script>
+        <div id="inputPannel">
+            <label>Center X: </label><input id="centerX" type="number" value="0.0">
+            <label>Center Y: </label><input id="centerY" type="number" value="0.0">
+            <label>Axis Length: </label><input id="axisLength" type="number" value="4.0">
+            <br>
+            <label>Fractal: </label>
+            <select id="fractal" onclick="changeFractal()">
+                <option value="mandelbrot">Mandelbrot</option>
+                <option value="julia">Julia</option>
+            </select>
+            <br>
+            <input type="button" value="Apply" onclick="updateParameters()">
+        </div>
     </body>
 </html>

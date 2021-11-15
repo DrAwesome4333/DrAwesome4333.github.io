@@ -1,29 +1,22 @@
 // @ts-check
-var CANVAS = document.createElement("canvas");
-var ct = CANVAS.getContext('2d');
-//document.body.append(CANVAS);
-CANVAS.width = 500;
-CANVAS.height = 500;
-var width = CANVAS.getBoundingClientRect().width;
-var height = CANVAS.getBoundingClientRect().height;
 
 // Webgl Canvas
 var GL_CANVAS = document.createElement("canvas");
-var gl = GL_CANVAS.getContext("webgl2");
+var GL = GL_CANVAS.getContext("webgl2");
 document.body.append(GL_CANVAS);
 GL_CANVAS.width = window.innerHeight;
-GL_CANVAS.height = window.innerHeight;
+GL_CANVAS.height = window.innerHeight - 100;
 
-gl.clearColor(0.0, 1.0, 0.0, 1.0);
-gl.enable(gl.DEPTH_TEST);
-gl.depthFunc(gl.LEQUAL);
-gl.clearDepth(1.0);
-gl.disable(gl.CULL_FACE);
+GL.clearColor(0.0, 1.0, 0.0, 1.0);
+GL.enable(GL.DEPTH_TEST);
+GL.depthFunc(GL.LEQUAL);
+GL.clearDepth(1.0);
+GL.disable(GL.CULL_FACE);
 
-var vab = gl.createVertexArray();
+var V_ARRAY_BUFFER = GL.createVertexArray();
 
-var gl_width = gl.drawingBufferWidth;
-var gl_height = gl.drawingBufferHeight;
+var GL_WIDTH = GL.drawingBufferWidth;
+var GL_HEIGHT = GL.drawingBufferHeight;
 
 var vertex_source = `#version 300 es
 in vec2 pos;
@@ -31,53 +24,127 @@ in vec2 coords;
 out vec2 _pos;
 void main(){
     gl_Position = vec4(pos.x, pos.y , 0.0, 1.0);
-    // Interpolate a float for later conversion to double
     _pos = coords;
 }
 `
-var frag_source = `#version 300 es
+var mandelbrot_frag_source = `#version 300 es
 precision highp float;
 
-in vec2 _pos;
-float iteration;
-out vec4 color;
-float PI;
-vec2 z;
+const float PI = 3.1415926535897932384626433832795;
+const int COLOR_COUNT = 255;
 
-void next(inout vec2 val, in vec2 pos){
-    vec2 temp = vec2(val.x, val.y);
-    val.x = temp.x * temp.x - temp.y * temp.y;
-    val.y = temp.y * temp.x * 2.0;
-    val += pos;
+uniform sampler2D color_palette;
+in vec2 _pos;
+int iteration;
+out vec4 color;
+vec2 z;
+vec2 c;
+
+void next(inout vec2 z, in vec2 c){
+    // save old value
+    vec2 temp = z;
+    // calculate new ones
+    z.x = temp.x * temp.x - temp.y * temp.y;
+    z.y = temp.y * temp.x * 2.0;
+    z += c;
 }
 
 void main(){
-    PI = 3.1415926535897932384626433832795;
     z = vec2(0.0, 0.0);
-    iteration = 0.0;
-    for(float i = 0.0; i < 180.0; i += 1.0){
-        next(z, _pos);
+    c = _pos;
+    iteration = COLOR_COUNT;
+
+    for(int i = 0; i < COLOR_COUNT; i += 1){
+        next(z, c);
         if(z.x * z.x + z.y * z.y > 4.0){
-            iteration = i + 1.0;
+            iteration = i;
             break;
         }
     }
     
-    if(iteration != 0.0){
-        iteration = 180.0 - iteration;
-    }
+    color = texture(color_palette, vec2(float(iteration) / float(COLOR_COUNT), 0.0));
+}`
 
-    iteration *= (1.0/180.0);
+var julia_frag_source = `#version 300 es
+precision highp float;
 
-    color = vec4(abs(cos(iteration * PI)), 0.0, abs(sin(iteration * PI)), 1.0);
+const float PI = 3.1415926535897932384626433832795;
+const int COLOR_COUNT = 255;
 
-    if(iteration == 0.0){
-        color = vec4(0.0,0.0,0.0,1.0);
-    }
+uniform sampler2D color_palette;
+in vec2 _pos;
+int iteration;
+out vec4 color;
+vec2 z;
+vec2 c;
+
+void next(inout vec2 z, in vec2 c){
+    // save old value
+    vec2 temp = z;
+    // calculate new ones
+    z.x = temp.x * temp.x - temp.y * temp.y;
+    z.y = temp.y * temp.x * 2.0;
+    z += c;
 }
 
-`
+void main(){
+    z = _pos;
+    c = vec2(-1.0, 0.0);
+    iteration = COLOR_COUNT;
 
+    for(int i = 0; i < COLOR_COUNT; i += 1){
+        next(z, c);
+        if(z.x * z.x + z.y * z.y > 4.0){
+            iteration = i;
+            break;
+        }
+    }
+    
+    color = texture(color_palette, vec2(float(iteration) / float(COLOR_COUNT), 0.0));
+}`
+
+/**
+ * 
+ * @param {WebGL2RenderingContext} gl 
+ * @param {*} shader 
+ */
+function Fractal(gl, shader){
+    var vArrayBuffer = gl.createVertexArray();
+    gl.bindVertexArray(vArrayBuffer);
+    gl.useProgram(shader);
+    var posLoc = gl.getAttribLocation(shader, "pos");
+    var coordLoc = gl.getAttribLocation(shader, "coords");
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, POS_BUFFER);
+    gl.bufferData(gl.ARRAY_BUFFER, POS_ARRAY, gl.STATIC_DRAW);
+
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 2*4, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, COORD_BUFFER);
+    gl.bufferData(gl.ARRAY_BUFFER, DEFAULT_COORD_ARRAY, gl.STATIC_DRAW);
+
+    gl.enableVertexAttribArray(coordLoc);
+    gl.vertexAttribPointer(coordLoc, 2, gl.FLOAT, false, 2*4, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ELE_BUFFER);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), GL.STATIC_DRAW);
+
+    gl.bindVertexArray(null);
+
+    this.draw = function(AXIS_LEN, CX, CY){
+        gl.useProgram(shader);
+        gl.bindVertexArray(vArrayBuffer);
+
+        DEFAULT_COORD_ARRAY = new Float32Array([-AXIS_LEN/2+CX,AXIS_LEN/2+CY, -AXIS_LEN/2+CX,-AXIS_LEN/2+CY, AXIS_LEN/2+CX,-AXIS_LEN/2+CY, AXIS_LEN/2+CX,AXIS_LEN/2+CY]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, COORD_BUFFER);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, DEFAULT_COORD_ARRAY);
+    
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT,0);
+        gl.bindVertexArray(null);
+        gl.flush();
+    }
+}
 
 // builds our webgl program
 function buildProgram(gl, vertexShaderSource, fragmentShaderSource){
@@ -108,184 +175,111 @@ function buildProgram(gl, vertexShaderSource, fragmentShaderSource){
    return program;
 }
 
-var posBuffer = gl.createBuffer();
-var coordBuffer = gl.createBuffer();
-var eleBuffer = gl.createBuffer();
-var posArray = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
-var coordArray = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
+var POS_BUFFER = GL.createBuffer();
+var COORD_BUFFER = GL.createBuffer();
+var ELE_BUFFER = GL.createBuffer();
+var POS_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
+var DEFAULT_COORD_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
 
-var mainProgram = buildProgram(gl, vertex_source, frag_source);
-gl.useProgram(mainProgram);
+var mandelbrot = new Fractal(GL, buildProgram(GL, vertex_source, mandelbrot_frag_source));
+var julia = new Fractal(GL, buildProgram(GL, vertex_source, julia_frag_source));
+var currentFractal = mandelbrot;
 
-gl.bindVertexArray(vab);
+GL.activeTexture(GL.TEXTURE0)
+var COLOR_PALETTE = GL.createTexture();
+GL.bindTexture(GL.TEXTURE_2D, COLOR_PALETTE);
 
-var posLoc = gl.getAttribLocation(mainProgram, "pos");
-var coordLoc = gl.getAttribLocation(mainProgram, "coords");
+// Create texture for for gradient
+var gradCanvas = document.createElement('canvas');
+gradCanvas.width = 256;
+gradCanvas.height = 1;
+var ct = gradCanvas.getContext('2d');
+var grad = ct.createLinearGradient(0, 0, 256, 0);
+grad.addColorStop(0/6, "#ff0000");
+grad.addColorStop(1/6, "#00ff00");
+grad.addColorStop(2/6, "#0000ff");
+grad.addColorStop(3/6, "#ffff00");
+grad.addColorStop(4/6, "#ff00ff");
+grad.addColorStop(5/6, "#00ffff");
+grad.addColorStop(6/6, "#000000");
+ct.fillStyle = grad;
+ct.fillRect(0,0,256,1);
 
-gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, posArray, gl.STATIC_DRAW);
+GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, gradCanvas);
 
-gl.enableVertexAttribArray(posLoc);
-gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 2*4, 0);
+GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
 
-gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, coordArray, gl.STATIC_DRAW);
+GL.bindVertexArray(null);
+GL.viewport(0, 0, GL_WIDTH, GL_HEIGHT);
 
-gl.enableVertexAttribArray(coordLoc);
-gl.vertexAttribPointer(coordLoc, 2, gl.FLOAT, false, 2*4, 0);
-
-
-gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, eleBuffer);
-gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
-
-
-gl.bindVertexArray(null);
-
-
-
-gl.viewport(0,0,gl_width,gl_height);
-/**
- * Creates a complex number, Treat as Immutable
- * @param {number} real the real component of the number
- * @param {number} imag the imaginary component of the number
- */
-function ComplexNumber(real, imag){
-    this.getReal = function(){
-        return real;
+function changeFractal(){
+    // @ts-ignore
+    var fractalName = document.getElementById('fractal').value;
+    switch(fractalName){
+        case 'julia':
+            currentFractal = julia;
+            break;
+        case 'mandelbrot':
+            currentFractal = mandelbrot;
+            break;
     }
-
-    this.getImag = function(){
-        return imag
-    }
-
-    /**
-     * Adds two complex numbers
-     * @param {ComplexNumber} other 
-     * @returns Resulting Complex Number
-     */
-    this.add = function(other){
-        let nReal = real + other.getReal();
-        let nImag = imag + other.getImag();
-        return new ComplexNumber(nReal, nImag);
-    }
-
-
-    /**
-     * Adds two complex numbers
-     * @param {ComplexNumber} other 
-     * @returns Resulting Complex Number
-     */
-    this.multiply = function(other){
-        let nReal = real * other.getReal() + imag * other.getImag() * -1;
-        let nImag = real * other.getImag() + imag * other.getReal();
-        return new ComplexNumber(nReal, nImag);
-    }
-
-    this.square = function(){
-        return this.multiply(this);
-    }
-
-    /**
-     * 
-     * @param {ComplexNumber} other 
-     * @returns 
-     */
-    this.equal = function(other){
-        return real == other.getReal() && imag == other.getImag();
-    }
-
-    this.toString = function(){
-        return `${real} + ${imag}i`;
-    }
+    drawWbgl()
 }
 
-/**
- * 
- * @param {ComplexNumber} c 
- */
-function mBrot(c){
-    // Check 5 iterations to see how the set grows with this C
-    let z = new ComplexNumber(0, 0);
-    function next(){
-        z = z.square().add(c);
-    }
-
-    function myAbs(){
-        return z.getImag() ** 2 + z.getReal() ** 2;
-    }
-
-    for(let i = 0; i < 180; i ++){
-        if (myAbs() > 4){
-            return i;
-        }
-        next();
-    }
-    return 0;
+function drawWbgl(){
+    currentFractal.draw(axisLen, cx, cy);
 }
 
-function draw2D(r){
 
-    var range = r;
-    var OFF_X = 0.25;
-    var OFF_Y = 0;
-    var SCALE_X = (2 * range)/(width);
-    var SCALE_Y = (2 * range)/(height);
-    ct.fillStyle = "black";
-    for(var x = -range + OFF_X; x <= range + OFF_X; x += SCALE_X){
-        for(var y = -range + OFF_Y; y <= range + OFF_Y; y += SCALE_Y){
-            var res = mBrot(new ComplexNumber(x, y));
-            var red = Math.cos(res * Math.PI/90)*255;
-            var blu = Math.sin(res * Math.PI/90)*255;
-            if(res == 0){
-                red = 0;
-                blu = 0;
-            }
-            ct.fillStyle = `rgb(${red}, 0, ${blu})`
-            ct.fillRect((x + range - OFF_X) / SCALE_X + 0.5, (y + range - OFF_Y) / SCALE_Y + 0.5, 1, 1)
-            
-        }
-    }
-    //setTimeout(draw, 1000, [r/2])
-}
-
-function drawWbgl(r){
-    
-    var OFF_X = cx;
-    var OFF_Y = cy;
-    gl.useProgram(mainProgram);
-    
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.bindVertexArray(vab);
-    coordArray = new Float32Array([-r+OFF_X,r+OFF_Y, -r+OFF_X,-r+OFF_Y, r+OFF_X,-r+OFF_Y, r+OFF_X,r+OFF_Y]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, coordBuffer);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, coordArray);
-
-    gl.useProgram(mainProgram);
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT,0);
-    gl.bindVertexArray(null);
-    gl.flush();
-}
-//draw2D(2);
-drawWbgl(1);
-var ranged = 1;
+var axisLen = 4;
 var cx = 0;
 var cy = 0;
+drawWbgl();
 
 /**
  * @param {WheelEvent} e
  */
-function theWheel(e){
+function zoom(e){
     e.preventDefault();
-    ranged += ranged * e.deltaY/1000;
-    drawWbgl(ranged);
+    axisLen += axisLen * e.deltaY/1000;
+    drawWbgl();
+    updateGUI()
 }
-GL_CANVAS.addEventListener("wheel",theWheel);
+GL_CANVAS.addEventListener("wheel", zoom);
 
-function md(e){
-    var X = e.clientX - GL_CANVAS.getBoundingClientRect().left - gl_width/2;
-    var Y = e.clientY - GL_CANVAS.getBoundingClientRect().top - gl_height/2;
-    cx += (X/gl_width) * ranged*2;
-    cy += -(Y/gl_height) * ranged*2;
-    drawWbgl(ranged);
+/**
+ * Updates the center of the fractal to where the user clicked
+ * @param {MouseEvent} e 
+ */
+function updateCenter(e){
+    var X = e.clientX - GL_CANVAS.getBoundingClientRect().left - GL_WIDTH/2;
+    var Y = e.clientY - GL_CANVAS.getBoundingClientRect().top - GL_HEIGHT/2;
+    cx += (X/GL_WIDTH) * axisLen;
+    cy += -(Y/GL_HEIGHT) * axisLen;
+    drawWbgl();
+    updateGUI()
 }
-GL_CANVAS.addEventListener("click", md)
+
+function updateGUI(){
+    // because most HTML elements don't have the value property, ts-check throws an error here
+    // @ts-ignore
+    document.getElementById('centerX').value = cx;
+    // @ts-ignore
+    document.getElementById('centerY').value = cy;
+    // @ts-ignore
+    document.getElementById('axisLength').value = axisLen;
+}
+
+function updateParameters(){
+    // @ts-ignore
+    cx = Number(document.getElementById('centerX').value);
+    // @ts-ignore
+    cy = Number(document.getElementById('centerY').value);
+    // @ts-ignore
+    axisLen = Number(document.getElementById('axisLength').value);
+    drawWbgl();
+}
+
+GL_CANVAS.addEventListener("click", updateCenter)
