@@ -119,7 +119,7 @@ var FRACTAL_INFO = {
         'data2':[0,0]
     },
     'phoenix':{
-        'name': 'Pheonix',
+        'name': 'Phoenix',
         'setup':`
         _z = _loc.yx;
         _c = _data1.xy;
