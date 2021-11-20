@@ -25,21 +25,22 @@
         </style>
     </head>
     <body>
-        <script src="fractal.js"></script>
         <div id="inputPannel">
-            <label>Center X: </label><input id="centerX" type="number" step="0.00001" value="0.0">
-            <label>Center Y: </label><input id="centerY" type="number" step="0.00001" value="0.0">
-            <label>Axis Length: </label><input id="axisLength" step="0.00001" type="number" value="4.0">
+            <label>Center X: </label><input id="centerX" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
+            <label>Center Y: </label><input id="centerY" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
+            <label>Axis Length: </label><input id="axisLength" step="0.00001" type="number" value="4.0" onchange="updateParameters()">
+            <br>
+            <label>Data 1 R: </label><input id="data1R" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
+            <label>Data 1 I: </label><input id="data1I" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
+            <br>
+            <label>Data 2 R: </label><input id="data2R" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
+            <label>Data 2 I: </label><input id="data2I" type="number" step="0.00001" value="0.0" onchange="updateParameters()">
             <br>
             <label>Fractal: </label>
             <select id="fractal" onclick="changeFractal()">
-                <option value="mandelbrot">Mandelbrot</option>
-                <option value="julia">Julia</option>
-                <option value="ship">Burning Ship</option>
-                <option value="juliaShip">Burning Ship Julia</option>
             </select>
-            <br>
-            <input type="button" value="Apply" onclick="updateParameters()">
         </div>
+        
+        <script src="fractal.js"></script>
     </body>
 </html>
