@@ -35,6 +35,40 @@ var FRACTAL_INFO = {
         `,
         'data1':[0,0],
         'data2':[0,0]
+    }, 
+    'mandelbrot3':{
+        'name': 'Mandelbrot 3',
+        'setup':`
+        _z = _data1;
+        _c = _loc;
+        `,
+        'next':`
+        // save old value
+        vec2 tmp = _z;
+        // calculate new ones
+        _z.x = tmp.x * tmp.x * tmp.x - 3.0 * tmp.x * tmp.y * tmp.y;
+        _z.y = 3.0 * tmp.x * tmp.x * tmp.y - tmp.y * tmp.y * tmp.y;
+        _z += _c;
+        `,
+        'data1':[0,0],
+        'data2':[0,0]
+    }, 
+    'mandelbrot4':{
+        'name': 'Mandelbrot 4',
+        'setup':`
+        _z = _data1;
+        _c = _loc;
+        `,
+        'next':`
+        // save old value
+        vec2 tmp = _z;
+        // calculate new ones
+        _z.x = tmp.x * tmp.x * tmp.x * tmp.x - 6.0 * tmp.x * tmp.x * tmp.y * tmp.y + tmp.y * tmp.y * tmp.y * tmp.y;
+        _z.y = 4.0 * tmp.x * tmp.x * tmp.x * tmp.y - 4.0 * tmp.x * tmp.y * tmp.y * tmp.y;
+        _z += _c;
+        `,
+        'data1':[0,0],
+        'data2':[0,0]
     },
     'julia':{
         'name': 'Julia',
@@ -83,6 +117,46 @@ var FRACTAL_INFO = {
         `,
         'data1':[-0.598, 0.9226],
         'data2':[0,0]
+    },
+    'phoenix':{
+        'name': 'Pheonix',
+        'setup':`
+        _z = _loc.yx;
+        _c = _data1.xy;
+        // Use data1 for old z
+        _data1 = vec2(0.0,0.0);
+        `,
+        'next':`
+        // save old value
+        vec2 tmp = _z;
+        // calculate new ones
+        _z.x = tmp.x * tmp.x - tmp.y * tmp.y + _data1.x * _data2.x - _data1.y * _data2.y;
+        _z.y = 2.0 * tmp.x * tmp.y + _data1.x * _data2.y + _data1.y * _data2.x;
+        _z += _c;
+        _data1 = tmp;
+        `,
+        'data1':[0.5667, 0.0],
+        'data2':[-0.5,0]
+    },
+    'ray':{
+        'name': 'Ray (AKA failed phoenix)',
+        'setup':`
+        _z = _data1;
+        _c = _loc.yx;
+        // Use data1 for old z
+        _data1 = vec2(0.0,0.0);
+        `,
+        'next':`
+        // save old value
+        vec2 tmp = _z;
+        // calculate new ones
+        _z.x = tmp.x * tmp.x - tmp.y * tmp.y + _data1.x * _data2.x;
+        _z.y = 2.0 * tmp.x * tmp.y + _data1.y * _data2.y;
+        _z += _c;
+        _data1 = tmp;
+        `,
+        'data1':[0.5667, 0.0],
+        'data2':[-0.5,0]
     }
 }
 
@@ -91,9 +165,9 @@ var fractals = {};
  * Creates a fractal generator within a GL context.
  * @param {WebGL2RenderingContext} gl 
  * @param {string} setupFunc A glsl function run before each pixel calculation for the signature:
- * void setup(inout vec2 _z, inout vec2 _c, in vec2 _loc, in vec2 _data1, in vec2 _data2)
+ * void setup(inout vec2 _z, inout vec2 _c, inout vec2 _loc, inout vec2 _data1, inout vec2 _data2)
  * @param {string} nextFunc A glsl function to advance the fractal formula for the signature:
- * void next(inout vec2 _z, in vec2 _c)
+ * void next(inout vec2 _z, inout vec2 _c)
  */
 function FractalGenerator(gl, setupFunc, nextFunc){
 
@@ -114,17 +188,21 @@ function FractalGenerator(gl, setupFunc, nextFunc){
     int iteration;
     vec2 z;
     vec2 c;
+    vec2 _data1;
+    vec2 _data2;
     
-    void next(inout vec2 _z, in vec2 _c){
+    void next(inout vec2 _z, inout vec2 _c){
     ${nextFunc}
     }
     
-    void setup(inout vec2 _z, inout vec2 _c, in vec2 _loc, in vec2 _data1, in vec2 _data2){
+    void setup(inout vec2 _z, inout vec2 _c, in vec2 _loc, inout vec2 _data1, inout vec2 _data2){
     ${setupFunc}
     }
     
     void main(){
-        setup(z, c, _pos, data1, data2);
+        _data1 = data1;
+        _data2 = data2;
+        setup(z, c, _pos, _data1, _data2);
     
         iteration = maxSteps;
     
