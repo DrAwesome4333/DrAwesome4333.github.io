@@ -1,15 +1,12 @@
 // @ts-check
-
-// Webgl Canvas
 var GL_CANVAS = document.createElement("canvas");
 var GL = GL_CANVAS.getContext("webgl2");
 document.body.append(GL_CANVAS);
 GL_CANVAS.width = window.innerHeight;
+// - 100 for GUI on bottom
 GL_CANVAS.height = window.innerHeight - 100;
 
 GL.clearColor(0.0, 1.0, 0.0, 1.0);
-GL.enable(GL.DEPTH_TEST);
-GL.depthFunc(GL.LEQUAL);
 GL.clearDepth(1.0);
 GL.disable(GL.CULL_FACE);
 
@@ -162,10 +159,10 @@ var FRACTAL_INFO = {
 
 var fractals = {};
 /**
- * Creates a fractal generator within a GL context.
+ * Creates a fractal generator within a given WebGL context.
  * @param {WebGL2RenderingContext} gl 
  * @param {string} setupFunc A glsl function run before each pixel calculation for the signature:
- * void setup(inout vec2 _z, inout vec2 _c, inout vec2 _loc, inout vec2 _data1, inout vec2 _data2)
+ * void setup(inout vec2 _z, inout vec2 _c, in vec2 _loc, inout vec2 _data1, inout vec2 _data2)
  * @param {string} nextFunc A glsl function to advance the fractal formula for the signature:
  * void next(inout vec2 _z, inout vec2 _c)
  */
@@ -218,7 +215,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
     }`
 
     
-    var vertex_source = `#version 300 es
+    var vertexSource = `#version 300 es
     in vec2 pos;
     in vec2 coords;
     out vec2 _pos;
@@ -226,7 +223,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
         gl_Position = vec4(pos.x, pos.y , 0.0, 1.0);
         _pos = coords;
     }`
-    var shader = buildProgram(gl, vertex_source, fragSource);
+    var shader = buildProgram(gl, vertexSource, fragSource);
     var vArrayBuffer = gl.createVertexArray();
     gl.bindVertexArray(vArrayBuffer);
     gl.useProgram(shader);
@@ -266,6 +263,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
         gl.bindVertexArray(vArrayBuffer);
         gl.uniform2fv(data1, d1);
         gl.uniform2fv(data2, d2);
+
         gl.uniform1i(maxSteps, 255);
 
         var coordArray = new Float32Array(
@@ -284,7 +282,13 @@ function FractalGenerator(gl, setupFunc, nextFunc){
     }
 }
 
-// builds our webgl program
+/**
+ * Builds WebGL shader programs
+ * @param {WebGL2RenderingContext} gl 
+ * @param {String} vertexShaderSource Source code for vertext shader
+ * @param {String} fragmentShaderSource Source code for fragment shader
+ * @returns 
+ */
 function buildProgram(gl, vertexShaderSource, fragmentShaderSource){
 			
     var vertShader = gl.createShader(gl.VERTEX_SHADER);
@@ -313,11 +317,7 @@ function buildProgram(gl, vertexShaderSource, fragmentShaderSource){
    return program;
 }
 
-var POS_BUFFER = GL.createBuffer();
-var COORD_BUFFER = GL.createBuffer();
-var ELE_BUFFER = GL.createBuffer();
-var POS_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
-var DEFAULT_COORD_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
+
 
 for(var fName in FRACTAL_INFO){
     let fractal = new FractalGenerator(GL, FRACTAL_INFO[fName]['setup'], FRACTAL_INFO[fName]['next']);
@@ -329,11 +329,19 @@ for(var fName in FRACTAL_INFO){
 }
 var currentFractal = fractals['mandelbrot'];
 
+
+var POS_BUFFER = GL.createBuffer();
+var COORD_BUFFER = GL.createBuffer();
+var ELE_BUFFER = GL.createBuffer();
+var POS_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
+var DEFAULT_COORD_ARRAY = new Float32Array([-1.0,1.0, -1.0,-1.0, 1.0,-1.0, 1.0,1.0]);
+
+
 GL.activeTexture(GL.TEXTURE0)
 var COLOR_PALETTE = GL.createTexture();
 GL.bindTexture(GL.TEXTURE_2D, COLOR_PALETTE);
 
-// Create texture for for gradient
+// Create texture for for gradient using a 2d canvas
 var gradCanvas = document.createElement('canvas');
 gradCanvas.width = 256;
 gradCanvas.height = 1;
