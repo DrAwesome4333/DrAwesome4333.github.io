@@ -215,7 +215,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
     }`
 
     
-    var vertexSource = `#version 300 es
+    var vertex_source = `#version 300 es
     in vec2 pos;
     in vec2 coords;
     out vec2 _pos;
@@ -223,7 +223,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
         gl_Position = vec4(pos.x, pos.y , 0.0, 1.0);
         _pos = coords;
     }`
-    var shader = buildProgram(gl, vertexSource, fragSource);
+    var shader = buildProgram(gl, vertex_source, fragSource);
     var vArrayBuffer = gl.createVertexArray();
     gl.bindVertexArray(vArrayBuffer);
     gl.useProgram(shader);
@@ -284,7 +284,7 @@ function FractalGenerator(gl, setupFunc, nextFunc){
 
 /**
  * Builds WebGL shader programs
- * @param {WebGL2RenderingContext} gl 
+ * @param {WebGLRenderingContext} gl 
  * @param {String} vertexShaderSource Source code for vertext shader
  * @param {String} fragmentShaderSource Source code for fragment shader
  * @returns 
@@ -319,16 +319,6 @@ function buildProgram(gl, vertexShaderSource, fragmentShaderSource){
 
 
 
-for(var fName in FRACTAL_INFO){
-    let fractal = new FractalGenerator(GL, FRACTAL_INFO[fName]['setup'], FRACTAL_INFO[fName]['next']);
-    fractals[fName] = fractal;
-    var option = document.createElement('option');
-    option.value = fName;
-    option.innerText = FRACTAL_INFO[fName]['name'];
-    document.getElementById('fractal').appendChild(option);
-}
-var currentFractal = fractals['mandelbrot'];
-
 
 var POS_BUFFER = GL.createBuffer();
 var COORD_BUFFER = GL.createBuffer();
@@ -341,7 +331,18 @@ GL.activeTexture(GL.TEXTURE0)
 var COLOR_PALETTE = GL.createTexture();
 GL.bindTexture(GL.TEXTURE_2D, COLOR_PALETTE);
 
-// Create texture for for gradient using a 2d canvas
+
+for(var fName in FRACTAL_INFO){
+    let fractal = new FractalGenerator(GL, FRACTAL_INFO[fName]['setup'], FRACTAL_INFO[fName]['next']);
+    fractals[fName] = fractal;
+    var option = document.createElement('option');
+    option.value = fName;
+    option.innerText = FRACTAL_INFO[fName]['name'];
+    document.getElementById('fractal').appendChild(option);
+}
+var currentFractal = fractals['mandelbrot'];
+
+// Create texture for for gradient using a 2d
 var gradCanvas = document.createElement('canvas');
 gradCanvas.width = 256;
 gradCanvas.height = 1;
