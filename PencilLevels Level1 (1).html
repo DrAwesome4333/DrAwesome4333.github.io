@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html>
+  
+  <head> <title>THE Game</title>
+  <style>
+</style>
+  
+  <body>
+  <Strong>Choose your color quickly!</strong>
+  <form>
+	<input type="button" value="Green" onClick="green()"/>
+	<input type="button" value="Blue" onClick="blue()"/>
+	<input type="button" value="Yellow" onClick="yellow()"/>
+	<input type="button" value="Gray" onClick="gray()"/>
+	<input type="button" value="White" onClick="white()"/>
+	<input type="button" value="Pink" onClick="pink()"/>
+	<input type="button" value="Tan" onClick="tan()"/>
+	
+	
+</form>
+  
+  
+    <script>
+	var Charcolor = "White";
+		  function green(){
+	  	Charcolor = "Green";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function blue(){
+	  	Charcolor = "Blue";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function pink(){
+	  	Charcolor = "Pink";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function yellow(){
+	  	Charcolor = "Yellow";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function gray(){
+	  	Charcolor = "Gray";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function white(){
+	  	Charcolor = "White";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	  function tan(){
+	  	Charcolor = "Tan";
+		setTimeout(function(){Color = Charcolor}, 1)
+	  }
+	
+	
+	 var animate = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || function (callback) {
+          window.setTimeout(callback, 1000 / 60)
+        };
+      var canvas = document.createElement("canvas");
+      var width = 1350;
+      var height = 595;
+      canvas.width = width;
+      canvas.height = height;
+      var context = canvas.getContext('2d');
+      var player = new Player();
+	  var Color = Charcolor;
+	  var Color2 = "Black";
+	  var Color3 = "Orange";
+	var Color4 = "Red";
+	var Gcolor = "Yellow";
+	
+	
+	  
+
+
+
+      var keysDown = {};
+
+      var render = function () {
+        
+        context.fillStyle = Color2;
+        context.fillRect(0, 0, width, height);
+        player.render();
+
+
+      };
+	  
+
+      var update = function () {
+        player.update();
+
+      };
+
+      var step = function () {
+        update();
+        render();
+        animate(step);
+      };
+
+	  function energy(x, y, w, h){
+	  this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.x_speed = 0;
+        this.y_speed = 0;	
+	  }
+	energy.prototype.render = function () {
+	 
+        context.fillStyle = Color;
+        context.fillRect(this.x, this.y, this.width, this.height);
+      };
+  function timebar(x, y, w, h){
+	  this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.x_speed = 0;
+        this.y_speed = 0;	
+	  }
+	timebar.prototype.render = function () {
+	 
+        context.fillStyle = "Green";
+        context.fillRect(this.x, this.y, this.width, this.height);
+      };
+
+
+		
+
+      function avitar(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.x_speed = 0;
+        this.y_speed = 0;
+      }
+
+      avitar.prototype.render = function () {
+	 
+        context.fillStyle = Color;
+        context.fillRect(this.x, this.y, this.width, this.height);
+      };
+
+      function platform(x, y, width) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = 10;
+        this.x_speed = 0;
+        this.y_speed = 0;
+      }
+
+      platform.prototype.render = function () {
+        context.fillStyle = Color3;
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+      };
+
+	  function portalexit(x, y){
+	  	this.x = x;
+		this.y = y;
+		this.width = 20;
+		this.height = 20;
+		this.x_speed = 0;
+		this.y_speed = 0;
+	  }
+	  portalexit.prototype.render = function (){
+	  	context.fillStyle = "Cyan";
+		context.fillRect(this.x, this.y, this.width, this.height);
+	  }
+	 
+	  function portal(x, y, w, h){
+	  	this.x = x;
+		this.y = y;
+		this.width = w;
+		this.height = h;
+		this.x_speed = 0;
+		this.y_speed = 0;
+	  }
+
+      function wall(x, y, height) {
+        this.x = x;
+        this.y = y;
+        this.width = 10;
+        this.height = height;
+        this.x_speed = 0;
+        this.y_speed = 0;
+      }
+	   portal.prototype.render = function (){
+	  	context.fillStyle = "Green";
+		context.fillRect(this.x, this.y, this.width, this.height);
+		}
+
+      wall.prototype.render = function () {
+        context.fillStyle = Color3;
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+      };
+	  function gun(x,y,w,h) {
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.x_speed = 0;
+        this.y_speed = 0;
+      }
+	  gun.prototype.render = function () {
+        context.fillStyle = "Silver";
+        context.fillRect(this.x, this.y, this.width, this.height);
+		};
+	  function goal(x,y,w,h){
+	  	this.x = x;
+		this.y = y;
+		this.width = w;
+		this.height = h;
+		this.x_speed = 0;
+		this.y_speed = 0;
+	  }
+	  goal.prototype.render = function () {
+	  	context.fillStyle = Gcolor;
+		context.fillRect(this.x, this.y, this.width, this.height);
+	  }
+	  function triger (x, y, w, h){
+	  this.x = x;
+		this.y = y;
+		this.width = w;
+		this.height = h;
+		this.x_speed = 0;
+		this.y_speed = 0;
+	  	
+	  }
+	  triger.prototype.render = function () {
+	  	context.fillStyle = Color2;
+		context.fillRect(this.x, this.y, this.width, this.height)
+	  }
+	  function redLight (x, y, w, h){
+	  	this.x = x;
+		this.y = y;
+		this.width = w;
+		this.height = h;
+		this.x_speed = 0;
+		this.y_speed = 0;
+	  }
+	  redLight.prototype.render = function (){
+	  	context.fillStyle = Color4;
+		context.fillRect(this.x, this.y, this.width, this.height);
+	  }
+
+
+    
+      avitar.prototype.move = function (x, y) {
+        this.x += x;
+        this.y += y;
+        this.x_speed = x;
+        this.y_speed = y;
+        if (this.x < 10 && this.x > 0) {
+          this.x = 10;
+          this.x_speed = 0;
+        } else if (this.x + this.width > 1340) {
+          this.x = 1340 - this.width;
+          this.x_speed = 0;
+        } else if (this.y + this.height > 585) {
+          this.y = 585 - this.height;
+          this.y_speed = 0;
+        } else if (this.y <  20) {
+		  this.y = 20;
+          this.y_speed = 0;
+        
+		}
+		else if (this.x > player.wall2.x - 20 && this.y < (player.wall2.y + player.wall2.height) && this.x < player.wall2.x + 1) {
+			this.x = player.wall2.x - 20;
+			this.x_speed = 0;
+		}
+		else if (this.x < player.wall2.x + 10 && this.y < (player.wall2.y + player.wall2.height) && this.x > player.wall2.x) {
+			this.x = player.wall2.x + 10;
+			this.x_speed = 0;
+		}
+		else if (this.x > player.wall3.x - 20 && this.y < (player.wall3.y + player.wall3.height) && this.y > player.wall3.y - 20 && this.x < player.wall3.x + 1) {
+                        this.x = player.wall3.x - 20;
+                        this.x_speed = 0;
+                }
+                else if (this.x < player.wall3.x + 10 && this.y < (player.wall3.y + player.wall3.height)&& this.y > player.wall3.y - 20  && this.x > player.wall3.x) {
+                        this.x = player.wall3.x + 10;
+                        this.x_speed = 0;
+                }
+else if (this.x > player.wall4.x - 20 && this.y < (player.wall4.y + player.wall4.height) && this.y > player.wall4.y - 20 && this.x < player.wall4.x + 1) {
+                        this.x = player.wall4.x - 20;
+                        this.x_speed = 0;
+                }
+                else if (this.x < player.wall4.x + 10 && this.y < (player.wall4.y + player.wall4.height) && this.y > player.wall4.y - 20 && this.x > player.wall4.x) {
+                        this.x = player.wall4.x + 10;
+                        this.x_speed = 0;
+                }
+
+else if (this.x > player.wall5.x - 20 && this.y < (player.wall5.y + player.wall5.height) && this.x < player.wall5.x + 1) {
+                        this.x = player.wall5.x - 20;
+                        this.x_speed = 0;
+                }
+                else if (this.x < player.wall5.x + 10 && this.y < (player.wall5.y + player.wall5.height) && this.x > player.wall5.x) {
+                        this.x = player.wall5.x + 10;
+                        this.x_speed = 0;
+                }
+				else if (this.y > player.platform.y - 20 && this.x < (player.platform.x + player.platform.width) && this.x > player.platform.x - 20 && this.y < player.platform.y ) {
+                        this.y = player.platform.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.platform.y + 10 && this.x < (player.platform.x + player.platform.width) && this.x > player.platform.x - 20  && this.y > player.platform.y + 1) {
+                        this.y = player.platform.y + 10;
+                        this.y_speed = 0;
+                }
+				else if (this.y > player.platform2.y - 20 && this.x < (player.platform2.x + player.platform2.width) && this.x > player.platform2.x - 20 && this.y < player.platform2.y ) {
+                        this.y = player.platform2.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.platform2.y + 10 && this.x < (player.platform2.x + player.platform2.width) && this.x > player.platform2.x - 20  && this.y > player.platform2.y + 1) {
+                        this.y = player.platform2.y + 10;
+                        this.y_speed = 0;
+                }
+				else if (this.x > player.portal1.x - 20 && this.y < (player.portal1.y + player.portal1.height) && this.y > player.portal1.y - 20 && this.x < player.portal1.x + 1) {
+                       this.x = 20;
+					   this.y = 20;
+					   player.portalexit.x = this.x;
+						player.portalexit.y = this.y;
+                        this.x_speed = 0;
+						this.y_speed = 0;
+						player.portalexit.x = this.x;
+						player.portalexit.y = this.y;
+						player.energy.x = player.energy.x - 10;
+						Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+						
+                }
+                else if (this.x < player.portal1.x + player.portal1.width && this.y < (player.portal1.y + player.portal1.height)&& this.y > player.portal1.y - 20  && this.x > player.portal1.x) {
+                         this.x = 20;
+					  this.y = 20;
+                        this.x_speed = 0;
+						this.y_speed = 0;
+					player.portalexit.x = this.x
+					player.portalexit.y = this.y
+						player.portalexit.y = this.y;
+						player.energy.x = player.energy.x - 10;
+						Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+						
+                }
+				else if (this.x > player.portal2.x - 20 && this.y < (player.portal2.y + player.portal2.height) && this.y > player.portal2.y - 20 && this.x < player.portal2.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+	
+                }
+                else if (this.x < player.portal2.x + player.portal2.width && this.y < (player.portal2.y + player.portal2.height)&& this.y > player.portal2.y - 20  && this.x > player.portal2.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+				else if (this.x > player.portal3.x - 20 && this.y < (player.portal3.y + player.portal3.height) && this.y > player.portal3.y - 20 && this.x < player.portal3.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.portal3.x + player.portal3.width && this.y < (player.portal3.y + player.portal3.height)&& this.y > player.portal3.y - 20  && this.x > player.portal3.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+else if (this.x > player.portal4.x - 20 && this.y < (player.portal4.y + player.portal4.height) && this.y > player.portal4.y - 20 && this.x < player.portal4.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+                else if (this.x < player.portal4.x + player.portal4.width && this.y < (player.portal4.y + player.portal4.height)&& this.y > player.portal4.y - 20  && this.x > player.portal4.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+else if (this.x > player.portal5.x - 20 && this.y < (player.portal5.y + player.portal5.height) && this.y > player.portal5.y - 20 && this.x < player.portal5.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+                else if (this.x < player.portal5.x + player.portal5.width && this.y < (player.portal5.y + player.portal5.height)&& this.y > player.portal5.y - 20  && this.x > player.portal5.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+else if (this.x > player.portal6.x - 20 && this.y < (player.portal6.y + player.portal6.height) && this.y > player.portal6.y - 20 && this.x < player.portal6.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+                else if (this.x < player.portal6.x + player.portal6.width && this.y < (player.portal6.y + player.portal6.height)&& this.y > player.portal6.y - 20  && this.x > player.portal6.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+				else if (this.x > player.triger1.x - 20 && this.y < (player.triger1.y + player.triger1.height) && this.y > player.triger1.y - 20 && this.x < player.triger1.x + 1) {
+                        player.triger1.x = 10000;
+                                                player.portal6.x = 500;
+                                                player.portal6.y = 540;
+												player.portal7.x = 475;
+												player.portal7.y = 20;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.triger1.x + player.triger1.width && this.y < (player.triger1.y + player.triger1.height)&& this.y > player.triger1.y - 20  && this.x > player.triger1.x) {
+                       
+                                               player.triger1.x = 10000; 
+                                                player.portal6.x = 500;
+                                                player.portal6.y = 540;
+												player.portal7.x = 475;
+												player.portal7.y = 20;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.portal7.x - 20 && this.y < (player.portal7.y + player.portal7.height) && this.y > player.portal7.y - 20 && this.x < player.portal7.x + 1) {
+                        this.x = 530;
+                                                this.y = 580;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit2.x = this.x;
+                                                player.portalexit2.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.portal7.x + player.portal7.width && this.y < (player.portal7.y + player.portal7.height)&& this.y > player.portal7.y - 20  && this.x > player.portal7.x) {
+                        this.x = 530;
+                                                this.y = 580;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit2.x = this.x;
+                                                player.portalexit2.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+
+else if (this.x > player.triger2.x - 20 && this.y < (player.triger2.y + player.triger2.height) && this.y > player.triger2.y - 20 && this.x < player.triger2.x + 1) {
+                      player.endplatform8.y = 50;
+					  player.triger2.x = 10000;
+					  player.endplatform9.y = 100;
+					  player.endplatform10.y = 150;
+					  player.endplatform11.y = 200;
+					  player.endplatform12.y = 250;
+					  player.endplatform13.y = 300;
+					  player.endplatform14.y = 350;
+					  player.endplatform15.y = 400;
+					  player.endplatform16.y = 450;
+					  player.endplatform17.y = 450;
+					  player.endportal1.y = 470;
+					  player.fakeportal1.y = 470;
+					  player.endportal2.y = 420;
+					  player.fakeportal2.y = 420;
+					  player.endportal3.y = 370;
+					  player.fakeportal3.y = 370;
+					  player.endportal4.y = 320;
+					  player.fakeportal4.y = 320;
+					  player.endportal5.y = 270;
+					  player.fakeportal5.y = 270;
+					  player.endportal6.y = 220;
+					  player.fakeportal6.y = 220;
+					  player.endportal7.y = 170;
+					  player.fakeportal7.y = 170;
+					  player.endportal8.y = 120;
+					  player.fakeportal8.y = 120;
+					  player.endportal9.y = 70;
+					  player.fakeportal9.y = 70;
+					  player.endportal10.y = 20;
+					  player.fakeportal10.y = 20;
+					  player.endportal11.y = 540
+					  Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+					  
+                }
+                else if (this.x < player.triger2.x + player.triger2.width && this.y < (player.triger2.y + player.triger2.height)&& this.y > player.triger2.y - 20  && this.x > player.triger2.x) {
+                           player.endplatform8.y = 50;
+						   player.triger2.x = 10000;
+					  player.endplatform9.y = 100;
+					  player.endplatform10.y = 150;
+					  player.endplatform11.y = 200;
+					  player.endplatform12.y = 250;
+					  player.endplatform13.y = 300;
+					  player.endplatform14.y = 350;
+					  player.endplatform15.y = 400;
+					  player.endplatform16.y = 450;
+					  player.endplatform17.y = 450;
+					  player.endportal1.y = 470;
+					  player.fakeportal1.y = 470;
+					  player.endportal2.y = 420;
+					  player.fakeportal2.y = 420;
+					  player.endportal3.y = 370;
+					  player.fakeportal3.y = 370;
+					  player.endportal4.y = 320;
+					  player.fakeportal4.y = 320;
+					  player.endportal5.y = 270;
+					  player.fakeportal5.y = 270;
+					  player.endportal6.y = 220;
+					  player.fakeportal6.y = 220;
+					  player.endportal7.y = 170;
+					  player.fakeportal7.y = 170;
+					  player.endportal8.y = 120;
+					  player.fakeportal8.y = 120;
+					  player.endportal9.y = 70;
+					  player.fakeportal9.y = 70;
+					  player.endportal10.y = 20;
+					  player.fakeportal10.y = 20; 
+					 player.endportal11.y = 530;
+					 Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+					  
+                }
+				else if (this.y > player.endplatform8.y - 20 && this.x < (player.endplatform8.x + player.endplatform8.width) && this.x > player.endplatform8.x - 20 && this.y < player.endplatform8.y ) {
+                        this.y = player.endplatform8.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform8.y + 10 && this.x < (player.endplatform8.x + player.endplatform8.width) && this.x > player.endplatform8.x - 20  && this.y > player.endplatform8.y + 1) {
+                        this.y = player.endplatform8.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform9.y - 20 && this.x < (player.endplatform9.x + player.endplatform9.width) && this.x > player.endplatform9.x - 20 && this.y < player.endplatform9.y ) {
+                        this.y = player.endplatform9.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform9.y + 10 && this.x < (player.endplatform9.x + player.endplatform9.width) && this.x > player.endplatform9.x - 20  && this.y > player.endplatform9.y + 1) {
+                        this.y = player.endplatform9.y + 10;
+                        this.y_speed = 0;
+                }else if (this.y > player.endplatform10.y - 20 && this.x < (player.endplatform10.x + player.endplatform10.width) && this.x > player.endplatform10.x - 20 && this.y < player.endplatform10.y ) {
+                        this.y = player.endplatform10.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform10.y + 10 && this.x < (player.endplatform10.x + player.endplatform10.width) && this.x > player.endplatform10.x - 20  && this.y > player.endplatform10.y + 1) {
+                        this.y = player.endplatform10.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform11.y - 20 && this.x < (player.endplatform11.x + player.endplatform11.width) && this.x > player.endplatform11.x - 20 && this.y < player.endplatform11.y ) {
+                        this.y = player.endplatform11.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform11.y + 10 && this.x < (player.endplatform11.x + player.endplatform11.width) && this.x > player.endplatform11.x - 20  && this.y > player.endplatform11.y + 1) {
+                        this.y = player.endplatform11.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform12.y - 20 && this.x < (player.endplatform12.x + player.endplatform12.width) && this.x > player.endplatform12.x - 20 && this.y < player.endplatform12.y ) {
+                        this.y = player.endplatform12.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform12.y + 10 && this.x < (player.endplatform12.x + player.endplatform12.width) && this.x > player.endplatform12.x - 20  && this.y > player.endplatform12.y + 1) {
+                        this.y = player.endplatform12.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform13.y - 20 && this.x < (player.endplatform13.x + player.endplatform13.width) && this.x > player.endplatform13.x - 20 && this.y < player.endplatform13.y ) {
+                        this.y = player.endplatform13.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform13.y + 10 && this.x < (player.endplatform13.x + player.endplatform13.width) && this.x > player.endplatform13.x - 20  && this.y > player.endplatform13.y + 1) {
+                        this.y = player.endplatform13.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform14.y - 20 && this.x < (player.endplatform14.x + player.endplatform14.width) && this.x > player.endplatform14.x - 20 && this.y < player.endplatform14.y ) {
+                        this.y = player.endplatform14.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform14.y + 10 && this.x < (player.endplatform14.x + player.endplatform14.width) && this.x > player.endplatform14.x - 20  && this.y > player.endplatform14.y + 1) {
+                        this.y = player.endplatform14.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform15.y - 20 && this.x < (player.endplatform15.x + player.endplatform15.width) && this.x > player.endplatform15.x - 20 && this.y < player.endplatform15.y ) {
+                        this.y = player.endplatform15.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform15.y + 10 && this.x < (player.endplatform15.x + player.endplatform15.width) && this.x > player.endplatform15.x - 20  && this.y > player.endplatform15.y + 1) {
+                        this.y = player.endplatform15.y + 10;
+                        this.y_speed = 0;
+                }
+else if (this.y > player.endplatform16.y - 20 && this.x < (player.endplatform16.x + player.endplatform16.width) && this.x > player.endplatform16.x - 20 && this.y < player.endplatform16.y ) {
+                        this.y = player.endplatform16.y - 20;
+                        this.y_speed = 0;
+                }
+                else if (this.y < player.endplatform16.y + 10 && this.x < (player.endplatform16.x + player.endplatform16.width) && this.x > player.endplatform16.x - 20  && this.y > player.endplatform16.y + 1) {
+                        this.y = player.endplatform16.y + 10;
+                        this.y_speed = 0;
+                }
+				else if (this.x > player.endplatform17.x - 20 && this.y < (player.endplatform17.y + player.endplatform17.height) && this.y > player.endplatform17.y - 20 && this.x < player.endplatform17.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endplatform17.x + player.endplatform17.width && this.y < (player.endplatform17.y + player.endplatform17.height)&& this.y > player.endplatform17.y - 20  && this.x > player.endplatform17.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+
+else if (this.x > player.fakeportal1.x - 20 && this.y < (player.fakeportal1.y + player.fakeportal1.height) && this.y > player.fakeportal1.y - 20 && this.x < player.fakeportal1.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal1.x + player.fakeportal1.width && this.y < (player.fakeportal1.y + player.fakeportal1.height)&& this.y > player.fakeportal1.y - 20  && this.x > player.fakeportal1.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal2.x - 20 && this.y < (player.fakeportal2.y + player.fakeportal2.height) && this.y > player.fakeportal2.y - 20 && this.x < player.fakeportal2.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal2.x + player.fakeportal2.width && this.y < (player.fakeportal2.y + player.fakeportal2.height)&& this.y > player.fakeportal2.y - 20  && this.x > player.fakeportal2.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal3.x - 20 && this.y < (player.fakeportal3.y + player.fakeportal3.height) && this.y > player.fakeportal3.y - 20 && this.x < player.fakeportal3.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal3.x + player.fakeportal3.width && this.y < (player.fakeportal3.y + player.fakeportal3.height)&& this.y > player.fakeportal3.y - 20  && this.x > player.fakeportal3.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal4.x - 20 && this.y < (player.fakeportal4.y + player.fakeportal4.height) && this.y > player.fakeportal4.y - 20 && this.x < player.fakeportal4.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal4.x + player.fakeportal4.width && this.y < (player.fakeportal4.y + player.fakeportal4.height)&& this.y > player.fakeportal4.y - 20  && this.x > player.fakeportal4.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal5.x - 20 && this.y < (player.fakeportal5.y + player.fakeportal5.height) && this.y > player.fakeportal5.y - 20 && this.x < player.fakeportal5.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal5.x + player.fakeportal5.width && this.y < (player.fakeportal5.y + player.fakeportal5.height)&& this.y > player.fakeportal5.y - 20  && this.x > player.fakeportal5.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal6.x - 20 && this.y < (player.fakeportal6.y + player.fakeportal6.height) && this.y > player.fakeportal6.y - 20 && this.x < player.fakeportal6.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal6.x + player.fakeportal6.width && this.y < (player.fakeportal6.y + player.fakeportal6.height)&& this.y > player.fakeportal6.y - 20  && this.x > player.fakeportal6.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal7.x - 20 && this.y < (player.fakeportal7.y + player.fakeportal7.height) && this.y > player.fakeportal7.y - 20 && this.x < player.fakeportal7.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal7.x + player.fakeportal7.width && this.y < (player.fakeportal7.y + player.fakeportal7.height)&& this.y > player.fakeportal7.y - 20  && this.x > player.fakeportal7.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal8.x - 20 && this.y < (player.fakeportal8.y + player.fakeportal8.height) && this.y > player.fakeportal8.y - 20 && this.x < player.fakeportal8.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal8.x + player.fakeportal8.width && this.y < (player.fakeportal8.y + player.fakeportal8.height)&& this.y > player.fakeportal8.y - 20  && this.x > player.fakeportal8.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal9.x - 20 && this.y < (player.fakeportal9.y + player.fakeportal9.height) && this.y > player.fakeportal9.y - 20 && this.x < player.fakeportal9.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal9.x + player.fakeportal9.width && this.y < (player.fakeportal9.y + player.fakeportal9.height)&& this.y > player.fakeportal9.y - 20  && this.x > player.fakeportal9.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.fakeportal10.x - 20 && this.y < (player.fakeportal10.y + player.fakeportal10.height) && this.y > player.fakeportal10.y - 20 && this.x < player.fakeportal10.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.fakeportal10.x + player.fakeportal10.width && this.y < (player.fakeportal10.y + player.fakeportal10.height)&& this.y > player.fakeportal10.y - 20  && this.x > player.fakeportal10.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+
+
+
+else if (this.x > player.endportal11.x - 20 && this.y < (player.endportal11.y + player.endportal11.height) && this.y > player.endportal11.y - 20 && this.x < player.endportal11.x + 1) {
+                        this.x = 1000;
+                                                this.y = 520;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit3.x = this.x;
+                                                player.portalexit3.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal11.x + player.endportal11.width && this.y < (player.endportal11.y + player.endportal11.height)&& this.y > player.endportal11.y - 20  && this.x > player.endportal11.x) {
+                        this.x = 1000;
+                                                this.y = 470;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit3.x = this.x;
+                                                player.portalexit3.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+
+		else if (this.x > player.endportal1.x - 20 && this.y < (player.endportal1.y + player.endportal1.height) && this.y > player.endportal1.y - 20 && this.x < player.endportal1.x + 1) {
+                        this.x = 1000;
+                                                this.y = 415;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit4.x = this.x;
+                                                player.portalexit4.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal1.x + player.endportal1.width && this.y < (player.endportal1.y + player.endportal1.height)&& this.y > player.endportal1.y - 20  && this.x > player.endportal1.x) {
+                        this.x = 1000;
+                                                this.y = 415;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit4.x = this.x;
+                                                player.portalexit4.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal2.x - 20 && this.y < (player.endportal2.y + player.endportal2.height) && this.y > player.endportal2.y - 20 && this.x < player.endportal2.x + 1) {
+                        this.x = 1000;
+                                                this.y = 365;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit5.x = this.x;
+                                                player.portalexit5.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal2.x + player.endportal2.width && this.y < (player.endportal2.y + player.endportal2.height)&& this.y > player.endportal2.y - 20  && this.x > player.endportal2.x) {
+                        this.x = 1000;
+                                                this.y = 365;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit5.x = this.x;
+                                                player.portalexit5.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal3.x - 20 && this.y < (player.endportal3.y + player.endportal3.height) && this.y > player.endportal3.y - 20 && this.x < player.endportal3.x + 1) {
+                        this.x = 1000;
+                                                this.y = 315;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit6.x = this.x;
+                                                player.portalexit6.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal3.x + player.endportal3.width && this.y < (player.endportal3.y + player.endportal3.height)&& this.y > player.endportal3.y - 20  && this.x > player.endportal3.x) {
+                        this.x = 1000;
+                                                this.y = 315;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit6.x = this.x;
+                                                player.portalexit6.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+
+else if (this.x > player.endportal4.x - 20 && this.y < (player.endportal4.y + player.endportal4.height) && this.y > player.endportal4.y - 20 && this.x < player.endportal4.x + 1) {
+                        this.x = 1000;
+                                                this.y = 265;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit7.x = this.x;
+                                                player.portalexit7.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal4.x + player.endportal4.width && this.y < (player.endportal4.y + player.endportal4.height)&& this.y > player.endportal4.y - 20  && this.x > player.endportal4.x) {
+                        this.x = 1000;
+                                                this.y = 265;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit7.x = this.x;
+                                                player.portalexit7.y = this.y;
+                }
+else if (this.x > player.endportal5.x - 20 && this.y < (player.endportal5.y + player.endportal5.height) && this.y > player.endportal5.y - 20 && this.x < player.endportal5.x + 1) {
+                        this.x = 1000;
+                                                this.y = 215;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit8.x = this.x;
+                                                player.portalexit8.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal5.x + player.endportal5.width && this.y < (player.endportal5.y + player.endportal5.height)&& this.y > player.endportal5.y - 20  && this.x > player.endportal5.x) {
+                        this.x = 1000;
+                                                this.y = 215;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit8.x = this.x;
+                                                player.portalexit8.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal6.x - 20 && this.y < (player.endportal6.y + player.endportal6.height) && this.y > player.endportal6.y - 20 && this.x < player.endportal6.x + 1) {
+                        this.x = 1000;
+                                                this.y = 165;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit9.x = this.x;
+                                                player.portalexit9.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal6.x + player.endportal6.width && this.y < (player.endportal6.y + player.endportal6.height)&& this.y > player.endportal6.y - 20  && this.x > player.endportal6.x) {
+                        this.x = 1000;
+                                                this.y = 165;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit9.x = this.x;
+                                                player.portalexit9.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+
+else if (this.x > player.endportal7.x - 20 && this.y < (player.endportal7.y + player.endportal7.height) && this.y > player.endportal7.y - 20 && this.x < player.endportal7.x + 1) {
+                        this.x = 1000;
+                                                this.y = 115;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit10.x = this.x;
+                                                player.portalexit10.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal7.x + player.endportal7.width && this.y < (player.endportal7.y + player.endportal7.height)&& this.y > player.endportal7.y - 20  && this.x > player.endportal7.x) {
+                        this.x = 1000;
+                                                this.y = 115;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit10.x = this.x;
+                                                player.portalexit10.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal8.x - 20 && this.y < (player.endportal8.y + player.endportal8.height) && this.y > player.endportal8.y - 20 && this.x < player.endportal8.x + 1) {
+                        this.x = 1000;
+                                                this.y = 65;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit11.x = this.x;
+                                                player.portalexit11.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal8.x + player.endportal8.width && this.y < (player.endportal8.y + player.endportal8.height)&& this.y > player.endportal8.y - 20  && this.x > player.endportal8.x) {
+                        this.x = 1000;
+                                                this.y = 65;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit11.x = this.x;
+                                                player.portalexit11.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal9.x - 20 && this.y < (player.endportal9.y + player.endportal9.height) && this.y > player.endportal9.y - 20 && this.x < player.endportal9.x + 1) {
+                        this.x = 1000;
+                                                this.y = 15;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit12.x = this.x;
+                                                player.portalexit12.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal9.x + player.endportal9.width && this.y < (player.endportal9.y + player.endportal9.height)&& this.y > player.endportal9.y - 20  && this.x > player.endportal9.x) {
+                        this.x = 1000;
+                                                this.y = 15;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit12.x = this.x;
+                                                player.portalexit12.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.endportal10.x - 20 && this.y < (player.endportal10.y + player.endportal10.height) && this.y > player.endportal10.y - 20 && this.x < player.endportal10.x + 1) {
+                   
+                                                player.portal22.x = 20;
+                                                player.portal22.y = 580;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.endportal10.x + player.endportal10.width && this.y < (player.endportal10.y + player.endportal10.height)&& this.y > player.endportal10.y - 20  && this.x > player.endportal10.x) {
+                        
+                                                player.portal22.x = 20;
+                                                player.portal22.y = 580;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.portal22.x - 20 && this.y < (player.portal22.y + player.portal22.height) && this.y > player.portal22.y - 20 && this.x < player.portal22.x + 1) {
+                        this.x = 1320;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit13.x = this.x;
+                                                player.portalexit13.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+                else if (this.x < player.portal22.x + player.portal22.width && this.y < (player.portal22.y + player.portal22.height)&& this.y > player.portal22.y - 20  && this.x > player.portal22.x) {
+                        this.x = 1320;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit13.x = this.x;
+                                                player.portalexit13.y = this.y;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+                }
+else if (this.x > player.portal18.x - 20 && this.y < (player.portal18.y + player.portal18.height) && this.y > player.portal18.y - 20 && this.x < player.portal18.x + 1) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }
+                else if (this.x < player.portal18.x + player.portal18.width && this.y < (player.portal18.y + player.portal18.height)&& this.y > player.portal18.y - 20  && this.x > player.portal18.x) {
+                        this.x = 20;
+                                                this.y = 20;
+                        this.x_speed = 0;
+                                                this.y_speed = 0;
+                                                player.portalexit.x = this.x;
+                                                player.portalexit.y = this.y;
+												player.energy.x = player.energy.x - 10;
+												Color2 = "Grey";
+						setTimeout(function(){Color2 = "Black"}, 100)
+												
+                }else if (this.x > player.goal.x - 20 && this.y < (player.goal.y + player.goal.height) && this.y > player.goal.y - 20 && this.x < player.goal.x + 1) {
+                 player.wpiece1.y = 200;
+				 setInterval(function(){player.timebar.width = player.timebar.width + 0.5},100)
+				setInterval(function(){Gcolor = Charcolor;},1)
+				 player.wpiece2.y = (player.wpiece1.y + player.wpiece1.height);
+				 player.wpiece3.y = (player.wpiece2.y + 15);
+				 player.wpiece4.y = (player.wpiece3.y + 15);
+				 player.wpiece5.y = player.wpiece3.y;
+				 player.wpiece6.y = player.wpiece2.y;
+				 player.wpiece7.y = player.wpiece1.y + 15;
+				 player.wpiece8.y = player.wpiece2.y;
+				 player.wpiece9.y = player.wpiece3.y;
+				 player.wpiece10.y = player.wpiece4.y;
+				 player.wpiece11.y = player.wpiece3.y;
+				  player.wpiece12.y = player.wpiece2.y;
+				 player.wpiece13.y = player.wpiece1.y;
+				 player.ipiece1.y = player.wpiece1.y;
+				 player.ipiece2.y = player.ipiece1.y;
+				 player.ipiece2.x = player.ipiece1.x + (player.ipiece1.width/2);
+				 player.ipiece3.y = player.ipiece1.y + player.ipiece2.height
+				 player.npiece1.y = player.wpiece1.y;
+				 player.npiece2.y = player.npiece1.y + 15;
+				 player.npiece3.y = player.npiece2.y + 15;
+				 player.npiece4.y = player.npiece3.y + 15;
+				 player.npiece5.y = player.npiece4.y + 15;
+				 player.npiece6.y = player.npiece5.y + 15;
+                 player.npiece7.y = player.npiece6.y + 15;
+				 player.npiece8.y = player.npiece7.y + 15;
+				 player.npiece9.y = player.npiece8.y + 15;
+				 player.npiece10.y = player.npiece9.y + 15;
+				 player.npiece11.y = player.npiece10.y + 15;
+				 player.npiece12.y = player.npiece11.y + 15;
+				 player.npiece13.y = player.npiece12.y + 15;
+				 player.npiece14.y = player.npiece13.y + 15;
+				 player.npiece15.y = player.npiece1.y;
+				  player.epiece1.y = player.npiece1.y;
+				 player.epiece2.y = player.epiece1.y + player.epiece1.height + 15;
+				  player.ypiece1.y = 100;
+				 player.ypiece2.y = 105;
+				 player.ypiece3.y = 100;
+				 player.opiece1.y = 100;
+				 player.opiece2.y = 100;
+				 player.opiece3.y = 110;
+				 player.opiece4.y = 100;
+				 player.upiece1.y = 100;
+				 player.upiece2.y = 110;
+				 player.upiece3.y = 100;
+					setTimeout(function(){setInterval(function(){Charcolor = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Charcolor = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Charcolor = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Charcolor = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Charcolor = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Charcolor = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Charcolor = "Grey"},700)},700)
+	setTimeout(function(){setInterval(function(){Color = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Color = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Color = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Color = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Color = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Color = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Color = "Grey"},700)},700)
+				 
+                                               
+                }
+                else if (this.x < player.goal.x + player.goal.width && this.y < (player.goal.y + player.goal.height)&& this.y > player.goal.y - 20  && this.x > player.goal.x) {
+          setInterval(function(){Gcolor = Charcolor;},1)
+		setInterval(function(){player.timebar.width = player.timebar.width + 0.5},100)
+			   player.wpiece1.y = 200;
+				 player.wpiece2.y = (player.wpiece1.y + player.wpiece1.height);
+				 player.wpiece3.y = (player.wpiece2.y + 15);
+				 player.wpiece4.y = (player.wpiece3.y + 15);
+				 player.wpiece5.y = player.wpiece3.y;
+				 player.wpiece6.y = player.wpiece2.y;
+				 player.wpiece7.y = player.wpiece1.y + 15;
+				 player.wpiece8.y = player.wpiece2.y;
+				 player.wpiece9.y = player.wpiece3.y;
+				 player.wpiece10.y = player.wpiece4.y;
+				 player.wpiece11.y = player.wpiece3.y;
+				 player.wpiece12.y = player.wpiece2.y;
+				 player.wpiece13.y = player.wpiece1.y;
+				 player.ipiece1.y = player.wpiece1.y;
+				 player.ipiece2.y = player.ipiece1.y;
+				 player.ipiece2.x = player.ipiece1.x + (player.ipiece1.width/2);
+				 player.ipiece3.y = player.ipiece1.y + player.ipiece2.height
+				 player.npiece1.y = player.wpiece1.y;
+				 player.npiece2.y = player.npiece1.y + 15;
+				 player.npiece3.y = player.npiece2.y + 15;
+				 player.npiece4.y = player.npiece3.y + 15;
+				 player.npiece5.y = player.npiece4.y + 15;
+				 player.npiece6.y = player.npiece5.y + 15;
+                 player.npiece7.y = player.npiece6.y + 15;
+				 player.npiece8.y = player.npiece7.y + 15;
+				 player.npiece9.y = player.npiece8.y + 15;
+				 player.npiece10.y = player.npiece9.y + 15;
+				 player.npiece11.y = player.npiece10.y + 15;
+				 player.npiece12.y = player.npiece11.y + 15;
+				 player.npiece13.y = player.npiece12.y + 15;
+				 player.npiece14.y = player.npiece13.y + 15;
+				 player.npiece15.y = player.npiece1.y;
+			 player.epiece1.y = player.npiece1.y;
+				 player.epiece2.y = player.epiece1.y + player.epiece1.height + 15;
+				 player.ypiece1.y = 100;
+				 player.ypiece2.y = 105;
+				 player.ypiece3.y = 100;
+				  player.opiece1.y = 100;
+				 player.opiece2.y = 100;
+				 player.opiece3.y = 110;
+				 player.opiece4.y = 100;
+                   player.upiece1.y = 100;
+				 player.upiece2.y = 110;
+				 player.upiece3.y = 100;
+				 	setTimeout(function(){setInterval(function(){Charcolor = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Charcolor = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Charcolor = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Charcolor = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Charcolor = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Charcolor = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Charcolor = "Grey"},700)},700)
+	setTimeout(function(){setInterval(function(){Color = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Color = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Color = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Color = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Color = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Color = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Color = "Grey"},700)},700)
+                                               
+                }
+			else if (player.energy.x + player.energy.width < 0){
+					explosion()
+					player.energy.x = 100000;
+			
+				}
+else if (player.timebar.x + player.timebar.width < 0){
+	explosion()
+	player.timebar.x = 100000;
+}
+else if (this.x > player.energypack.x - 20 && this.y < (player.energypack.y + player.energypack.height) && this.y > player.energypack.y - 20 && this.x < player.energypack.x + 1) {
+                        
+						player.energy.width = player.energy.width + 30;
+						player.hurt.width = player.energy.width;
+						player.energypack.x = 100000;
+                }
+                else if (this.x < player.energypack.x + player.energypack.width && this.y < (player.energypack.y + player.energypack.height)&& this.y > player.energypack.y - 20  && this.x > player.energypack.x) {
+                       
+						player.energy.width = player.energy.width + 30;
+						player.hurt.width = player.energy.width;
+						player.energypack.x = 100000;
+                }
+				else if (this.x > player.timepack.x - 20 && this.y < (player.timepack.y + player.timepack.height) && this.y > player.timepack.y - 20 && this.x < player.timepack.x + 1) {
+                        
+						player.timebar.width = player.timebar.width + 100;
+					
+						player.timepack.x = 100000;
+                }
+                else if (this.x < player.timepack.x + player.timepack.width && this.y < (player.timepack.y + player.timepack.height)&& this.y > player.timepack.y - 20  && this.x > player.timepack.x) {
+                       
+						player.timebar.width = player.timebar.width + 100;
+						
+						player.timepack.x = 100000;
+                }
+				else if (player.hurt.x + player.hurt.width > player.energy.x + player.energy.width){
+					player.hurt.x = player.hurt.x - 0.1
+				}
+				 if (this.x < player.enemy.x ){
+					player.enemy.x = player.enemy.x - 1;
+				}
+				if (this.x < player.enemy2.x ){
+					player.enemy2.x = player.enemy2.x - 1;
+				}
+				if (this.x < player.enemy3.x ){
+					player.enemy3.x = player.enemy3.x - 1;
+				}
+				if (this.x < player.enemy4.x ){
+					player.enemy4.x = player.enemy4.x - 1;
+				}
+				if (this.x < player.enemy5.x ){
+					player.enemy5.x = player.enemy5.x - 1;
+				}
+				if (this.x < player.enemy6.x ){
+					player.enemy6.x = player.enemy6.x - 1;
+				}
+				if (this.x < player.enemy7.x ){
+					player.enemy7.x = player.enemy7.x - 1;
+				}
+				if (this.x < player.enemy8.x ){
+					player.enemy8.x = player.enemy8.x - 1;
+				}
+				if (this.x < player.enemy9.x ){
+					player.enemy9.x = player.enemy9.x - 1;
+				}
+				if (this.x < player.enemy10.x ){
+					player.enemy10.x = player.enemy10.x -1;
+				}
+				 if (this.y < player.enemy.y ){
+					player.enemy.y = player.enemy.y - 1;
+				}
+				if (this.y < player.enemy2.y ){
+					player.enemy2.y = player.enemy2.y - 1;
+				}
+				if (this.y < player.enemy3.y ){
+					player.enemy3.y = player.enemy3.y - 1;
+				}
+				if (this.y < player.enemy4.y ){
+					player.enemy4.y = player.enemy4.y - 1;
+				}
+				if (this.y < player.enemy5.y ){
+					player.enemy5.y = player.enemy5.y - 1;
+				}
+				if (this.y < player.enemy6.y ){
+					player.enemy6.y = player.enemy6.y - 1;
+				}
+				if (this.y < player.enemy7.y ){
+					player.enemy7.y = player.enemy7.y - 1;
+				}
+				if (this.y < player.enemy8.y ){
+					player.enemy8.y = player.enemy8.y - 1;
+				}
+				if (this.y < player.enemy9.y ){
+					player.enemy9.y = player.enemy9.y - 1;
+				}
+				if (this.y < player.enemy10.y ){
+					player.enemy10.y = player.enemy10.y - 1;
+				}
+				 				
+                                if (this.y > player.enemy2.y ){
+                                        player.enemy2.y = player.enemy2.y + 1;
+                                }
+                                if (this.y > player.enemy3.y ){
+                                        player.enemy3.y = player.enemy3.y + 1;
+                                }
+                                if (this.y > player.enemy4.y ){
+                                        player.enemy4.y = player.enemy4.y + 1;
+                                }
+                                if (this.y > player.enemy5.y ){
+                                        player.enemy5.y = player.enemy5.y + 1;
+                                }
+                                if (this.y > player.enemy6.y ){
+                                        player.enemy6.y = player.enemy6.y + 1;
+                                }
+                                if (this.y > player.enemy7.y ){
+                                        player.enemy7.y = player.enemy7.y + 1;
+                                }
+                                if (this.y > player.enemy8.y ){
+                                        player.enemy8.y = player.enemy8.y + 1;
+                                }
+                                if (this.y > player.enemy9.y ){
+                                        player.enemy9.y = player.enemy9.y + 1;
+                                }
+                                if (this.y > player.enemy10.y ){
+                                        player.enemy10.y = player.enemy10.y + 1;
+                                }
+
+				 if (this.y > player.enemy.y ){
+					player.enemy.y = player.enemy.y + 1;
+				}
+				 					if (this.x > player.enemy.x ){
+                                        player.enemy.x = player.enemy.x + 1;
+                                }
+                                if (this.x > player.enemy2.x ){
+                                        player.enemy2.x = player.enemy2.x + 1;
+                                }
+                                if (this.x > player.enemy3.x ){
+                                        player.enemy3.x = player.enemy3.x + 1;
+                                }
+                                if (this.x > player.enemy4.x ){
+                                        player.enemy4.x = player.enemy4.x + 1;
+                                }
+                                if (this.x > player.enemy5.x ){
+                                        player.enemy5.x = player.enemy5.x + 1;
+                                }
+                                if (this.x > player.enemy6.x ){
+                                        player.enemy6.x = player.enemy6.x + 1;
+                                }
+                                if (this.x > player.enemy7.x ){
+                                        player.enemy7.x = player.enemy7.x + 1;
+                                }
+                                if (this.x > player.enemy8.x ){
+                                        player.enemy8.x = player.enemy8.x + 1;
+                                }
+                                if (this.x > player.enemy9.x ){
+                                        player.enemy9.x = player.enemy9.x + 1;
+                                }
+                                if (this.x > player.enemy10.x ){
+                                        player.enemy10.x = player.enemy10.x + 1;
+                                }
+
+				if (this.x > player.enemy.x - 20 && this.y < (player.enemy.y + player.enemy.height) && this.y > player.enemy.y - 20 && this.x < player.enemy.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy.x + player.enemy.width && this.y < (player.enemy.y + player.enemy.height)&& this.y > player.enemy.y - 20  && this.x > player.enemy.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+				if (this.x > player.enemy2.x - 20 && this.y < (player.enemy2.y + player.enemy2.height) && this.y > player.enemy2.y - 20 && this.x < player.enemy2.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy2.x + player.enemy2.width && this.y < (player.enemy2.y + player.enemy2.height)&& this.y > player.enemy2.y - 20  && this.x > player.enemy2.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy3.x - 20 && this.y < (player.enemy3.y + player.enemy3.height) && this.y > player.enemy3.y - 20 && this.x < player.enemy3.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy3.x + player.enemy3.width && this.y < (player.enemy3.y + player.enemy3.height)&& this.y > player.enemy3.y - 20  && this.x > player.enemy3.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy4.x - 20 && this.y < (player.enemy4.y + player.enemy4.height) && this.y > player.enemy4.y - 20 && this.x < player.enemy4.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy4.x + player.enemy4.width && this.y < (player.enemy4.y + player.enemy4.height)&& this.y > player.enemy4.y - 20  && this.x > player.enemy4.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy5.x - 20 && this.y < (player.enemy5.y + player.enemy5.height) && this.y > player.enemy5.y - 20 && this.x < player.enemy5.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy5.x + player.enemy5.width && this.y < (player.enemy5.y + player.enemy5.height)&& this.y > player.enemy5.y - 20  && this.x > player.enemy5.x) {
+                 player.energy.x = player.energy.x - 1; 
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy6.x - 20 && this.y < (player.enemy6.y + player.enemy6.height) && this.y > player.enemy6.y - 20 && this.x < player.enemy6.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy6.x + player.enemy6.width && this.y < (player.enemy6.y + player.enemy6.height)&& this.y > player.enemy6.y - 20  && this.x > player.enemy6.x) {
+                 player.energy.x = player.energy.x - 1; 
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy7.x - 20 && this.y < (player.enemy7.y + player.enemy7.height) && this.y > player.enemy7.y - 20 && this.x < player.enemy7.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy7.x + player.enemy7.width && this.y < (player.enemy7.y + player.enemy7.height)&& this.y > player.enemy7.y - 20  && this.x > player.enemy7.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy8.x - 20 && this.y < (player.enemy8.y + player.enemy8.height) && this.y > player.enemy8.y - 20 && this.x < player.enemy8.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy8.x + player.enemy8.width && this.y < (player.enemy8.y + player.enemy8.height)&& this.y > player.enemy8.y - 20  && this.x > player.enemy8.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy9.x - 20 && this.y < (player.enemy9.y + player.enemy9.height) && this.y > player.enemy9.y - 20 && this.x < player.enemy9.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy9.x + player.enemy9.width && this.y < (player.enemy9.y + player.enemy9.height)&& this.y > player.enemy9.y - 20  && this.x > player.enemy9.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+if (this.x > player.enemy10.x - 20 && this.y < (player.enemy10.y + player.enemy10.height) && this.y > player.enemy10.y - 20 && this.x < player.enemy10.x + 1) {
+                        player.energy.x = player.energy.x - 1;
+						Color = "Cyan"
+						setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+                 if (this.x < player.enemy10.x + player.enemy10.width && this.y < (player.enemy10.y + player.enemy10.height)&& this.y > player.enemy10.y - 20  && this.x > player.enemy10.x) {
+                 player.energy.x = player.energy.x - 1;
+				 Color = "Cyan"
+				 setTimeout(function(){Color =  Charcolor}, 1000)
+                }
+
+if (this.x > player.gun.x - 20 && this.y < (player.gun.y + player.gun.height) && this.y > player.gun.y - 20 && this.x < player.gun.x + 1) {
+                        player.gun.x = this.x + 5
+				 player.gun.y = this.y + 10
+                }
+                 if (this.x < player.gun.x + player.gun.width && this.y < (player.gun.y + player.gun.height)&& this.y > player.gun.y - 20  && this.x > player.gun.x) {
+                 player.gun.x = this.x + 5
+				 player.gun.y = this.y + 10
+                }
+				else if (player.enemy.x > player.laser.x - 20 && player.enemy.y < (player.laser.y + player.laser.height) && player.enemy.y > player.laser.y - 20 && player.enemy.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+					 player.enemy.x = player.enemy.x + 30;
+                }
+                else if (player.enemy.x < player.laser.x + player.laser.width && player.enemy.y < (player.laser.y + player.laser.height)&& player.enemy.y > player.laser.y - 20  && player.enemy.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+						 player.enemy.x = player.enemy.x + 30;
+						 
+                }
+				else if (player.enemy2.x > player.laser.x - 20 && player.enemy2.y < (player.laser.y + player.laser.height) && player.enemy2.y > player.laser.y - 20 && player.enemy2.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy2.x = player.enemy2.x + 30;
+                }
+                else if (player.enemy2.x < player.laser.x + player.laser.width && player.enemy2.y < (player.laser.y + player.laser.height)&& player.enemy2.y > player.laser.y - 20  && player.enemy2.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy2.x = player.enemy2.x + 30;
+                                                 
+                }else if (player.enemy3.x > player.laser.x - 20 && player.enemy3.y < (player.laser.y + player.laser.height) && player.enemy3.y > player.laser.y - 20 && player.enemy3.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy3.x = player.enemy3.x + 30;
+                }
+                else if (player.enemy3.x < player.laser.x + player.laser.width && player.enemy3.y < (player.laser.y + player.laser.height)&& player.enemy3.y > player.laser.y - 20  && player.enemy3.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy3.x = player.enemy3.x + 30;
+                                                 
+                }
+else if (player.enemy4.x > player.laser.x - 20 && player.enemy4.y < (player.laser.y + player.laser.height) && player.enemy4.y > player.laser.y - 20 && player.enemy4.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy4.x = player.enemy4.x + 30;
+                }
+                else if (player.enemy4.x < player.laser.x + player.laser.width && player.enemy4.y < (player.laser.y + player.laser.height)&& player.enemy4.y > player.laser.y - 20  && player.enemy4.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy4.x = player.enemy4.x + 30;
+                                                 
+                }
+else if (player.enemy5.x > player.laser.x - 20 && player.enemy5.y < (player.laser.y + player.laser.height) && player.enemy5.y > player.laser.y - 20 && player.enemy5.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy5.x = player.enemy5.x + 30;
+                }
+                else if (player.enemy5.x < player.laser.x + player.laser.width && player.enemy5.y < (player.laser.y + player.laser.height)&& player.enemy5.y > player.laser.y - 20  && player.enemy5.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy5.x = player.enemy5.x + 30;
+                                                 
+                }
+else if (player.enemy6.x > player.laser.x - 20 && player.enemy6.y < (player.laser.y + player.laser.height) && player.enemy6.y > player.laser.y - 20 && player.enemy6.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy6.x = player.enemy6.x + 30;
+                }
+                else if (player.enemy6.x < player.laser.x + player.laser.width && player.enemy6.y < (player.laser.y + player.laser.height)&& player.enemy6.y > player.laser.y - 20  && player.enemy6.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy6.x = player.enemy6.x + 30;
+                                                 
+                }
+else if (player.enemy7.x > player.laser.x - 20 && player.enemy7.y < (player.laser.y + player.laser.height) && player.enemy7.y > player.laser.y - 20 && player.enemy7.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy7.x = player.enemy7.x + 30;
+                }
+                else if (player.enemy7.x < player.laser.x + player.laser.width && player.enemy7.y < (player.laser.y + player.laser.height)&& player.enemy7.y > player.laser.y - 20  && player.enemy7.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy7.x = player.enemy7.x + 30;
+                                                 
+                }
+else if (player.enemy8.x > player.laser.x - 20 && player.enemy8.y < (player.laser.y + player.laser.height) && player.enemy8.y > player.laser.y - 20 && player.enemy8.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy8.x = player.enemy8.x + 30;
+                }
+                else if (player.enemy8.x < player.laser.x + player.laser.width && player.enemy8.y < (player.laser.y + player.laser.height)&& player.enemy8.y > player.laser.y - 20  && player.enemy8.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy8.x = player.enemy8.x + 30;
+                                                 
+                }
+else if (player.enemy9.x > player.laser.x - 20 && player.enemy9.y < (player.laser.y + player.laser.height) && player.enemy9.y > player.laser.y - 20 && player.enemy9.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy9.x = player.enemy9.x + 30;
+                }
+                else if (player.enemy9.x < player.laser.x + player.laser.width && player.enemy9.y < (player.laser.y + player.laser.height)&& player.enemy9.y > player.laser.y - 20  && player.enemy9.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy9.x = player.enemy9.x + 30;
+                                                 
+                }
+else if (player.enemy10.x > player.laser.x - 20 && player.enemy10.y < (player.laser.y + player.laser.height) && player.enemy10.y > player.laser.y - 20 && player.enemy10.x < player.laser.x + 1) {
+                     player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                         player.enemy10.x = player.enemy10.x + 30;
+                }
+                else if (player.enemy10.x < player.laser.x + player.laser.width && player.enemy10.y < (player.laser.y + player.laser.height)&& player.enemy10.y > player.laser.y - 20  && player.enemy10.x > player.laser.x) {
+                         player.enemyenergy3.x = player.enemyenergy3.x + 1;
+                                                 player.enemy10.x = player.enemy10.x + 30;
+                                                 
+                }
+
+
+				if (player.enemyenergy.x > 1350){
+					player.enemy.x = 9999999999999;
+					player.enemy.y = 9999999999999;
+					player.enemy2.x = 9999999999999;
+					player.enemy2.y = 9999999999999;
+					player.enemy3.x = 9999999999999;
+					player.enemy3.y = 9999999999999;
+					player.enemy4.x = 9999999999999;
+					player.enemy4.y = 9999999999999;
+					player.enemy5.x = 9999999999999;
+					player.enemy5.y = 9999999999999;
+					player.enemy6.x = 9999999999999;
+					player.enemy6.y = 9999999999999;
+					player.enemy7.x = 9999999999999;
+					player.enemy7.y = 9999999999999;
+					player.enemy8.x = 9999999999999;
+					player.enemy8.y = 9999999999999;
+					player.enemy9.x = 9999999999999;
+					player.enemy9.y = 9999999999999;
+					player.enemy10.x = 9999999999999;
+					player.enemy10.y = 9999999999999;
+					player.goal.y = 570;
+					
+				}
+				if (player.enemyenergy3.x > 1350){
+					player.enemyenergy2.x = player.enemyenergy3.x - player.enemyenergy2.width;
+				}
+				
+				if (player.enemyenergy2.x > 1350){
+					player.enemyenergy.x = player.enemyenergy2.x - player.enemyenergy.width;
+					}
+				if (this.x < 0 && this.y < 0){
+					Color = "Blue"
+				}
+				
+
+      };
+	  function explosion(){
+	  player.center.y = player.avitar.y + 10;
+	  player.center.x = player.avitar.x + 10;
+	  player.piece1.x = player.center.x - 9;
+	  player.piece1.y = player.center.y - 9;
+	  player.piece2.x = player.center.x + 1;
+	  player.piece2.y = player.center.y - 9;
+	  player.piece3.x = player.center.x - 9;
+	  player.piece3.y = player.center.y + 1;
+	  player.piece4.x = player.center.x + 1;
+	  player.piece4.y = player.center.y + 1;
+	  setTimeout(function(){player.avitar.x = player.avitar.x - 10000},1)
+	  setInterval(function(){player.piece1.y = player.piece1.y + 1},16)
+	  setInterval(function(){player.piece2.y = player.piece2.y + 1},16)
+	  setInterval(function(){player.piece3.y = player.piece3.y + 1},15)
+	  setInterval(function(){player.piece4.y = player.piece4.y + 1},15)
+	  setInterval(function(){player.piece1.x = player.piece1.x - 3},100)
+	  setInterval(function(){player.piece2.x = player.piece2.x + 3},100)
+	  setTimeout(function(){setInterval(function(){player.piece3.x = player.piece3.x - 1.5},100)},100)
+	  setTimeout(function(){setInterval(function(){player.piece4.x = player.piece4.x + 1.5},100)},100)
+	setTimeout(function(){alert("GAME OVER! You ran out of energy and or time. Press F5 or refresh to try again")},10000)
+	setTimeout(function(){setInterval(function(){Charcolor = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Charcolor = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Charcolor = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Charcolor = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Charcolor = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Charcolor = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Charcolor = "Grey"},700)},700)
+	setTimeout(function(){setInterval(function(){Color = "Red"},700)},100)
+	setTimeout(function(){setInterval(function(){Color = "Blue"},700)},200)
+	setTimeout(function(){setInterval(function(){Color = "Green"},700)},300)
+	setTimeout(function(){setInterval(function(){Color = "Yellow"},700)},400)
+	setTimeout(function(){setInterval(function(){Color = "Tan"},700)},500)
+	setTimeout(function(){setInterval(function(){Color = "White"},700)},600)
+	setTimeout(function(){setInterval(function(){Color = "Grey"},700)},700)
+	  }
+
+
+      function Player() { 
+        this.avitar = new avitar(10, 55, 20, 20);
+		this.wall = new wall (0, 0, 610) //far left wall
+		this.wall1= new wall (1340, 0, 610)//far right wall
+		this.floor= new platform(0, 585, 1350)// bottom floor
+		this.platform = new platform(0, 75, 100)// starting platform
+		this.wall2 = new wall(500, 0, 540)//first divider
+		this.wall3 = new wall( 600, 50, 560)//second divider
+		this.platform2 = new platform(610, 550, 700)// above the goal
+		this.wall4 = new wall(1300, 50, 510)// part of the end tube
+		this.wall5= new wall (700, 0, 450)//third divider
+		this.platform3 = new redLight(0, 0, 1350, 10)// roof
+		this.goal = new goal (620, 5000, 10, 10)
+		this.portal1 = new redLight (300, 200, 240, 10)//first one on left
+		this.portal2 = new redLight (0, 400, 150, 10)// lower down one
+		this.portal3 = new redLight (0, 200, 250, 10)// first one on right
+		this.portal4 = new redLight (255, 250, 40, 10)// the one blocking the open gap
+		this.portal5 = new redLight (255, 400, 200, 10)// lower right one
+		this.portal6 = new redLight (2000, 2000, 10, 60)// appering bellow divider one
+		this.triger1 = new triger (475, 540, 10, 60)// triger to move portal6 and portal7
+		this.triger2 = new triger (675, 460, 10, 100)// the main triger to make the hard ending
+		this.portal7 = new portal (2000, 2000, 10, 30)// one that leads to the divider section
+		this.endplatform8 = new platform (700, 700,  600)
+		this.endplatform9 = new platform (700, 700,  600)
+		this.endplatform10 = new platform (700, 700,  600)
+		this.endplatform11 = new platform (700, 700,  600)
+		this.endplatform12 = new platform (700, 700,  600)
+		this.endplatform13 = new platform (700, 700,  600)
+		this.endplatform14 = new platform (700, 700,  600)
+		this.endplatform15 = new platform (700, 700,  600)
+		this.endplatform16 = new platform (700, 700,  600)
+		this.endplatform17 = new redLight (700, 700,  10, 100)
+		this.portal18 = new redLight (100, 450, 10, 200)
+		this.portal22 = new portal (2000, 2000, 30, 10)
+		this.endportal1 = new portal (720, 700, 10, 30)
+		this.endportal2 = new portal (1280, 700, 10, 30)
+		this.endportal3 = new portal (1280, 700, 10, 30)
+		this.endportal4 = new portal (1280, 700, 10, 30)
+		this.endportal5 = new portal (720, 700, 10, 30)
+		this.endportal6 = new portal (1280, 700, 10, 30)
+		this.endportal7 = new portal (720, 700, 10, 30)
+		this.endportal8 = new portal (720, 700, 10 , 30)
+		this.endportal9 = new portal (1280, 700, 10, 30)
+		this.endportal10 = new portal (720, 700, 10, 30)
+		this.endportal11 = new portal (50, 700, 10, 30)
+		this.fakeportal1 = new portal (1280, 700, 10, 30)
+		this.fakeportal2 = new portal (720, 700, 10, 30)
+		this.fakeportal3 = new portal (720, 700, 10, 30)
+		this.fakeportal4 = new portal (720, 700, 10, 30)
+		this.fakeportal5 = new portal (1280, 700, 10, 30)
+		this.fakeportal6 = new portal (720, 700, 10, 30)
+		this.fakeportal7 = new portal (1280, 700, 10, 30)
+		this.fakeportal8 = new portal (1280, 700, 10, 30)
+		this.fakeportal9 = new portal (720, 700, 10, 30)
+		this.fakeportal10 = new portal (1280, 700, 10, 30)
+		this.portalexit = new portalexit (2000, 2000)
+		this.portalexit2 = new portalexit (2000, 2000)
+		this.portalexit3 = new portalexit (2000, 2000)
+		this.portalexit4 = new portalexit (2000, 2000)
+		this.portalexit5 = new portalexit (2000, 2000)
+		this.portalexit6 = new portalexit (2000, 2000)
+		this.portalexit7 = new portalexit (2000, 2000)
+		this.portalexit8 = new portalexit (2000, 2000)
+		this.portalexit9 = new portalexit (2000, 2000)
+		this.portalexit10 = new portalexit (2000, 2000)
+		this.portalexit11 = new portalexit (2000, 2000)
+		this.portalexit12 = new portalexit (2000, 2000)
+		this.portalexit13 = new portalexit (2000, 2000)
+		this.wpiece1 = new goal (200, 2000, 15, 150)
+		this.wpiece2 = new goal (215, 2000, 15, 15)
+		this.wpiece3 = new goal (230, 2000, 15, 15)
+		this.wpiece4 = new goal (245, 2000, 15, 15)
+		this.wpiece5 = new goal (260, 2000, 15, 15)
+		this.wpiece6 = new goal (275, 2000, 15, 15)
+		this.wpiece7 = new goal (290, 2000, 15, 135)
+		this.wpiece8 = new goal (305, 2000, 15, 15)
+		this.wpiece9 = new goal (320, 2000, 15, 15)
+		this.wpiece10 = new goal (335, 2000, 15, 15)
+		this.wpiece11 = new goal (350, 2000, 15, 15)
+		this.wpiece12 = new goal (365, 2000, 15, 15)
+		this.wpiece13 = new goal (380, 2000, 15, 150)
+		this.ipiece1 = new goal (415, 2000, 200, 15)
+		this.ipiece2 = new goal (8000, 2000, 15, 185)
+		this.ipiece3 = new goal (415, 2000, 200, 15)
+		this.npiece1 = new goal (635, 2000, 15, 200)
+		this.npiece2 = new goal (650, 2000, 15, 15)
+		this.npiece3 = new goal (665, 2000, 15, 15)
+		this.npiece4 = new goal (680, 2000, 15, 15)
+		this.npiece5 = new goal (695, 2000, 15, 15)
+		this.npiece6 = new goal (710, 2000, 15, 15)
+		this.npiece7 = new goal (725, 2000, 15, 15)
+		this.npiece8 = new goal (740, 2000, 15, 15)
+		this.npiece9 = new goal (755, 2000, 15, 15)
+		this.npiece10 = new goal (770, 2000, 15, 15)
+		this.npiece11 = new goal (785, 2000, 15, 15)
+		this.npiece12 = new goal (800, 2000, 15, 15)
+		this.npiece13 = new goal (815, 2000, 15, 15)
+		this.npiece14 = new goal (830, 2000, 15, 15)
+		this.npiece15 = new goal (845, 2000, 15, 200)
+		this.epiece1 = new goal (880, 2000, 15, 170)
+		this.epiece2 = new goal (880, 2000, 15, 15)
+		this.ypiece1 = new goal (210, 2000, 5, 5)
+		this.ypiece2 = new goal (215, 2000, 5, 10)
+		this.ypiece3 = new goal (220, 2000, 5, 5)
+		this.opiece1 = new goal (230, 2000, 5, 15)
+		this.opiece2 = new goal (235, 2000, 5, 5)
+		this.opiece3 = new goal (235, 2000, 5, 5)
+		this.opiece4 = new goal (240, 2000, 5, 15)
+		this.upiece1 = new goal (250, 2000, 5, 15)
+		this.upiece2 = new goal (255, 2000, 5, 5)
+		this.upiece3 = new goal (260, 2000, 5, 15)
+		this.hurt = new redLight (0, 10, 500, 10)
+		this.energypack = new energy(10, 90, 10, 10)
+		this.timepack = new timebar(20, 90, 10, 10)
+		this.energy = new energy (0, 10, 1350, 10)
+		this.timebar = new timebar (0, 0, 1350, 10)
+		this.enemy = new redLight (400, 500, 20, 20)
+		this.enemy2 = new redLight (420, 500, 20, 20)
+		this.enemy3 = new redLight (440, 500, 20, 20)
+		this.enemy4 = new redLight (460, 500, 20, 20)
+		this.enemy5 = new redLight (480, 500, 20, 20)
+		this.enemy6 = new redLight (500, 500, 20, 20)
+		this.enemy7 = new redLight (520, 500, 20, 20)
+		this.enemy8 = new redLight (540, 500, 20, 20)
+		this.enemy9 = new redLight (560, 500, 20, 20)
+		this.enemy10 = new redLight (580, 500, 20, 20)
+		this.enemyenergy = new redLight (0, 20, 1350, 10)
+		this.enemyenergy3 = new goal (0, 20, 1350, 10)
+		this.enemyenergy2 = new platform(0, 20, 1350)
+		this.laser = new avitar (2000, 2000, 50, 1)
+		this.gun = new gun (100, 100, 20, 5)
+		this.bomb = new redLight (2000, 2000, 5, 5)
+		this.explosion = new goal (2000, 2000, 40, 40)
+		this.explosion2 = new platform(2000, 2000, 40, 40)
+		this.explosion3 = new redLight(2000, 2000, 40, 40)
+		this.center = new triger(2000, 2000, 2, 2)
+		this.piece1 = new avitar(5000, 5000, 10, 10)
+		this.piece2 = new avitar(5000, 5000, 10, 10)
+		this.piece3 = new avitar(5000, 5000, 10, 10)
+		this.piece4 = new avitar(5000, 5000, 10, 10)
+		
+        ;
+      } 
+
+
+      Player.prototype.render = function () {
+          try{
+        this.goal.render();	
+		this.center.render();
+		this.triger1.render();
+		this.triger2.render();
+		this.portal1.render();
+		this.portal2.render();
+		this.portal3.render();
+		this.portal4.render();
+		this.portal5.render();
+		this.portal6.render();
+		this.portal7.render();
+		this.endplatform8.render();
+		this.endplatform9.render();
+		this.endplatform10.render();
+		this.endplatform11.render();
+		this.endplatform12.render();
+		this.endplatform13.render();
+		this.endplatform14.render();
+		this.endplatform15.render();
+		this.endplatform16.render();
+		this.endplatform17.render();
+		this.portal18.render();
+		this.portal22.render();
+		this.endportal1.render();
+		this.endportal2.render();
+		this.endportal3.render();
+		this.endportal4.render();
+		this.endportal5.render();
+		this.endportal6.render();
+		this.endportal7.render();
+		this.endportal8.render();
+		this.endportal9.render();
+		this.endportal10.render();
+		this.endportal11.render();
+		this.fakeportal1.render();
+		this.fakeportal2.render();
+		this.fakeportal3.render();
+		this.fakeportal4.render();
+		this.fakeportal5.render();
+		this.fakeportal6.render();
+		this.fakeportal7.render();
+		this.fakeportal8.render();
+		this.fakeportal9.render();
+		this.fakeportal10.render();
+		this.portalexit.render();
+		this.portalexit2.render();
+		this.portalexit3.render();
+		this.portalexit4.render();
+		this.portalexit5.render();
+		this.portalexit6.render();
+		this.portalexit7.render();
+		this.portalexit8.render();
+		this.portalexit9.render();
+		this.portalexit10.render();
+		this.portalexit11.render();
+		this.portalexit12.render();
+		this.portalexit13.render();
+		this.enemy.render();
+		this.enemy2.render();
+		this.enemy3.render();
+		this.enemy4.render();
+		this.enemy5.render();
+		this.enemy6.render();
+		this.enemy7.render();
+		this.enemy8.render();
+		this.enemy9.render();
+		this.enemy10.render();
+		this.avitar.render();
+		this.wall.render();
+		this.wall1.render();
+		this.floor.render();
+		this.platform.render();
+		this.wall2.render();
+		this.wall3.render();
+		this.platform2.render();
+		this.wall4.render();  
+		this.wall5.render();
+		this.energypack.render();
+		this.platform3.render();
+		this.bomb.render();
+		this.explosion.render();
+		this.explosion2.render();
+		this.explosion3.render();
+		this.hurt.render();
+		this.energy.render();
+		this.enemyenergy.render();
+		this.enemyenergy2.render();
+		this.enemyenergy3.render();
+		this.timepack.render();
+		this.timebar.render();
+		this.laser.render();
+		this.gun.render();
+		this.piece1.render();
+		this.piece2.render();
+		this.piece3.render();
+		this.piece4.render();
+		this.wpiece1.render();
+		this.wpiece2.render();
+		this.wpiece3.render();
+		this.wpiece4.render();
+		this.wpiece5.render();
+		this.wpiece6.render();
+		this.wpiece7.render();
+		this.wpiece8.render();
+		this.wpiece9.render();
+		this.wpiece10.render();
+		this.wpiece11.render();
+		this.wpiece12.render();
+		this.wpiece13.render();
+		this.ipiece1.render();
+		this.ipiece2.render();
+		this.ipiece3.render();
+		this.npiece1.render();
+		this.npiece2.render();
+		this.npiece3.render();
+		this.npiece4.render();
+		this.npiece5.render();
+		this.npiece6.render();
+		this.npiece7.render();
+		this.npiece8.render();
+		this.npiece9.render();
+		this.npiece10.render();
+		this.npiece11.render();
+		this.npiece12.render();
+		this.npiece13.render();
+		this.npiece14.render();
+		this.npiece15.render();
+		this.epiece1.render();
+		this.epiece2.render();
+		this.ypiece1.render();
+		this.ypiece2.render();
+		this.ypiece3.render();
+		this.opiece1.render();
+		this.opiece2.render();
+		this.opiece3.render();
+		this.opiece4.render();
+		this.upiece1.render();
+		this.upiece2.render();
+		this.upiece3.render();
+	
+          }catch(e){
+              
+              alert(e.message)
+          }
+	
+		
+		
+
+      };
+
+      Player.prototype.update = function () {
+        for (var key in keysDown) {
+          var value = Number(key);
+          if (value == 37) {
+            this.avitar.move(-5, 0);
+			this.energy.x = this.energy.x - 0.05;
+          }  if (value == 38) {
+            this.avitar.move(0, -5)
+			this.energy.x = this.energy.x - 0.1;
+			
+			
+          }  if (value == 39) {
+            this.avitar.move(5, 0);
+			this.energy.x = this.energy.x - 0.05;
+          }  if (value == 40) {
+		  this.energy.x = this.energy.x - 0.05;
+            this.avitar.move(0, 1);
+          }
+		  if (value == 32){ 
+		  this.laser.x = this.gun.x + this.gun.width
+		 this.laser.y = this.gun.y - (this.laser.height/2)
+		 this.laser.height = this.laser.height + 2;
+		 this.laser.width = 5;
+		this.energy.x = this.energy.x - 0.1;
+		Color2 = "Orange";
+						setTimeout(function(){Color2 = "Black"}, 100)
+			Color3 = "Black";
+						setTimeout(function(){Color3 = "Orange"}, 100)	
+						Color4 = "Purple";
+						setTimeout(function(){Color4 = "Red"}, 100)
+		  }
+		  if (value == 66){
+		  	this.bomb.y = this.gun.y
+			this.bomb.x = this.gun.x + this.gun.width
+			setTimeout(function(){player.explosion.y = player.bomb.y - (player.explosion.height/2)}, 4000)
+			setTimeout(function(){player.explosion.x = player.bomb.x - (player.explosion.width/2)}, 4000)
+			
+		  }
+		 
+        }
+        try{
+        this.avitar.move(0,4);
+        }catch(err){
+            alert(e.message)
+        }
+      };
+	 
+	      
+      document.body.appendChild(canvas);
+      animate(step);
+
+      window.addEventListener("keydown", function (event) {
+        keysDown[event.keyCode] = true;
+      });
+
+      window.addEventListener("keyup", function (event) {
+        delete keysDown[event.keyCode];
+		player.laser.width = 50;
+		player.laser.height = 1;
+		player.laser.y = player.gun.y;
+	
+      });
+	  
+	  setInterval(function(){player.timebar.x = player.timebar.x - 0.5},100)
+	  setInterval(function(){player.laser.x = player.laser.x + 5}, 0.1)
+	  setInterval(function(){player.energy.width = player.energy.width + 1}, 5000)
+	  setInterval(function(){player.hurt.width = player.energy.width + 1}, 5000)
+	  
+	  setInterval(function(){player.bomb.x = player.bomb.x + 2}, 50)
+	  setTimeout(function(){Color = Charcolor}, 1)
+	  
+	 
+    </script>
+	
+  </body>
+  </head>
+
+</html>
